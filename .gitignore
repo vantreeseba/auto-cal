@@ -1,0 +1,12 @@
+node_modules
+dist
+__generated__
+drizzle
+routeTree.gen.ts
+pgdata
+.env
+.env.local
+*.log
+.DS_Store
+.vscode
+.idea

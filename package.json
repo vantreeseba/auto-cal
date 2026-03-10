@@ -1,0 +1,35 @@
+{
+  "name": "auto-cal",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Auto Cal - Todo and habit scheduling application",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "npm run dev -w @auto-cal/server",
+    "dev:client": "npm run dev -w @auto-cal/client",
+    "build": "npm run build -w @auto-cal/client && npm run build -w @auto-cal/server",
+    "build:docker": "docker build -t auto-cal .",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "biome check .",
+    "lint:fix": "biome check --apply .",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "codegen": "graphql-codegen --config codegen.ts",
+    "test": "vitest"
+  },
+  "keywords": ["scheduling", "todo", "habits", "calendar", "productivity"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@graphql-codegen/cli": "^5.0.3",
+    "@graphql-codegen/client-preset": "^4.5.1",
+    "concurrently": "^9.1.2",
+    "drizzle-kit": "^0.29.1",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}
