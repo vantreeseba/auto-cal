@@ -8,6 +8,8 @@ export default defineConfig({
     react(),
     GraphQLCodegen({
       configFilePathOverride: '../../codegen.ts',
+      // Codegen requires a running server; disable during production builds
+      runOnBuild: false,
     }),
   ],
   resolve: {

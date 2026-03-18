@@ -304,7 +304,7 @@ function App() {
                               block.activityType.slice(1)}
                           </CardTitle>
                           <CardDescription>
-                            {block.daysOfWeek
+                            {(block.daysOfWeek as unknown as number[])
                               .map((d: number) => DAY_NAMES[d] ?? `Day ${d}`)
                               .join(', ')}{' '}
                             • {block.startTime} – {block.endTime}

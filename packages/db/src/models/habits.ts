@@ -1,5 +1,6 @@
 import { integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
-import type { ActivityType, FrequencyUnit } from './enums.ts';
+import { activityTypes } from './activity_types.ts';
+import type { FrequencyUnit } from './enums.ts';
 import { users } from './users.ts';
 
 export const habits = pgTable('habits', {
@@ -10,10 +11,12 @@ export const habits = pgTable('habits', {
   title: text('title').notNull(),
   description: text('description'),
   priority: integer('priority').notNull().default(0),
-  estimatedLength: integer('estimated_length').notNull(), // in minutes
-  activityType: text('activity_type').notNull().$type<ActivityType>(),
-  frequencyCount: integer('frequency_count').notNull(), // X times per...
-  frequencyUnit: text('frequency_unit').notNull().$type<FrequencyUnit>(), // week or month
+  estimatedLength: integer('estimated_length').notNull(),
+  activityTypeId: uuid('activity_type_id').references(() => activityTypes.id, {
+    onDelete: 'set null',
+  }),
+  frequencyCount: integer('frequency_count').notNull(),
+  frequencyUnit: text('frequency_unit').notNull().$type<FrequencyUnit>(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

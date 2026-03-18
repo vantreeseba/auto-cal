@@ -9,4 +9,5 @@ pgdata
 .git
 .vscode
 .idea
-drizzle
+# Only exclude the root drizzle dir (none exists currently, but safe to list)
+/drizzle

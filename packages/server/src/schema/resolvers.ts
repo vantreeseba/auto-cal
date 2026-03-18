@@ -1,6 +1,5 @@
 import {
-  ACTIVITY_TYPES,
-  type ActivityType,
+  activityTypes,
   habitCompletions,
   habits,
   timeBlocks,
@@ -17,12 +16,29 @@ import { z } from 'zod';
 import type { Context } from '../context.ts';
 
 // Zod validation schemas
+const CreateActivityTypeInput = z.object({
+  name: z.string().min(1).max(100),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, 'Must be a valid hex color')
+    .default('#6366f1'),
+});
+
+const UpdateActivityTypeInput = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1).max(100).optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, 'Must be a valid hex color')
+    .optional(),
+});
+
 const CreateTodoInput = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
   priority: z.number().int().min(0).max(100).default(0),
   estimatedLength: z.number().int().min(1).max(1440).optional(),
-  activityType: z.enum(ACTIVITY_TYPES).optional(),
+  activityTypeId: z.string().uuid().optional(),
   scheduledAt: z.string().datetime().optional(),
 });
 
@@ -32,7 +48,7 @@ const UpdateTodoInput = z.object({
   description: z.string().max(2000).optional(),
   priority: z.number().int().min(0).max(100).optional(),
   estimatedLength: z.number().int().min(1).max(1440).optional(),
-  activityType: z.enum(ACTIVITY_TYPES).optional(),
+  activityTypeId: z.string().uuid().nullable().optional(),
   scheduledAt: z.string().datetime().optional(),
 });
 
@@ -41,14 +57,14 @@ const CreateHabitInput = z.object({
   description: z.string().max(2000).optional(),
   priority: z.number().int().min(0).max(100).default(0),
   estimatedLength: z.number().int().min(1).max(1440).optional(),
-  activityType: z.enum(ACTIVITY_TYPES).optional(),
+  activityTypeId: z.string().uuid().optional(),
   frequencyCount: z.number().int().positive().min(1).max(30),
   frequencyUnit: z.enum(['week', 'month'] as const),
 });
 
 const CreateTimeBlockInput = z
   .object({
-    activityType: z.enum(ACTIVITY_TYPES),
+    activityTypeId: z.string().uuid().optional(),
     daysOfWeek: z
       .array(z.number().int().min(0).max(6))
       .min(1)
@@ -71,12 +87,12 @@ const CompleteHabitInput = z.object({
 
 // SDL extension
 const extensionSDL = `
-  type ActivityStats {
-    activityType: String!
+  type ActivityTypeStats {
+    activityTypeId: String!
+    activityTypeName: String!
     totalTodos: Int!
     completedTodos: Int!
     totalHabits: Int!
-    completedHabits: Int!
   }
 
   type HabitStats {
@@ -86,12 +102,23 @@ const extensionSDL = `
     totalCompletions: Int!
   }
 
+  input CreateActivityTypeArgs {
+    name: String!
+    color: String
+  }
+
+  input UpdateActivityTypeArgs {
+    id: ID!
+    name: String
+    color: String
+  }
+
   input CreateTodoArgs {
     title: String!
     description: String
     priority: Int
     estimatedLength: Int
-    activityType: String
+    activityTypeId: ID
     scheduledAt: String
   }
 
@@ -101,7 +128,7 @@ const extensionSDL = `
     description: String
     priority: Int
     estimatedLength: Int
-    activityType: String
+    activityTypeId: ID
     scheduledAt: String
   }
 
@@ -110,13 +137,13 @@ const extensionSDL = `
     description: String
     priority: Int
     estimatedLength: Int
-    activityType: String
+    activityTypeId: ID
     frequencyCount: Int!
     frequencyUnit: String!
   }
 
   input CreateTimeBlockArgs {
-    activityType: String!
+    activityTypeId: ID
     daysOfWeek: [Int!]!
     startTime: String!
     endTime: String!
@@ -128,14 +155,18 @@ const extensionSDL = `
   }
 
   extend type Query {
-    myTodos(activityType: String, completed: Boolean): [Todo!]!
-    myHabits(activityType: String): [Habit!]!
-    myTimeBlocks(activityType: String, containsDay: Int): [TimeBlock!]!
-    activityStats(startDate: String, endDate: String): [ActivityStats!]!
+    myActivityTypes: [ActivityType!]!
+    myTodos(activityTypeId: ID, completed: Boolean): [Todo!]!
+    myHabits(activityTypeId: ID): [Habit!]!
+    myTimeBlocks(activityTypeId: ID, containsDay: Int): [TimeBlock!]!
+    activityTypeStats(startDate: String, endDate: String): [ActivityTypeStats!]!
     habitStats(habitId: ID, startDate: String, endDate: String): [HabitStats!]!
   }
 
   extend type Mutation {
+    myCreateActivityType(input: CreateActivityTypeArgs!): ActivityType!
+    myUpdateActivityType(input: UpdateActivityTypeArgs!): ActivityType!
+    myDeleteActivityType(id: ID!): Boolean!
     myCreateTodo(input: CreateTodoArgs!): Todo!
     myUpdateTodo(input: UpdateTodoArgs!): Todo!
     myCompleteTodo(id: ID!): Todo!
@@ -156,20 +187,33 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   const queryFields = queryType.getFields();
   const mutationFields = mutationType.getFields();
 
-  // --- Queries ---
+  // --- ActivityType Queries ---
+
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  queryFields.myActivityTypes!.resolve = async (
+    _parent,
+    _args,
+    context: Context,
+  ) => {
+    if (!context.userId) throw new Error('Not authenticated');
+    return context.db._query.activityTypes.findMany({
+      where: eq(activityTypes.userId, context.userId),
+      orderBy: [activityTypes.name],
+    });
+  };
+
+  // --- Todo Queries ---
 
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
   queryFields.myTodos!.resolve = async (
     _parent,
-    args: { activityType?: string; completed?: boolean },
+    args: { activityTypeId?: string; completed?: boolean },
     context: Context,
   ) => {
     if (!context.userId) throw new Error('Not authenticated');
     const conditions = [eq(todos.userId, context.userId)];
-    if (args.activityType)
-      conditions.push(
-        eq(todos.activityType, args.activityType as ActivityType),
-      );
+    if (args.activityTypeId)
+      conditions.push(eq(todos.activityTypeId, args.activityTypeId));
     if (args.completed === true) conditions.push(isNotNull(todos.completedAt));
     else if (args.completed === false)
       conditions.push(isNull(todos.completedAt));
@@ -179,58 +223,64 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     });
   };
 
+  // --- Habit Queries ---
+
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
   queryFields.myHabits!.resolve = async (
     _parent,
-    args: { activityType?: string },
+    args: { activityTypeId?: string },
     context: Context,
   ) => {
     if (!context.userId) throw new Error('Not authenticated');
     const conditions = [eq(habits.userId, context.userId)];
-    if (args.activityType)
-      conditions.push(
-        eq(habits.activityType, args.activityType as ActivityType),
-      );
+    if (args.activityTypeId)
+      conditions.push(eq(habits.activityTypeId, args.activityTypeId));
     return context.db._query.habits.findMany({
       where: and(...conditions),
       orderBy: [desc(habits.priority), desc(habits.createdAt)],
     });
   };
 
+  // --- Time Block Queries ---
+
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
   queryFields.myTimeBlocks!.resolve = async (
     _parent,
-    args: { activityType?: string; containsDay?: number },
+    args: { activityTypeId?: string; containsDay?: number },
     context: Context,
   ) => {
     if (!context.userId) throw new Error('Not authenticated');
     const conditions = [eq(timeBlocks.userId, context.userId)];
-    if (args.activityType)
-      conditions.push(
-        eq(timeBlocks.activityType, args.activityType as ActivityType),
-      );
-    if (args.containsDay !== undefined && args.containsDay !== null)
+    if (args.activityTypeId)
+      conditions.push(eq(timeBlocks.activityTypeId, args.activityTypeId));
+    if (args.containsDay !== undefined && args.containsDay !== null) {
       conditions.push(
         sql`${timeBlocks.daysOfWeek} @> ARRAY[${sql.param(args.containsDay)}]::integer[]`,
       );
+    }
     return context.db._query.timeBlocks.findMany({
       where: and(...conditions),
       orderBy: [timeBlocks.startTime],
     });
   };
 
+  // --- ActivityType Stats Query ---
+
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  queryFields.activityStats!.resolve = async (
+  queryFields.activityTypeStats!.resolve = async (
     _parent,
     args: { startDate?: string; endDate?: string },
     context: Context,
   ) => {
     if (!context.userId) throw new Error('Not authenticated');
+    const userActivityTypes = await context.db._query.activityTypes.findMany({
+      where: eq(activityTypes.userId, context.userId),
+    });
     const results = [];
-    for (const activityType of ACTIVITY_TYPES) {
+    for (const activityType of userActivityTypes) {
       const todoConditions = [
         eq(todos.userId, context.userId),
-        eq(todos.activityType, activityType),
+        eq(todos.activityTypeId, activityType.id),
       ];
       if (args.startDate)
         todoConditions.push(gte(todos.createdAt, new Date(args.startDate)));
@@ -242,21 +292,23 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
       const completedTodos = allTodos.filter((t) => t.completedAt !== null);
       const habitConditions = [
         eq(habits.userId, context.userId),
-        eq(habits.activityType, activityType),
+        eq(habits.activityTypeId, activityType.id),
       ];
       const allHabits = await context.db._query.habits.findMany({
         where: and(...habitConditions),
       });
       results.push({
-        activityType,
+        activityTypeId: activityType.id,
+        activityTypeName: activityType.name,
         totalTodos: allTodos.length,
         completedTodos: completedTodos.length,
         totalHabits: allHabits.length,
-        completedHabits: 0,
       });
     }
     return results;
   };
+
+  // --- Habit Stats Query ---
 
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
   queryFields.habitStats!.resolve = async (
@@ -294,7 +346,71 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     return results;
   };
 
-  // --- Mutations ---
+  // --- ActivityType Mutations ---
+
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  mutationFields.myCreateActivityType!.resolve = async (
+    _parent,
+    args: { input: unknown },
+    context: Context,
+  ) => {
+    if (!context.userId) throw new Error('Not authenticated');
+    const input = CreateActivityTypeInput.parse(args.input);
+    const [activityType] = await context.db
+      .insert(activityTypes)
+      .values({
+        userId: context.userId,
+        name: input.name,
+        color: input.color,
+      })
+      .returning();
+    if (!activityType) throw new Error('Failed to create activity type');
+    return activityType;
+  };
+
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  mutationFields.myUpdateActivityType!.resolve = async (
+    _parent,
+    args: { input: unknown },
+    context: Context,
+  ) => {
+    if (!context.userId) throw new Error('Not authenticated');
+    const input = UpdateActivityTypeInput.parse(args.input);
+    const existing = await context.db._query.activityTypes.findFirst({
+      where: eq(activityTypes.id, input.id),
+    });
+    if (!existing) throw new Error(`ActivityType ${input.id} not found`);
+    if (existing.userId !== context.userId) throw new Error('Forbidden');
+    const [updated] = await context.db
+      .update(activityTypes)
+      .set({
+        ...(input.name !== undefined && { name: input.name }),
+        ...(input.color !== undefined && { color: input.color }),
+        updatedAt: new Date(),
+      })
+      .where(eq(activityTypes.id, input.id))
+      .returning();
+    if (!updated) throw new Error(`Failed to update activity type ${input.id}`);
+    return updated;
+  };
+
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  mutationFields.myDeleteActivityType!.resolve = async (
+    _parent,
+    args: { id: string },
+    context: Context,
+  ) => {
+    if (!context.userId) throw new Error('Not authenticated');
+    const existing = await context.db._query.activityTypes.findFirst({
+      where: eq(activityTypes.id, args.id),
+    });
+    if (!existing) throw new Error(`ActivityType ${args.id} not found`);
+    if (existing.userId !== context.userId) throw new Error('Forbidden');
+    await context.db.delete(activityTypes).where(eq(activityTypes.id, args.id));
+    return true;
+  };
+
+  // --- Todo Mutations ---
 
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
   mutationFields.myCreateTodo!.resolve = async (
@@ -312,7 +428,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
         description: input.description,
         priority: input.priority,
         estimatedLength: input.estimatedLength ?? 0,
-        activityType: input.activityType ?? 'other',
+        activityTypeId: input.activityTypeId ?? null,
         scheduledAt: input.scheduledAt
           ? new Date(input.scheduledAt)
           : undefined,
@@ -346,8 +462,8 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
         ...(input.estimatedLength !== undefined && {
           estimatedLength: input.estimatedLength,
         }),
-        ...(input.activityType !== undefined && {
-          activityType: input.activityType,
+        ...(input.activityTypeId !== undefined && {
+          activityTypeId: input.activityTypeId,
         }),
         ...(input.scheduledAt !== undefined && {
           scheduledAt: new Date(input.scheduledAt),
@@ -397,6 +513,8 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     return true;
   };
 
+  // --- Habit Mutations ---
+
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
   mutationFields.myCreateHabit!.resolve = async (
     _parent,
@@ -413,7 +531,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
         description: input.description,
         priority: input.priority,
         estimatedLength: input.estimatedLength ?? 0,
-        activityType: input.activityType ?? 'other',
+        activityTypeId: input.activityTypeId ?? null,
         frequencyCount: input.frequencyCount,
         frequencyUnit: input.frequencyUnit,
       })
@@ -463,6 +581,8 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     return completion;
   };
 
+  // --- Time Block Mutations ---
+
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
   mutationFields.myCreateTimeBlock!.resolve = async (
     _parent,
@@ -475,7 +595,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
       .insert(timeBlocks)
       .values({
         userId: context.userId,
-        activityType: input.activityType,
+        activityTypeId: input.activityTypeId ?? null,
         daysOfWeek: input.daysOfWeek,
         startTime: input.startTime,
         endTime: input.endTime,

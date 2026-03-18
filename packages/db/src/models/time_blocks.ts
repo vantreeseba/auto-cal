@@ -1,5 +1,5 @@
 import { integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
-import type { ActivityType } from './enums.ts';
+import { activityTypes } from './activity_types.ts';
 import { users } from './users.ts';
 
 export const timeBlocks = pgTable('time_blocks', {
@@ -7,10 +7,12 @@ export const timeBlocks = pgTable('time_blocks', {
   userId: uuid('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  activityType: text('activity_type').notNull().$type<ActivityType>(),
-  daysOfWeek: integer('days_of_week').array().notNull(), // 0 = Sunday, 6 = Saturday
-  startTime: text('start_time').notNull(), // HH:MM format (24h)
-  endTime: text('end_time').notNull(), // HH:MM format (24h)
+  activityTypeId: uuid('activity_type_id').references(() => activityTypes.id, {
+    onDelete: 'set null',
+  }),
+  daysOfWeek: integer('days_of_week').array().notNull(),
+  startTime: text('start_time').notNull(),
+  endTime: text('end_time').notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

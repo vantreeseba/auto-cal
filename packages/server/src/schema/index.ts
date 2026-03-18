@@ -13,6 +13,7 @@ mkdirSync(generatedDir, { recursive: true });
 const { schema: drizzleSchema, entities } = buildSchema(db, {
   prefixes: { insert: 'create', update: 'update', delete: 'delete' },
   suffixes: { list: 's', single: '' },
+  singularTypes: true,
 });
 
 export const schema = applyCustomResolvers(drizzleSchema);
