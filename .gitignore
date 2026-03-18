@@ -1,7 +1,7 @@
 node_modules
 dist
 __generated__
-drizzle
+#drizzle
 routeTree.gen.ts
 pgdata
 .env

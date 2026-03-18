@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node --env-file=../../.env --experimental-strip-types src/index.ts",
+    "dev": "node --env-file=../../.env --experimental-transform-types src/index.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit"
   },
@@ -11,15 +11,20 @@
     "@apollo/server": "^4.11.3",
     "@auto-cal/db": "*",
     "cors": "^2.8.5",
-    "drizzle-graphql": "^0.8.5",
+    "drizzle-graphql": "file://home/vantreeseba/code/vantreeseba/apps/drizzle-graphql",
+    "drizzle-orm": "~1.0.0-beta",
     "express": "^4.21.2",
     "graphql": "^16.9.0",
-    "graphql-tag": "^2.12.6",
+    "pluralize": "^8.0.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
-    "@types/node": "^22.10.5"
+    "@types/node": "^22.10.5",
+    "@types/pluralize": "^0.0.33"
+  },
+  "resolutions": {
+    "graphql": "16.10.0"
   }
 }

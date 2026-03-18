@@ -1,15 +1,22 @@
+import path from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
-import path from 'node:path';
+import { GraphQLCodegen } from 'vite-plugin-graphql-codegen';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    GraphQLCodegen({
+      configFilePathOverride: '../../codegen.ts',
+    }),
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
   server: {
+    host: '0.0.0.0',
     port: 3000,
     proxy: {
       '/graphql': {

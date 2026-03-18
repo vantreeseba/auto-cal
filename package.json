@@ -14,10 +14,11 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "biome check .",
     "lint:fix": "biome check --apply .",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio",
+    "db:generate": "npm run db:generate -w @auto-cal/db",
+    "db:migrate": "npm run migrate -w @auto-cal/db",
+    "db:studio": "npm run db:studio -w @auto-cal/db",
     "codegen": "graphql-codegen --config codegen.ts",
+    "codegen:server": "graphql-codegen-esm --config codegen.server.ts",
     "test": "vitest"
   },
   "keywords": ["scheduling", "todo", "habits", "calendar", "productivity"],
@@ -27,9 +28,14 @@
     "@biomejs/biome": "^1.9.4",
     "@graphql-codegen/cli": "^5.0.3",
     "@graphql-codegen/client-preset": "^4.5.1",
+    "@graphql-codegen/schema-ast": "^5.0.0",
+    "@graphql-codegen/typescript": "^5.0.7",
+    "@graphql-codegen/typescript-resolvers": "^5.1.5",
     "concurrently": "^9.1.2",
-    "drizzle-kit": "^0.29.1",
     "typescript": "^5.7.3",
     "vitest": "^2.1.8"
+  },
+  "resolutions": {
+    "graphql": "16.10.0"
   }
 }

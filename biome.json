@@ -1,5 +1,8 @@
 {
   "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "organizeImports": {
+    "enabled": true
+  },
   "linter": {
     "enabled": true,
     "rules": {
@@ -36,10 +39,20 @@
   },
   "overrides": [
     {
-      "include": ["**/__generated__/**", "**/dist/**", "**/drizzle/**", "**/pgdata/**", "**/routeTree.gen.ts"],
-      "linter": {
-        "enabled": false
-      }
+      "include": ["**/__generated__/**"],
+      "linter": { "enabled": false },
+      "formatter": { "enabled": false },
+      "organizeImports": { "enabled": false }
+    },
+    {
+      "include": [
+        "**/dist/**",
+        "**/drizzle/**",
+        "**/pgdata/**",
+        "**/routeTree.gen.ts"
+      ],
+      "linter": { "enabled": false },
+      "formatter": { "enabled": false }
     }
   ]
 }

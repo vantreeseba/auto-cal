@@ -1,37 +1,39 @@
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
+import { db } from '@auto-cal/db';
+import { seedDemoUser } from '@auto-cal/db/seed';
 import cors from 'cors';
 import express from 'express';
-import { db } from '@auto-cal/db';
-import { schema } from './schema/index.ts';
 import type { Context } from './context.ts';
+import { schema } from './schema/index.ts';
 
 const app = express();
 
 const server = new ApolloServer<Context>({ schema });
 
 await server.start();
+await seedDemoUser();
 
 app.use(
   '/graphql',
   cors<cors.CorsRequest>(),
   express.json(),
+  // @ts-expect-error - apollo/server express types conflict with @types/express
   expressMiddleware(server, {
-    context: async ({ req }): Promise<Context> => {
-      // For now, we'll use a simple demo user ID
-      // In production, this would verify JWT from Authorization header
+    context: async ({ req }: { req: express.Request }): Promise<Context> => {
       const authHeader = req.headers.authorization;
       const userId = authHeader?.startsWith('Bearer ')
         ? authHeader.slice(7)
         : undefined;
 
-      return { db, userId };
+      if (userId) return { db, userId };
+      return { db };
     },
   }),
 );
 
-const PORT = process.env.PORT ?? 4000;
+const PORT = Number(process.env.PORT ?? 4000);
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server ready at http://localhost:${PORT}/graphql`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server ready at http://0.0.0.0:${PORT}/graphql`);
 });

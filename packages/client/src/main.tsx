@@ -1,6 +1,6 @@
+import { ApolloClient, ApolloProvider, InMemoryCache } from '@apollo/client';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ApolloClient, InMemoryCache, ApolloProvider } from '@apollo/client';
 import App from './App';
 import './index.css';
 
@@ -10,7 +10,7 @@ const client = new ApolloClient({
   // For demo purposes, we'll add a fixed user ID
   // In production, this would come from authentication
   headers: {
-    authorization: 'Bearer demo-user-id',
+    authorization: 'Bearer 00000000-0000-0000-0000-000000000001',
   },
 });
 

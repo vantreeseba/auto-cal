@@ -1,5 +1,3 @@
-import { useState } from 'react';
-import { useQuery, gql } from '@apollo/client';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -9,6 +7,18 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { gql, useQuery } from '@apollo/client';
+import { Plus } from 'lucide-react';
+import { Pencil } from 'lucide-react';
+import { useState } from 'react';
+import type {
+  GetMyHabitsQuery,
+  GetMyTimeBlocksQuery,
+  GetMyTodosQuery,
+} from './__generated__/graphql';
+import { HabitForm } from './components/HabitForm';
+import { TimeBlockForm } from './components/TimeBlockForm';
+import { TodoForm } from './components/TodoForm';
 
 const GET_MY_TODOS = gql`
   query GetMyTodos {
@@ -47,7 +57,7 @@ const GET_MY_TIME_BLOCKS = gql`
     myTimeBlocks {
       id
       activityType
-      dayOfWeek
+      daysOfWeek
       startTime
       endTime
       createdAt
@@ -55,8 +65,26 @@ const GET_MY_TIME_BLOCKS = gql`
   }
 `;
 
+const DAY_NAMES = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+] as const;
+
 function App() {
   const [activeTab, setActiveTab] = useState('todos');
+
+  const [todoFormOpen, setTodoFormOpen] = useState(false);
+  const [editingTodo, setEditingTodo] = useState<
+    GetMyTodosQuery['myTodos'][number] | null
+  >(null);
+
+  const [habitFormOpen, setHabitFormOpen] = useState(false);
+  const [timeBlockFormOpen, setTimeBlockFormOpen] = useState(false);
 
   const {
     data: todosData,
@@ -75,6 +103,21 @@ function App() {
     loading: timeBlocksLoading,
     error: timeBlocksError,
   } = useQuery(GET_MY_TIME_BLOCKS);
+
+  function openCreateTodo() {
+    setEditingTodo(null);
+    setTodoFormOpen(true);
+  }
+
+  function openEditTodo(todo: GetMyTodosQuery['myTodos'][number]) {
+    setEditingTodo(todo);
+    setTodoFormOpen(true);
+  }
+
+  function handleTodoFormOpenChange(open: boolean) {
+    setTodoFormOpen(open);
+    if (!open) setEditingTodo(null);
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -95,13 +138,22 @@ function App() {
             <TabsTrigger value="timeblocks">Time Blocks</TabsTrigger>
           </TabsList>
 
+          {/* ── Todos ───────────────────────────────────────────────────── */}
           <TabsContent value="todos" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>My Todos</CardTitle>
-                <CardDescription>
-                  Single-time tasks scheduled in your time blocks
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>My Todos</CardTitle>
+                    <CardDescription>
+                      Single-time tasks scheduled in your time blocks
+                    </CardDescription>
+                  </div>
+                  <Button size="sm" onClick={openCreateTodo}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    New Todo
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {todosLoading && <p>Loading todos...</p>}
@@ -116,36 +168,61 @@ function App() {
                   </p>
                 )}
                 <div className="space-y-2">
-                  {todosData?.myTodos.map((todo: any) => (
-                    <Card key={todo.id}>
-                      <CardHeader>
-                        <CardTitle className="text-lg">{todo.title}</CardTitle>
-                        <CardDescription>
-                          {todo.activityType} • {todo.estimatedLength} min •
-                          Priority: {todo.priority}
-                        </CardDescription>
-                      </CardHeader>
-                      {todo.description && (
-                        <CardContent>
-                          <p className="text-sm text-muted-foreground">
-                            {todo.description}
-                          </p>
-                        </CardContent>
-                      )}
-                    </Card>
-                  ))}
+                  {todosData?.myTodos.map(
+                    (todo: GetMyTodosQuery['myTodos'][number]) => (
+                      <Card key={todo.id}>
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <CardTitle className="text-lg">
+                                {todo.title}
+                              </CardTitle>
+                              <CardDescription>
+                                {todo.activityType} • {todo.estimatedLength} min
+                                • Priority: {todo.priority}
+                              </CardDescription>
+                            </div>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => openEditTodo(todo)}
+                              aria-label={`Edit ${todo.title}`}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </CardHeader>
+                        {todo.description && (
+                          <CardContent>
+                            <p className="text-sm text-muted-foreground">
+                              {todo.description}
+                            </p>
+                          </CardContent>
+                        )}
+                      </Card>
+                    ),
+                  )}
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
+          {/* ── Habits ──────────────────────────────────────────────────── */}
           <TabsContent value="habits" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>My Habits</CardTitle>
-                <CardDescription>
-                  Recurring tasks scheduled regularly
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>My Habits</CardTitle>
+                    <CardDescription>
+                      Recurring tasks scheduled regularly
+                    </CardDescription>
+                  </div>
+                  <Button size="sm" onClick={() => setHabitFormOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    New Habit
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {habitsLoading && <p>Loading habits...</p>}
@@ -160,39 +237,50 @@ function App() {
                   </p>
                 )}
                 <div className="space-y-2">
-                  {habitsData?.myHabits.map((habit: any) => (
-                    <Card key={habit.id}>
-                      <CardHeader>
-                        <CardTitle className="text-lg">
-                          {habit.title}
-                        </CardTitle>
-                        <CardDescription>
-                          {habit.activityType} • {habit.estimatedLength} min •{' '}
-                          {habit.frequencyCount}x per {habit.frequencyUnit} •
-                          Priority: {habit.priority}
-                        </CardDescription>
-                      </CardHeader>
-                      {habit.description && (
-                        <CardContent>
-                          <p className="text-sm text-muted-foreground">
-                            {habit.description}
-                          </p>
-                        </CardContent>
-                      )}
-                    </Card>
-                  ))}
+                  {habitsData?.myHabits.map(
+                    (habit: GetMyHabitsQuery['myHabits'][number]) => (
+                      <Card key={habit.id}>
+                        <CardHeader>
+                          <CardTitle className="text-lg">
+                            {habit.title}
+                          </CardTitle>
+                          <CardDescription>
+                            {habit.activityType} • {habit.estimatedLength} min •{' '}
+                            {habit.frequencyCount}x per {habit.frequencyUnit} •
+                            Priority: {habit.priority}
+                          </CardDescription>
+                        </CardHeader>
+                        {habit.description && (
+                          <CardContent>
+                            <p className="text-sm text-muted-foreground">
+                              {habit.description}
+                            </p>
+                          </CardContent>
+                        )}
+                      </Card>
+                    ),
+                  )}
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
+          {/* ── Time Blocks ─────────────────────────────────────────────── */}
           <TabsContent value="timeblocks" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Time Blocks</CardTitle>
-                <CardDescription>
-                  Designated time periods for different activity types
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Time Blocks</CardTitle>
+                    <CardDescription>
+                      Designated time periods for different activity types
+                    </CardDescription>
+                  </div>
+                  <Button size="sm" onClick={() => setTimeBlockFormOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    New Time Block
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {timeBlocksLoading && <p>Loading time blocks...</p>}
@@ -207,25 +295,41 @@ function App() {
                   </p>
                 )}
                 <div className="space-y-2">
-                  {timeBlocksData?.myTimeBlocks.map((block: any) => (
-                    <Card key={block.id}>
-                      <CardHeader>
-                        <CardTitle className="text-lg">
-                          {block.activityType}
-                        </CardTitle>
-                        <CardDescription>
-                          Day {block.dayOfWeek} • {block.startTime} -{' '}
-                          {block.endTime}
-                        </CardDescription>
-                      </CardHeader>
-                    </Card>
-                  ))}
+                  {timeBlocksData?.myTimeBlocks.map(
+                    (block: GetMyTimeBlocksQuery['myTimeBlocks'][number]) => (
+                      <Card key={block.id}>
+                        <CardHeader>
+                          <CardTitle className="text-lg">
+                            {block.activityType.charAt(0).toUpperCase() +
+                              block.activityType.slice(1)}
+                          </CardTitle>
+                          <CardDescription>
+                            {block.daysOfWeek
+                              .map((d: number) => DAY_NAMES[d] ?? `Day ${d}`)
+                              .join(', ')}{' '}
+                            • {block.startTime} – {block.endTime}
+                          </CardDescription>
+                        </CardHeader>
+                      </Card>
+                    ),
+                  )}
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       </main>
+
+      <TodoForm
+        {...(editingTodo !== null ? { todo: editingTodo } : {})}
+        open={todoFormOpen}
+        onOpenChange={handleTodoFormOpenChange}
+      />
+      <HabitForm open={habitFormOpen} onOpenChange={setHabitFormOpen} />
+      <TimeBlockForm
+        open={timeBlockFormOpen}
+        onOpenChange={setTimeBlockFormOpen}
+      />
     </div>
   );
 }

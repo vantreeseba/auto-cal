@@ -1,13 +1,21 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { CodegenConfig } from '@graphql-codegen/cli';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const config: CodegenConfig = {
-  schema: 'http://localhost:4000/graphql',
+  schema: path.resolve(
+    __dirname,
+    'packages/server/src/__generated__/schema.graphql',
+  ),
   documents: [
-    'packages/client/src/**/*.{tsx,ts}',
-    '!packages/client/src/__generated__/**',
+    path.resolve(__dirname, 'packages/client/src/**/*.{tsx,ts}'),
+    `!${path.resolve(__dirname, 'packages/client/src/__generated__/**')}`,
   ],
   generates: {
-    'packages/client/src/__generated__/': {
+    [`${path.resolve(__dirname, 'packages/client/src/__generated__')}/`]: {
       preset: 'client',
       config: { documentMode: 'string' },
     },

@@ -4,18 +4,23 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./schema": "./src/schema.ts"
+    "./schema": "./src/schema.ts",
+    "./seed": "./src/seed.ts"
   },
   "scripts": {
-    "db:generate": "drizzle-kit generate --config ../../drizzle.config.ts",
-    "db:migrate": "drizzle-kit migrate --config ../../drizzle.config.ts",
-    "db:studio": "drizzle-kit studio --config ../../drizzle.config.ts"
+    "migrate": "env-cmd -f ../../.env node --experimental-strip-types src/migrator.ts",
+    "db:generate": "env-cmd -f ../../.env drizzle-kit generate",
+    "db:migrate": "npm run migrate",
+    "db:studio": "env-cmd -f ../../.env drizzle-kit studio"
   },
   "dependencies": {
-    "@electric-sql/pglite": "^0.2.15",
-    "drizzle-orm": "^0.38.3"
+    "@electric-sql/pglite": "^0.2.15"
+  },
+  "peerDependencies": {
+    "drizzle-orm": "~1.0.0-beta"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.29.1"
+    "drizzle-kit": "~1.0.0-beta",
+    "env-cmd": "^10.1.0"
   }
 }
