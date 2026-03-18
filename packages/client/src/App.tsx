@@ -8,17 +8,65 @@ import {
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { gql, useQuery } from '@apollo/client';
-import { Plus } from 'lucide-react';
-import { Pencil } from 'lucide-react';
+import { Pencil, Plus } from 'lucide-react';
 import { useState } from 'react';
-import type {
-  GetMyHabitsQuery,
-  GetMyTimeBlocksQuery,
-  GetMyTodosQuery,
-} from './__generated__/graphql';
+import { ActivityTypeForm } from './components/ActivityTypeForm';
 import { HabitForm } from './components/HabitForm';
 import { TimeBlockForm } from './components/TimeBlockForm';
 import { TodoForm } from './components/TodoForm';
+
+// ─── Types ──────────────────────────────────────────────────────────────────
+
+interface ActivityType {
+  id: string;
+  name: string;
+  color: string;
+}
+
+interface Todo {
+  id: string;
+  title: string;
+  description?: string | null;
+  priority: number;
+  estimatedLength: number;
+  activityTypeId?: string | null;
+  scheduledAt?: string | null;
+  completedAt?: string | null;
+  createdAt: string;
+}
+
+interface Habit {
+  id: string;
+  title: string;
+  description?: string | null;
+  priority: number;
+  estimatedLength: number;
+  activityTypeId?: string | null;
+  frequencyCount: number;
+  frequencyUnit: string;
+  createdAt: string;
+}
+
+interface TimeBlock {
+  id: string;
+  activityTypeId?: string | null;
+  daysOfWeek: number | number[];
+  startTime: string;
+  endTime: string;
+  createdAt: string;
+}
+
+// ─── GraphQL Operations ─────────────────────────────────────────────────────
+
+const GET_MY_ACTIVITY_TYPES = gql`
+  query GetMyActivityTypes {
+    myActivityTypes {
+      id
+      name
+      color
+    }
+  }
+`;
 
 const GET_MY_TODOS = gql`
   query GetMyTodos {
@@ -28,7 +76,7 @@ const GET_MY_TODOS = gql`
       description
       priority
       estimatedLength
-      activityType
+      activityTypeId
       scheduledAt
       completedAt
       createdAt
@@ -44,7 +92,7 @@ const GET_MY_HABITS = gql`
       description
       priority
       estimatedLength
-      activityType
+      activityTypeId
       frequencyCount
       frequencyUnit
       createdAt
@@ -56,7 +104,7 @@ const GET_MY_TIME_BLOCKS = gql`
   query GetMyTimeBlocks {
     myTimeBlocks {
       id
-      activityType
+      activityTypeId
       daysOfWeek
       startTime
       endTime
@@ -64,6 +112,8 @@ const GET_MY_TIME_BLOCKS = gql`
     }
   }
 `;
+
+// ─── Constants ──────────────────────────────────────────────────────────────
 
 const DAY_NAMES = [
   'Sunday',
@@ -75,41 +125,55 @@ const DAY_NAMES = [
   'Saturday',
 ] as const;
 
+// ─── Component ──────────────────────────────────────────────────────────────
+
 function App() {
   const [activeTab, setActiveTab] = useState('todos');
 
   const [todoFormOpen, setTodoFormOpen] = useState(false);
-  const [editingTodo, setEditingTodo] = useState<
-    GetMyTodosQuery['myTodos'][number] | null
-  >(null);
+  const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
 
   const [habitFormOpen, setHabitFormOpen] = useState(false);
   const [timeBlockFormOpen, setTimeBlockFormOpen] = useState(false);
+
+  const [activityTypeFormOpen, setActivityTypeFormOpen] = useState(false);
+  const [editingActivityType, setEditingActivityType] =
+    useState<ActivityType | null>(null);
+
+  const {
+    data: activityTypesData,
+    loading: activityTypesLoading,
+    error: activityTypesError,
+  } = useQuery<{ myActivityTypes: ActivityType[] }>(GET_MY_ACTIVITY_TYPES);
 
   const {
     data: todosData,
     loading: todosLoading,
     error: todosError,
-  } = useQuery(GET_MY_TODOS);
+  } = useQuery<{ myTodos: Todo[] }>(GET_MY_TODOS);
 
   const {
     data: habitsData,
     loading: habitsLoading,
     error: habitsError,
-  } = useQuery(GET_MY_HABITS);
+  } = useQuery<{ myHabits: Habit[] }>(GET_MY_HABITS);
 
   const {
     data: timeBlocksData,
     loading: timeBlocksLoading,
     error: timeBlocksError,
-  } = useQuery(GET_MY_TIME_BLOCKS);
+  } = useQuery<{ myTimeBlocks: TimeBlock[] }>(GET_MY_TIME_BLOCKS);
+
+  const activityTypeMap = new Map<string, ActivityType>(
+    (activityTypesData?.myActivityTypes ?? []).map((at) => [at.id, at]),
+  );
 
   function openCreateTodo() {
     setEditingTodo(null);
     setTodoFormOpen(true);
   }
 
-  function openEditTodo(todo: GetMyTodosQuery['myTodos'][number]) {
+  function openEditTodo(todo: Todo) {
     setEditingTodo(todo);
     setTodoFormOpen(true);
   }
@@ -117,6 +181,11 @@ function App() {
   function handleTodoFormOpenChange(open: boolean) {
     setTodoFormOpen(open);
     if (!open) setEditingTodo(null);
+  }
+
+  function handleActivityTypeFormOpenChange(open: boolean) {
+    setActivityTypeFormOpen(open);
+    if (!open) setEditingActivityType(null);
   }
 
   return (
@@ -132,10 +201,11 @@ function App() {
 
       <main className="container mx-auto px-4 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="todos">Todos</TabsTrigger>
             <TabsTrigger value="habits">Habits</TabsTrigger>
             <TabsTrigger value="timeblocks">Time Blocks</TabsTrigger>
+            <TabsTrigger value="activity-types">Activity Types</TabsTrigger>
           </TabsList>
 
           {/* ── Todos ───────────────────────────────────────────────────── */}
@@ -168,8 +238,11 @@ function App() {
                   </p>
                 )}
                 <div className="space-y-2">
-                  {todosData?.myTodos.map(
-                    (todo: GetMyTodosQuery['myTodos'][number]) => (
+                  {todosData?.myTodos.map((todo) => {
+                    const actType = todo.activityTypeId
+                      ? activityTypeMap.get(todo.activityTypeId)
+                      : undefined;
+                    return (
                       <Card key={todo.id}>
                         <CardHeader>
                           <div className="flex items-start justify-between">
@@ -177,9 +250,19 @@ function App() {
                               <CardTitle className="text-lg">
                                 {todo.title}
                               </CardTitle>
-                              <CardDescription>
-                                {todo.activityType} • {todo.estimatedLength} min
-                                • Priority: {todo.priority}
+                              <CardDescription className="flex items-center gap-2">
+                                {actType && (
+                                  <span className="flex items-center gap-1">
+                                    <span
+                                      className="inline-block h-3 w-3 rounded-full flex-shrink-0"
+                                      style={{ backgroundColor: actType.color }}
+                                    />
+                                    {actType.name}
+                                    {' • '}
+                                  </span>
+                                )}
+                                {todo.estimatedLength} min • Priority:{' '}
+                                {todo.priority}
                               </CardDescription>
                             </div>
                             <Button
@@ -200,8 +283,8 @@ function App() {
                           </CardContent>
                         )}
                       </Card>
-                    ),
-                  )}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -237,17 +320,30 @@ function App() {
                   </p>
                 )}
                 <div className="space-y-2">
-                  {habitsData?.myHabits.map(
-                    (habit: GetMyHabitsQuery['myHabits'][number]) => (
+                  {habitsData?.myHabits.map((habit) => {
+                    const actType = habit.activityTypeId
+                      ? activityTypeMap.get(habit.activityTypeId)
+                      : undefined;
+                    return (
                       <Card key={habit.id}>
                         <CardHeader>
                           <CardTitle className="text-lg">
                             {habit.title}
                           </CardTitle>
-                          <CardDescription>
-                            {habit.activityType} • {habit.estimatedLength} min •{' '}
-                            {habit.frequencyCount}x per {habit.frequencyUnit} •
-                            Priority: {habit.priority}
+                          <CardDescription className="flex items-center gap-2">
+                            {actType && (
+                              <span className="flex items-center gap-1">
+                                <span
+                                  className="inline-block h-3 w-3 rounded-full flex-shrink-0"
+                                  style={{ backgroundColor: actType.color }}
+                                />
+                                {actType.name}
+                                {' • '}
+                              </span>
+                            )}
+                            {habit.estimatedLength} min • {habit.frequencyCount}
+                            x per {habit.frequencyUnit} • Priority:{' '}
+                            {habit.priority}
                           </CardDescription>
                         </CardHeader>
                         {habit.description && (
@@ -258,8 +354,8 @@ function App() {
                           </CardContent>
                         )}
                       </Card>
-                    ),
-                  )}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -295,24 +391,104 @@ function App() {
                   </p>
                 )}
                 <div className="space-y-2">
-                  {timeBlocksData?.myTimeBlocks.map(
-                    (block: GetMyTimeBlocksQuery['myTimeBlocks'][number]) => (
+                  {timeBlocksData?.myTimeBlocks.map((block) => {
+                    const actType = block.activityTypeId
+                      ? activityTypeMap.get(block.activityTypeId)
+                      : undefined;
+                    const daysArray = Array.isArray(block.daysOfWeek)
+                      ? (block.daysOfWeek as number[])
+                      : [block.daysOfWeek as number];
+                    return (
                       <Card key={block.id}>
                         <CardHeader>
-                          <CardTitle className="text-lg">
-                            {block.activityType.charAt(0).toUpperCase() +
-                              block.activityType.slice(1)}
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            {actType ? (
+                              <>
+                                <span
+                                  className="inline-block h-4 w-4 rounded-full flex-shrink-0"
+                                  style={{ backgroundColor: actType.color }}
+                                />
+                                {actType.name}
+                              </>
+                            ) : (
+                              'Unassigned'
+                            )}
                           </CardTitle>
                           <CardDescription>
-                            {(block.daysOfWeek as unknown as number[])
-                              .map((d: number) => DAY_NAMES[d] ?? `Day ${d}`)
+                            {daysArray
+                              .map((d) => DAY_NAMES[d] ?? `Day ${d}`)
                               .join(', ')}{' '}
                             • {block.startTime} – {block.endTime}
                           </CardDescription>
                         </CardHeader>
                       </Card>
-                    ),
-                  )}
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ── Activity Types ───────────────────────────────────────────── */}
+          <TabsContent value="activity-types" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Activity Types</CardTitle>
+                    <CardDescription>
+                      Categories for your todos, habits, and time blocks
+                    </CardDescription>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setEditingActivityType(null);
+                      setActivityTypeFormOpen(true);
+                    }}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    New Activity Type
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {activityTypesLoading && <p>Loading activity types...</p>}
+                {activityTypesError && (
+                  <p className="text-destructive">
+                    Error loading activity types: {activityTypesError.message}
+                  </p>
+                )}
+                {activityTypesData?.myActivityTypes.length === 0 && (
+                  <p className="text-muted-foreground">
+                    No activity types yet. Create your first one!
+                  </p>
+                )}
+                <div className="space-y-2">
+                  {activityTypesData?.myActivityTypes.map((actType) => (
+                    <div
+                      key={actType.id}
+                      className="flex items-center justify-between rounded-lg border p-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="h-5 w-5 rounded-full border border-border flex-shrink-0"
+                          style={{ backgroundColor: actType.color }}
+                        />
+                        <span className="font-medium">{actType.name}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setEditingActivityType(actType);
+                          setActivityTypeFormOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -329,6 +505,13 @@ function App() {
       <TimeBlockForm
         open={timeBlockFormOpen}
         onOpenChange={setTimeBlockFormOpen}
+      />
+      <ActivityTypeForm
+        {...(editingActivityType !== null
+          ? { activityType: editingActivityType }
+          : {})}
+        open={activityTypeFormOpen}
+        onOpenChange={handleActivityTypeFormOpenChange}
       />
     </div>
   );

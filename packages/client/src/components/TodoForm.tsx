@@ -24,24 +24,20 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useAppForm } from '@/hooks/form-hook';
-import { gql, useMutation } from '@apollo/client';
+import { gql, useMutation, useQuery } from '@apollo/client';
 import { z } from 'zod';
-import type { GetMyTodosQuery } from '../__generated__/graphql';
-
-// ─── Activity Types (kept in sync with @auto-cal/db enums) ────────────────
-
-const ACTIVITY_TYPES = [
-  'work',
-  'exercise',
-  'learning',
-  'personal',
-  'social',
-  'chores',
-  'creative',
-  'other',
-] as const;
 
 // ─── GraphQL Operations ────────────────────────────────────────────────────
+
+const GET_MY_ACTIVITY_TYPES = gql`
+  query GetActivityTypesForTodoForm {
+    myActivityTypes {
+      id
+      name
+      color
+    }
+  }
+`;
 
 const CREATE_TODO = gql`
   mutation CreateTodo($input: CreateTodoArgs!) {
@@ -49,7 +45,7 @@ const CREATE_TODO = gql`
       id
       title
       description
-      activityType
+      activityTypeId
       priority
       estimatedLength
       scheduledAt
@@ -64,7 +60,7 @@ const UPDATE_TODO = gql`
       id
       title
       description
-      activityType
+      activityTypeId
       priority
       estimatedLength
       scheduledAt
@@ -98,19 +94,37 @@ const DURATION_OPTIONS = [
 const todoSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Max 200 characters'),
   description: z.string().max(2000, 'Max 2000 characters').optional(),
-  activityType: z.enum(ACTIVITY_TYPES, {
-    message: 'Activity type is required',
-  }),
+  activityTypeId: z.string().optional(),
   priority: z.number().int().min(0).max(100),
   estimatedLength: z.number().int().min(1, 'Duration is required').max(1440),
 });
 
 type TodoFormValues = z.infer<typeof todoSchema>;
 
+// ─── Types ─────────────────────────────────────────────────────────────────
+
+interface ActivityType {
+  id: string;
+  name: string;
+  color: string;
+}
+
+interface Todo {
+  id: string;
+  title: string;
+  description?: string | null;
+  activityTypeId?: string | null;
+  priority: number;
+  estimatedLength: number;
+  scheduledAt?: string | null;
+  completedAt?: string | null;
+  createdAt: string;
+}
+
 // ─── Props ─────────────────────────────────────────────────────────────────
 
 type TodoFormProps = {
-  todo?: GetMyTodosQuery['myTodos'][number];
+  todo?: Todo;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
@@ -119,6 +133,10 @@ type TodoFormProps = {
 
 export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
   const isEdit = todo !== undefined;
+
+  const { data: activityTypesData } = useQuery<{
+    myActivityTypes: ActivityType[];
+  }>(GET_MY_ACTIVITY_TYPES);
 
   const [createTodo] = useMutation(CREATE_TODO, {
     refetchQueries: ['GetMyTodos'],
@@ -132,8 +150,7 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
     defaultValues: {
       title: todo?.title ?? '',
       description: todo?.description ?? '',
-      activityType: (todo?.activityType ??
-        '') as TodoFormValues['activityType'],
+      activityTypeId: todo?.activityTypeId ?? undefined,
       priority: todo?.priority ?? 0,
       estimatedLength: todo?.estimatedLength ?? 30,
     } as TodoFormValues,
@@ -203,26 +220,32 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
             </form.AppField>
 
             {/* Activity Type */}
-            <form.AppField name="activityType">
+            <form.AppField name="activityTypeId">
               {(field) => (
                 <Field>
                   <FieldLabel>Activity Type</FieldLabel>
                   <FieldControl>
                     <Select
-                      value={field.state.value}
-                      onValueChange={(v) =>
-                        field.handleChange(v as TodoFormValues['activityType'])
-                      }
+                      value={field.state.value ?? ''}
+                      onValueChange={(v) => field.handleChange(v || undefined)}
                     >
                       <SelectTrigger onBlur={field.handleBlur}>
-                        <SelectValue placeholder="Select a type..." />
+                        <SelectValue placeholder="Select activity type (optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        {ACTIVITY_TYPES.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type.charAt(0).toUpperCase() + type.slice(1)}
-                          </SelectItem>
-                        ))}
+                        {(activityTypesData?.myActivityTypes ?? []).map(
+                          (at) => (
+                            <SelectItem key={at.id} value={at.id}>
+                              <span className="flex items-center gap-2">
+                                <span
+                                  className="inline-block h-3 w-3 rounded-full flex-shrink-0"
+                                  style={{ backgroundColor: at.color }}
+                                />
+                                {at.name}
+                              </span>
+                            </SelectItem>
+                          ),
+                        )}
                       </SelectContent>
                     </Select>
                   </FieldControl>

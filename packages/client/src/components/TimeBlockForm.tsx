@@ -24,33 +24,26 @@ import {
 } from '@/components/ui/select';
 import { useAppForm } from '@/hooks/form-hook';
 import { cn } from '@/lib/utils';
-import { gql, useMutation } from '@apollo/client';
+import { gql, useMutation, useQuery } from '@apollo/client';
 import { z } from 'zod';
 
-// ─── Activity Types (kept in sync with @auto-cal/db enums) ────────────────
-
-const ACTIVITY_TYPES = [
-  'work',
-  'exercise',
-  'learning',
-  'personal',
-  'social',
-  'chores',
-  'creative',
-  'other',
-] as const;
-
-// ─── Constants ─────────────────────────────────────────────────────────────
-
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
-
 // ─── GraphQL Operations ────────────────────────────────────────────────────
+
+const GET_MY_ACTIVITY_TYPES = gql`
+  query GetActivityTypesForTimeBlockForm {
+    myActivityTypes {
+      id
+      name
+      color
+    }
+  }
+`;
 
 const CREATE_TIME_BLOCK = gql`
   mutation CreateTimeBlock($input: CreateTimeBlockArgs!) {
     myCreateTimeBlock(input: $input) {
       id
-      activityType
+      activityTypeId
       daysOfWeek
       startTime
       endTime
@@ -58,13 +51,15 @@ const CREATE_TIME_BLOCK = gql`
   }
 `;
 
+// ─── Constants ─────────────────────────────────────────────────────────────
+
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
+
 // ─── Validation Schema ──────────────────────────────────────────────────────
 
 const timeBlockSchema = z
   .object({
-    activityType: z.enum(ACTIVITY_TYPES, {
-      message: 'Activity type is required',
-    }),
+    activityTypeId: z.string().optional(),
     daysOfWeek: z
       .array(z.number().int().min(0).max(6))
       .min(1, 'Select at least one day')
@@ -82,6 +77,14 @@ const timeBlockSchema = z
 
 type TimeBlockFormValues = z.infer<typeof timeBlockSchema>;
 
+// ─── Types ─────────────────────────────────────────────────────────────────
+
+interface ActivityType {
+  id: string;
+  name: string;
+  color: string;
+}
+
 // ─── Props ─────────────────────────────────────────────────────────────────
 
 type TimeBlockFormProps = {
@@ -92,13 +95,17 @@ type TimeBlockFormProps = {
 // ─── Component ─────────────────────────────────────────────────────────────
 
 export function TimeBlockForm({ open, onOpenChange }: TimeBlockFormProps) {
+  const { data: activityTypesData } = useQuery<{
+    myActivityTypes: ActivityType[];
+  }>(GET_MY_ACTIVITY_TYPES);
+
   const [createTimeBlock] = useMutation(CREATE_TIME_BLOCK, {
     refetchQueries: ['GetMyTimeBlocks'],
   });
 
   const form = useAppForm({
     defaultValues: {
-      activityType: '' as TimeBlockFormValues['activityType'],
+      activityTypeId: undefined,
       daysOfWeek: [1], // Monday by default
       startTime: '09:00',
       endTime: '10:00',
@@ -110,7 +117,7 @@ export function TimeBlockForm({ open, onOpenChange }: TimeBlockFormProps) {
       await createTimeBlock({
         variables: {
           input: {
-            activityType: value.activityType,
+            activityTypeId: value.activityTypeId,
             daysOfWeek: value.daysOfWeek,
             startTime: value.startTime,
             endTime: value.endTime,
@@ -134,28 +141,32 @@ export function TimeBlockForm({ open, onOpenChange }: TimeBlockFormProps) {
         <form.AppForm>
           <Form className="space-y-4">
             {/* Activity Type */}
-            <form.AppField name="activityType">
+            <form.AppField name="activityTypeId">
               {(field) => (
                 <Field>
                   <FieldLabel>Activity Type</FieldLabel>
                   <FieldControl>
                     <Select
-                      value={field.state.value}
-                      onValueChange={(v) =>
-                        field.handleChange(
-                          v as TimeBlockFormValues['activityType'],
-                        )
-                      }
+                      value={field.state.value ?? ''}
+                      onValueChange={(v) => field.handleChange(v || undefined)}
                     >
                       <SelectTrigger onBlur={field.handleBlur}>
-                        <SelectValue placeholder="Select a type..." />
+                        <SelectValue placeholder="Select activity type (optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        {ACTIVITY_TYPES.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type.charAt(0).toUpperCase() + type.slice(1)}
-                          </SelectItem>
-                        ))}
+                        {(activityTypesData?.myActivityTypes ?? []).map(
+                          (at) => (
+                            <SelectItem key={at.id} value={at.id}>
+                              <span className="flex items-center gap-2">
+                                <span
+                                  className="inline-block h-3 w-3 rounded-full flex-shrink-0"
+                                  style={{ backgroundColor: at.color }}
+                                />
+                                {at.name}
+                              </span>
+                            </SelectItem>
+                          ),
+                        )}
                       </SelectContent>
                     </Select>
                   </FieldControl>

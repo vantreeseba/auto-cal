@@ -24,23 +24,20 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useAppForm } from '@/hooks/form-hook';
-import { gql, useMutation } from '@apollo/client';
+import { gql, useMutation, useQuery } from '@apollo/client';
 import { z } from 'zod';
 
-// ─── Activity Types (kept in sync with @auto-cal/db enums) ────────────────
-
-const ACTIVITY_TYPES = [
-  'work',
-  'exercise',
-  'learning',
-  'personal',
-  'social',
-  'chores',
-  'creative',
-  'other',
-] as const;
-
 // ─── GraphQL Operations ────────────────────────────────────────────────────
+
+const GET_MY_ACTIVITY_TYPES = gql`
+  query GetActivityTypesForHabitForm {
+    myActivityTypes {
+      id
+      name
+      color
+    }
+  }
+`;
 
 const CREATE_HABIT = gql`
   mutation CreateHabit($input: CreateHabitArgs!) {
@@ -48,7 +45,7 @@ const CREATE_HABIT = gql`
       id
       title
       description
-      activityType
+      activityTypeId
       priority
       estimatedLength
       frequencyCount
@@ -87,9 +84,7 @@ const FREQUENCY_UNIT_OPTIONS = [
 const habitSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Max 200 characters'),
   description: z.string().max(2000, 'Max 2000 characters').optional(),
-  activityType: z.enum(ACTIVITY_TYPES, {
-    message: 'Activity type is required',
-  }),
+  activityTypeId: z.string().optional(),
   priority: z.number().int().min(0).max(100),
   estimatedLength: z.number().int().min(1, 'Duration is required').max(1440),
   frequencyCount: z
@@ -104,6 +99,14 @@ const habitSchema = z.object({
 
 type HabitFormValues = z.infer<typeof habitSchema>;
 
+// ─── Types ─────────────────────────────────────────────────────────────────
+
+interface ActivityType {
+  id: string;
+  name: string;
+  color: string;
+}
+
 // ─── Props ─────────────────────────────────────────────────────────────────
 
 type HabitFormProps = {
@@ -114,6 +117,10 @@ type HabitFormProps = {
 // ─── Component ─────────────────────────────────────────────────────────────
 
 export function HabitForm({ open, onOpenChange }: HabitFormProps) {
+  const { data: activityTypesData } = useQuery<{
+    myActivityTypes: ActivityType[];
+  }>(GET_MY_ACTIVITY_TYPES);
+
   const [createHabit] = useMutation(CREATE_HABIT, {
     refetchQueries: ['GetMyHabits'],
   });
@@ -122,7 +129,7 @@ export function HabitForm({ open, onOpenChange }: HabitFormProps) {
     defaultValues: {
       title: '',
       description: '',
-      activityType: '' as HabitFormValues['activityType'],
+      activityTypeId: undefined,
       priority: 0,
       estimatedLength: 30,
       frequencyCount: 1,
@@ -186,26 +193,32 @@ export function HabitForm({ open, onOpenChange }: HabitFormProps) {
             </form.AppField>
 
             {/* Activity Type */}
-            <form.AppField name="activityType">
+            <form.AppField name="activityTypeId">
               {(field) => (
                 <Field>
                   <FieldLabel>Activity Type</FieldLabel>
                   <FieldControl>
                     <Select
-                      value={field.state.value}
-                      onValueChange={(v) =>
-                        field.handleChange(v as HabitFormValues['activityType'])
-                      }
+                      value={field.state.value ?? ''}
+                      onValueChange={(v) => field.handleChange(v || undefined)}
                     >
                       <SelectTrigger onBlur={field.handleBlur}>
-                        <SelectValue placeholder="Select a type..." />
+                        <SelectValue placeholder="Select activity type (optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        {ACTIVITY_TYPES.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type.charAt(0).toUpperCase() + type.slice(1)}
-                          </SelectItem>
-                        ))}
+                        {(activityTypesData?.myActivityTypes ?? []).map(
+                          (at) => (
+                            <SelectItem key={at.id} value={at.id}>
+                              <span className="flex items-center gap-2">
+                                <span
+                                  className="inline-block h-3 w-3 rounded-full flex-shrink-0"
+                                  style={{ backgroundColor: at.color }}
+                                />
+                                {at.name}
+                              </span>
+                            </SelectItem>
+                          ),
+                        )}
                       </SelectContent>
                     </Select>
                   </FieldControl>
