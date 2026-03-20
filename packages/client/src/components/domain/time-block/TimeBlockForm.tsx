@@ -1,3 +1,12 @@
+import type {
+  CreateTimeBlockMutation,
+  CreateTimeBlockMutationVariables,
+  TimeBlockListFieldsFragment,
+  UpdateTimeBlockMutation,
+  UpdateTimeBlockMutationVariables,
+} from '@/__generated__/graphql.js';
+import { graphql } from '@/__generated__/index.js';
+import { ActivityTypeSelect } from '@/components/domain/activity-type/ActivityTypeSelect';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -15,41 +24,44 @@ import {
   Form,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useAppForm } from '@/hooks/form-hook';
 import { cn } from '@/lib/utils';
-import { gql, useMutation, useQuery } from '@apollo/client';
+import { useMutation } from '@apollo/client';
 import { z } from 'zod';
 
 // ─── GraphQL Operations ────────────────────────────────────────────────────
 
-const GET_MY_ACTIVITY_TYPES = gql`
-  query GetActivityTypesForTimeBlockForm {
-    myActivityTypes {
-      id
-      name
-      color
-    }
-  }
-`;
-
-const CREATE_TIME_BLOCK = gql`
+const CREATE_TIME_BLOCK = graphql(`
   mutation CreateTimeBlock($input: CreateTimeBlockArgs!) {
     myCreateTimeBlock(input: $input) {
       id
-      activityTypeId
+      activityType {
+        id
+        name
+        color
+      }
       daysOfWeek
       startTime
       endTime
     }
   }
-`;
+`);
+
+const UPDATE_TIME_BLOCK = graphql(`
+  mutation UpdateTimeBlock($input: UpdateTimeBlockArgs!) {
+    myUpdateTimeBlock(input: $input) {
+      id
+      activityType {
+        id
+        name
+        color
+      }
+      daysOfWeek
+      startTime
+      endTime
+    }
+  }
+`);
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -59,7 +71,7 @@ const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 
 const timeBlockSchema = z
   .object({
-    activityTypeId: z.string().optional(),
+    activityTypeId: z.string().uuid().optional(),
     daysOfWeek: z
       .array(z.number().int().min(0).max(6))
       .min(1, 'Select at least one day')
@@ -77,53 +89,72 @@ const timeBlockSchema = z
 
 type TimeBlockFormValues = z.infer<typeof timeBlockSchema>;
 
-// ─── Types ─────────────────────────────────────────────────────────────────
-
-interface ActivityType {
-  id: string;
-  name: string;
-  color: string;
-}
-
 // ─── Props ─────────────────────────────────────────────────────────────────
 
 type TimeBlockFormProps = {
+  timeBlock?: TimeBlockListFieldsFragment;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
 
 // ─── Component ─────────────────────────────────────────────────────────────
 
-export function TimeBlockForm({ open, onOpenChange }: TimeBlockFormProps) {
-  const { data: activityTypesData } = useQuery<{
-    myActivityTypes: ActivityType[];
-  }>(GET_MY_ACTIVITY_TYPES);
+export function TimeBlockForm({
+  timeBlock,
+  open,
+  onOpenChange,
+}: TimeBlockFormProps) {
+  const isEdit = timeBlock !== undefined;
 
-  const [createTimeBlock] = useMutation(CREATE_TIME_BLOCK, {
+  const [createTimeBlock] = useMutation<
+    CreateTimeBlockMutation,
+    CreateTimeBlockMutationVariables
+  >(CREATE_TIME_BLOCK, {
+    refetchQueries: ['GetMyTimeBlocks'],
+  });
+
+  const [updateTimeBlock] = useMutation<
+    UpdateTimeBlockMutation,
+    UpdateTimeBlockMutationVariables
+  >(UPDATE_TIME_BLOCK, {
     refetchQueries: ['GetMyTimeBlocks'],
   });
 
   const form = useAppForm({
     defaultValues: {
-      activityTypeId: undefined,
-      daysOfWeek: [1], // Monday by default
-      startTime: '09:00',
-      endTime: '10:00',
+      activityTypeId: timeBlock?.activityType?.id ?? undefined,
+      daysOfWeek: timeBlock?.daysOfWeek ?? [1],
+      startTime: timeBlock?.startTime ?? '09:00',
+      endTime: timeBlock?.endTime ?? '10:00',
     } as TimeBlockFormValues,
     validators: {
       onChange: timeBlockSchema,
     },
     onSubmit: async ({ value }) => {
-      await createTimeBlock({
-        variables: {
-          input: {
-            activityTypeId: value.activityTypeId,
-            daysOfWeek: value.daysOfWeek,
-            startTime: value.startTime,
-            endTime: value.endTime,
+      if (isEdit && timeBlock) {
+        await updateTimeBlock({
+          variables: {
+            input: {
+              id: timeBlock.id,
+              activityTypeId: value.activityTypeId ?? null,
+              daysOfWeek: value.daysOfWeek,
+              startTime: value.startTime,
+              endTime: value.endTime,
+            },
           },
-        },
-      });
+        });
+      } else {
+        await createTimeBlock({
+          variables: {
+            input: {
+              activityTypeId: value.activityTypeId ?? null,
+              daysOfWeek: value.daysOfWeek,
+              startTime: value.startTime,
+              endTime: value.endTime,
+            },
+          },
+        });
+      }
       onOpenChange(false);
     },
   });
@@ -132,9 +163,13 @@ export function TimeBlockForm({ open, onOpenChange }: TimeBlockFormProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>New Time Block</DialogTitle>
+          <DialogTitle>
+            {isEdit ? 'Edit Time Block' : 'New Time Block'}
+          </DialogTitle>
           <DialogDescription>
-            Define a recurring time slot for a specific activity type.
+            {isEdit
+              ? 'Update the details of this time block.'
+              : 'Define a recurring time slot for a specific activity type.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -144,31 +179,13 @@ export function TimeBlockForm({ open, onOpenChange }: TimeBlockFormProps) {
             <form.AppField name="activityTypeId">
               {(field) => (
                 <Field>
-                  <FieldLabel>Activity Type</FieldLabel>
+                  <FieldLabel>Activity Type (optional)</FieldLabel>
                   <FieldControl>
-                    <Select
-                      value={field.state.value ?? ''}
-                      onValueChange={(v) => field.handleChange(v || undefined)}
-                    >
-                      <SelectTrigger onBlur={field.handleBlur}>
-                        <SelectValue placeholder="Select activity type (optional)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(activityTypesData?.myActivityTypes ?? []).map(
-                          (at) => (
-                            <SelectItem key={at.id} value={at.id}>
-                              <span className="flex items-center gap-2">
-                                <span
-                                  className="inline-block h-3 w-3 rounded-full flex-shrink-0"
-                                  style={{ backgroundColor: at.color }}
-                                />
-                                {at.name}
-                              </span>
-                            </SelectItem>
-                          ),
-                        )}
-                      </SelectContent>
-                    </Select>
+                    <ActivityTypeSelect
+                      value={field.state.value}
+                      onValueChange={(v) => field.handleChange(v)}
+                      onBlur={field.handleBlur}
+                    />
                   </FieldControl>
                   <FieldError />
                 </Field>
@@ -179,7 +196,9 @@ export function TimeBlockForm({ open, onOpenChange }: TimeBlockFormProps) {
             <form.AppField name="daysOfWeek">
               {(field) => (
                 <div className="space-y-2">
-                  <FieldLabel>Days of Week</FieldLabel>
+                  <p className="text-sm font-medium leading-none">
+                    Days of Week
+                  </p>
                   <div className="flex gap-1 flex-wrap">
                     {DAY_NAMES.map((day, index) => {
                       const current = field.state.value as number[];
@@ -283,7 +302,11 @@ export function TimeBlockForm({ open, onOpenChange }: TimeBlockFormProps) {
                       Cancel
                     </Button>
                     <Button type="submit" disabled={!canSubmit}>
-                      {isSubmitting ? 'Saving...' : 'Create Time Block'}
+                      {isSubmitting
+                        ? 'Saving...'
+                        : isEdit
+                          ? 'Save Changes'
+                          : 'Create Time Block'}
                     </Button>
                   </>
                 )}

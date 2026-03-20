@@ -5,7 +5,17 @@ import {
   timeBlocks,
   todos,
 } from '@auto-cal/db/schema';
-import { and, desc, eq, gte, isNotNull, isNull, lte, sql } from 'drizzle-orm';
+import {
+  and,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  sql,
+} from 'drizzle-orm';
 import {
   type GraphQLObjectType,
   type GraphQLSchema,
@@ -14,6 +24,12 @@ import {
 } from 'graphql';
 import { z } from 'zod';
 import type { Context } from '../context.ts';
+import {
+  computeSchedule,
+  startOfISOWeek,
+  startOfISOWeekStr,
+  startOfLocalMonth,
+} from '../services/scheduler.ts';
 
 // Zod validation schemas
 const CreateActivityTypeInput = z.object({
@@ -85,6 +101,46 @@ const CompleteHabitInput = z.object({
   scheduledAt: z.string().datetime().optional(),
 });
 
+const UpdateHabitInput = z.object({
+  id: z.string().uuid(),
+  title: z.string().min(1).max(200).optional(),
+  description: z.string().max(2000).optional(),
+  priority: z.number().int().min(0).max(100).optional(),
+  estimatedLength: z.number().int().min(1).max(1440).optional(),
+  activityTypeId: z.string().uuid().nullable().optional(),
+  frequencyCount: z.number().int().positive().min(1).max(30).optional(),
+  frequencyUnit: z.enum(['week', 'month'] as const).optional(),
+});
+
+const UpdateTimeBlockInput = z
+  .object({
+    id: z.string().uuid(),
+    activityTypeId: z.string().uuid().nullable().optional(),
+    daysOfWeek: z
+      .array(z.number().int().min(0).max(6))
+      .min(1)
+      .max(7)
+      .refine((days) => new Set(days).size === days.length, {
+        message: 'Days of week must be unique',
+      })
+      .optional(),
+    startTime: z
+      .string()
+      .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+      .optional(),
+    endTime: z
+      .string()
+      .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+      .optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.startTime && data.endTime) return data.endTime > data.startTime;
+      return true;
+    },
+    { message: 'End time must be after start time', path: ['endTime'] },
+  );
+
 // SDL extension
 const extensionSDL = `
   type ActivityTypeStats {
@@ -100,6 +156,48 @@ const extensionSDL = `
     title: String!
     completionRate: Float!
     totalCompletions: Int!
+  }
+
+  type HabitPeriod {
+    label: String!
+    periodStart: String!
+    periodEnd: String!
+    completions: Int!
+    target: Int!
+    rate: Float!
+  }
+
+  type HabitDetail {
+    habitId: ID!
+    title: String!
+    description: String
+    priority: Int!
+    estimatedLength: Int!
+    frequencyCount: Int!
+    frequencyUnit: String!
+    activityType: ActivityType
+    totalCompletions: Int!
+    allTimeRate: Float!
+    periods: [HabitPeriod!]!
+  }
+
+  enum ScheduledItemKind {
+    todo
+    habit
+  }
+
+  type ScheduledItem {
+    kind: ScheduledItemKind!
+    id: ID!
+    title: String!
+    priority: Int!
+    estimatedLength: Int!
+    activityType: ActivityType
+    scheduledStart: String
+    scheduledEnd: String
+    isScheduled: Boolean!
+    isOverdue: Boolean!
+    completedAt: String
   }
 
   input CreateActivityTypeArgs {
@@ -149,9 +247,40 @@ const extensionSDL = `
     endTime: String!
   }
 
+  input UpdateHabitArgs {
+    id: ID!
+    title: String
+    description: String
+    priority: Int
+    estimatedLength: Int
+    activityTypeId: ID
+    frequencyCount: Int
+    frequencyUnit: String
+  }
+
+  input UpdateTimeBlockArgs {
+    id: ID!
+    activityTypeId: ID
+    daysOfWeek: [Int!]
+    startTime: String
+    endTime: String
+  }
+
   input CompleteHabitArgs {
     habitId: ID!
     scheduledAt: String
+  }
+
+  extend type Todo {
+    activityType: ActivityType
+  }
+
+  extend type Habit {
+    activityType: ActivityType
+  }
+
+  extend type TimeBlock {
+    activityType: ActivityType
   }
 
   extend type Query {
@@ -161,6 +290,8 @@ const extensionSDL = `
     myTimeBlocks(activityTypeId: ID, containsDay: Int): [TimeBlock!]!
     activityTypeStats(startDate: String, endDate: String): [ActivityTypeStats!]!
     habitStats(habitId: ID, startDate: String, endDate: String): [HabitStats!]!
+    myHabitDetail(habitId: ID!, periods: Int): HabitDetail!
+    mySchedule(weekStart: String): [ScheduledItem!]!
   }
 
   extend type Mutation {
@@ -173,6 +304,8 @@ const extensionSDL = `
     myDeleteTodo(id: ID!): Boolean!
     myCreateHabit(input: CreateHabitArgs!): Habit!
     myDeleteHabit(id: ID!): Boolean!
+    myUpdateHabit(input: UpdateHabitArgs!): Habit!
+    myUpdateTimeBlock(input: UpdateTimeBlockArgs!): TimeBlock!
     myCompleteHabit(input: CompleteHabitArgs!): HabitCompletion!
     myCreateTimeBlock(input: CreateTimeBlockArgs!): TimeBlock!
     myDeleteTimeBlock(id: ID!): Boolean!
@@ -217,10 +350,12 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     if (args.completed === true) conditions.push(isNotNull(todos.completedAt));
     else if (args.completed === false)
       conditions.push(isNull(todos.completedAt));
-    return context.db._query.todos.findMany({
+    const result = await context.db._query.todos.findMany({
       where: and(...conditions),
       orderBy: [desc(todos.priority), desc(todos.createdAt)],
     });
+
+    return result;
   };
 
   // --- Habit Queries ---
@@ -344,6 +479,253 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
       });
     }
     return results;
+  };
+
+  // --- Habit Detail Query ---
+
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  queryFields.myHabitDetail!.resolve = async (
+    _parent,
+    args: { habitId: string; periods?: number },
+    context: Context,
+  ) => {
+    if (!context.userId) throw new Error('Not authenticated');
+
+    const habit = await context.db._query.habits.findFirst({
+      where: eq(habits.id, args.habitId),
+    });
+    if (!habit) throw new Error(`Habit ${args.habitId} not found`);
+    if (habit.userId !== context.userId) throw new Error('Forbidden');
+
+    const activityType = habit.activityTypeId
+      ? await context.db._query.activityTypes.findFirst({
+          where: eq(activityTypes.id, habit.activityTypeId),
+        })
+      : null;
+
+    const numPeriods = Math.min(Math.max(args.periods ?? 8, 1), 26);
+
+    const now = new Date();
+    const isWeekly = habit.frequencyUnit === 'week';
+
+    function getPeriodBounds(index: number): {
+      start: Date;
+      end: Date;
+      label: string;
+    } {
+      if (isWeekly) {
+        const weekStart = startOfISOWeek(now);
+        const start = new Date(weekStart);
+        start.setDate(start.getDate() - index * 7);
+        const end = new Date(start);
+        end.setDate(end.getDate() + 7);
+        const label =
+          index === 0
+            ? 'This week'
+            : index === 1
+              ? 'Last week'
+              : `${index}w ago`;
+        return { start, end, label };
+      }
+      // monthly
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const targetMonth = month - index;
+      const start = new Date(year, targetMonth, 1);
+      const end = new Date(year, targetMonth + 1, 1);
+      const label = start.toLocaleString('default', {
+        month: 'short',
+        year: 'numeric',
+      });
+      return { start, end, label };
+    }
+
+    const allCompletions = await context.db._query.habitCompletions.findMany({
+      where: eq(habitCompletions.habitId, args.habitId),
+    });
+
+    const totalCompletions = allCompletions.length;
+    const allTimeRate = totalCompletions / habit.frequencyCount;
+
+    const periods = Array.from({ length: numPeriods }, (_, i) => {
+      const { start, end, label } = getPeriodBounds(i);
+      const count = allCompletions.filter(
+        (c) => c.completedAt >= start && c.completedAt < end,
+      ).length;
+      return {
+        label,
+        periodStart: start.toISOString().replace('Z', ''),
+        periodEnd: end.toISOString().replace('Z', ''),
+        completions: count,
+        target: habit.frequencyCount,
+        rate: count / habit.frequencyCount,
+      };
+    }).reverse();
+
+    return {
+      habitId: habit.id,
+      title: habit.title,
+      description: habit.description ?? null,
+      priority: habit.priority,
+      estimatedLength: habit.estimatedLength,
+      frequencyCount: habit.frequencyCount,
+      frequencyUnit: habit.frequencyUnit,
+      activityType: activityType ?? null,
+      totalCompletions,
+      allTimeRate,
+      periods,
+    };
+  };
+
+  // --- Schedule Query ---
+
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  queryFields.mySchedule!.resolve = async (
+    _parent,
+    args: { weekStart?: string },
+    context: Context,
+  ) => {
+    if (!context.userId) throw new Error('Not authenticated');
+
+    // Validate and determine week start as both a "YYYY-MM-DD" string and a Date
+    const weekStartStr = args.weekStart
+      ? (() => {
+          z.string().datetime().parse(args.weekStart);
+          return startOfISOWeekStr(new Date(args.weekStart));
+        })()
+      : startOfISOWeekStr(new Date());
+
+    const weekStart = startOfISOWeek(new Date(`${weekStartStr}T00:00:00`));
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+
+    const monthStart = startOfLocalMonth(weekStart);
+    const monthEnd = new Date(
+      monthStart.getFullYear(),
+      monthStart.getMonth() + 1,
+      1,
+    );
+
+    // Fetch user-scoped data first (habits needed to scope completions)
+    const [
+      userTimeBlocks,
+      userTodos,
+      userCompletedTodos,
+      userHabits,
+      userActivityTypes,
+    ] = await Promise.all([
+      context.db._query.timeBlocks.findMany({
+        where: eq(timeBlocks.userId, context.userId),
+      }),
+      context.db._query.todos.findMany({
+        where: and(
+          eq(todos.userId, context.userId),
+          isNull(todos.completedAt),
+          isNotNull(todos.activityTypeId),
+        ),
+        orderBy: [desc(todos.priority)],
+      }),
+      context.db._query.todos.findMany({
+        where: and(
+          eq(todos.userId, context.userId),
+          isNotNull(todos.completedAt),
+          isNotNull(todos.activityTypeId),
+        ),
+      }),
+      context.db._query.habits.findMany({
+        where: and(
+          eq(habits.userId, context.userId),
+          isNotNull(habits.activityTypeId),
+        ),
+      }),
+      context.db._query.activityTypes.findMany({
+        where: eq(activityTypes.userId, context.userId),
+      }),
+    ]);
+
+    // habit_completions has no userId — scope by the user's own habit IDs
+    const userHabitIds = userHabits.map((h) => h.id);
+
+    // Guard: if user has no habits, skip completion queries entirely
+    const [weekCompletions, monthCompletions] =
+      userHabitIds.length === 0
+        ? [[], []]
+        : await Promise.all([
+            context.db._query.habitCompletions.findMany({
+              where: and(
+                inArray(habitCompletions.habitId, userHabitIds),
+                gte(habitCompletions.completedAt, weekStart),
+                lte(habitCompletions.completedAt, weekEnd),
+              ),
+            }),
+            context.db._query.habitCompletions.findMany({
+              where: and(
+                inArray(habitCompletions.habitId, userHabitIds),
+                gte(habitCompletions.completedAt, monthStart),
+                lte(habitCompletions.completedAt, monthEnd),
+              ),
+            }),
+          ]);
+
+    // Build activity type lookup map
+    const activityTypeMap = new Map(userActivityTypes.map((at) => [at.id, at]));
+
+    // Build completion count maps
+    const weekCompletionCounts = new Map<string, number>();
+    for (const c of weekCompletions) {
+      weekCompletionCounts.set(
+        c.habitId,
+        (weekCompletionCounts.get(c.habitId) ?? 0) + 1,
+      );
+    }
+    const monthCompletionCounts = new Map<string, number>();
+    for (const c of monthCompletions) {
+      monthCompletionCounts.set(
+        c.habitId,
+        (monthCompletionCounts.get(c.habitId) ?? 0) + 1,
+      );
+    }
+
+    // Expand habits into instances — one per remaining occurrence needed this period
+    const habitInstances: Array<
+      (typeof userHabits)[number] & { instanceIndex: number }
+    > = [];
+    for (const h of userHabits) {
+      if (!h.activityTypeId) continue; // skip unassignable habits
+      const counts =
+        h.frequencyUnit === 'week'
+          ? weekCompletionCounts
+          : monthCompletionCounts;
+      const done = counts.get(h.id) ?? 0;
+      const deficit = h.frequencyCount - done;
+      if (deficit <= 0) continue;
+      for (let i = 0; i < deficit; i++) {
+        habitInstances.push({ ...h, instanceIndex: i });
+      }
+    }
+
+    // Compute schedule — returns naive ISO strings (no Z suffix) for local-time rendering
+    const items = computeSchedule(
+      weekStartStr,
+      userTimeBlocks,
+      userTodos,
+      habitInstances,
+      activityTypeMap,
+    );
+
+    // Attach completedAt for todo items
+    const todoCompletedAtMap = new Map(
+      userCompletedTodos.map((t) => [t.id, t.completedAt]),
+    );
+
+    return items.map((item) => ({
+      ...item,
+      completedAt:
+        item.kind === 'todo'
+          ? (todoCompletedAtMap.get(item.id)?.toISOString().replace('Z', '') ??
+            null)
+          : null,
+    }));
   };
 
   // --- ActivityType Mutations ---
@@ -557,6 +939,77 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   };
 
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  mutationFields.myUpdateHabit!.resolve = async (
+    _parent,
+    args: { input: unknown },
+    context: Context,
+  ) => {
+    if (!context.userId) throw new Error('Not authenticated');
+    const input = UpdateHabitInput.parse(args.input);
+    const existing = await context.db._query.habits.findFirst({
+      where: eq(habits.id, input.id),
+    });
+    if (!existing) throw new Error(`Habit ${input.id} not found`);
+    if (existing.userId !== context.userId) throw new Error('Forbidden');
+    const [updated] = await context.db
+      .update(habits)
+      .set({
+        ...(input.title !== undefined && { title: input.title }),
+        ...(input.description !== undefined && {
+          description: input.description,
+        }),
+        ...(input.priority !== undefined && { priority: input.priority }),
+        ...(input.estimatedLength !== undefined && {
+          estimatedLength: input.estimatedLength,
+        }),
+        ...(input.activityTypeId !== undefined && {
+          activityTypeId: input.activityTypeId,
+        }),
+        ...(input.frequencyCount !== undefined && {
+          frequencyCount: input.frequencyCount,
+        }),
+        ...(input.frequencyUnit !== undefined && {
+          frequencyUnit: input.frequencyUnit,
+        }),
+        updatedAt: new Date(),
+      })
+      .where(eq(habits.id, input.id))
+      .returning();
+    if (!updated) throw new Error(`Failed to update habit ${input.id}`);
+    return updated;
+  };
+
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  mutationFields.myUpdateTimeBlock!.resolve = async (
+    _parent,
+    args: { input: unknown },
+    context: Context,
+  ) => {
+    if (!context.userId) throw new Error('Not authenticated');
+    const input = UpdateTimeBlockInput.parse(args.input);
+    const existing = await context.db._query.timeBlocks.findFirst({
+      where: eq(timeBlocks.id, input.id),
+    });
+    if (!existing) throw new Error(`TimeBlock ${input.id} not found`);
+    if (existing.userId !== context.userId) throw new Error('Forbidden');
+    const [updated] = await context.db
+      .update(timeBlocks)
+      .set({
+        ...(input.activityTypeId !== undefined && {
+          activityTypeId: input.activityTypeId,
+        }),
+        ...(input.daysOfWeek !== undefined && { daysOfWeek: input.daysOfWeek }),
+        ...(input.startTime !== undefined && { startTime: input.startTime }),
+        ...(input.endTime !== undefined && { endTime: input.endTime }),
+        updatedAt: new Date(),
+      })
+      .where(eq(timeBlocks.id, input.id))
+      .returning();
+    if (!updated) throw new Error(`Failed to update time block ${input.id}`);
+    return updated;
+  };
+
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
   mutationFields.myCompleteHabit!.resolve = async (
     _parent,
     args: { input: unknown },
@@ -619,6 +1072,49 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     if (existing.userId !== context.userId) throw new Error('Forbidden');
     await context.db.delete(timeBlocks).where(eq(timeBlocks.id, args.id));
     return true;
+  };
+
+  // --- ActivityType Field Resolvers ---
+
+  type RowWithActivityTypeId = { activityTypeId?: string | null };
+
+  const todoType = extended.getType('Todo') as GraphQLObjectType;
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  todoType.getFields().activityType!.resolve = async (
+    parent: RowWithActivityTypeId,
+    _args,
+    context: Context,
+  ) => {
+    if (!parent.activityTypeId) return null;
+    return context.db._query.activityTypes.findFirst({
+      where: eq(activityTypes.id, parent.activityTypeId),
+    });
+  };
+
+  const habitType = extended.getType('Habit') as GraphQLObjectType;
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  habitType.getFields().activityType!.resolve = async (
+    parent: RowWithActivityTypeId,
+    _args,
+    context: Context,
+  ) => {
+    if (!parent.activityTypeId) return null;
+    return context.db._query.activityTypes.findFirst({
+      where: eq(activityTypes.id, parent.activityTypeId),
+    });
+  };
+
+  const timeBlockType = extended.getType('TimeBlock') as GraphQLObjectType;
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  timeBlockType.getFields().activityType!.resolve = async (
+    parent: RowWithActivityTypeId,
+    _args,
+    context: Context,
+  ) => {
+    if (!parent.activityTypeId) return null;
+    return context.db._query.activityTypes.findFirst({
+      where: eq(activityTypes.id, parent.activityTypeId),
+    });
   };
 
   return extended;

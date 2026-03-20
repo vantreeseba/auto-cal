@@ -1,8 +1,14 @@
-import { gql, useMutation } from '@apollo/client';
-import { Trash2 } from 'lucide-react';
-import { z } from 'zod';
-import { useAppForm } from '../hooks/form-hook';
-import { Button } from './ui/button';
+import type {
+  CreateActivityTypeMutation,
+  CreateActivityTypeMutationVariables,
+  DeleteActivityTypeMutation,
+  DeleteActivityTypeMutationVariables,
+  MyActivityTypesQuery,
+  UpdateActivityTypeMutation,
+  UpdateActivityTypeMutationVariables,
+} from '@/__generated__/graphql.js';
+import { graphql } from '@/__generated__/index.js';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -10,41 +16,47 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from './ui/dialog';
-import { Field, FieldControl, FieldError, FieldLabel, Form } from './ui/form';
-import { Input } from './ui/input';
+} from '@/components/ui/dialog';
+import {
+  Field,
+  FieldControl,
+  FieldError,
+  FieldLabel,
+  Form,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { useAppForm } from '@/hooks/form-hook';
+import { useMutation } from '@apollo/client';
+import { Trash2 } from 'lucide-react';
+import { z } from 'zod';
 
-// ─── GraphQL Operations ─────────────────────────────────────────────────────
+// ─── GraphQL Operations ────────────────────────────────────────────────────
 
-const CREATE_ACTIVITY_TYPE = gql`
+const CREATE_ACTIVITY_TYPE = graphql(`
   mutation CreateActivityType($input: CreateActivityTypeArgs!) {
     myCreateActivityType(input: $input) {
       id
       name
       color
-      createdAt
-      updatedAt
     }
   }
-`;
+`);
 
-const UPDATE_ACTIVITY_TYPE = gql`
+const UPDATE_ACTIVITY_TYPE = graphql(`
   mutation UpdateActivityType($input: UpdateActivityTypeArgs!) {
     myUpdateActivityType(input: $input) {
       id
       name
       color
-      createdAt
-      updatedAt
     }
   }
-`;
+`);
 
-const DELETE_ACTIVITY_TYPE = gql`
+const DELETE_ACTIVITY_TYPE = graphql(`
   mutation DeleteActivityType($id: ID!) {
     myDeleteActivityType(id: $id)
   }
-`;
+`);
 
 // ─── Validation Schema ──────────────────────────────────────────────────────
 
@@ -59,38 +71,37 @@ type ActivityTypeFormValues = z.infer<typeof activityTypeSchema>;
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-interface ActivityType {
-  id: string;
-  name: string;
-  color: string;
-}
+type ActivityTypeItem = MyActivityTypesQuery['myActivityTypes'][number];
 
 interface ActivityTypeFormProps {
-  activityType?: ActivityType;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  activityType?: ActivityTypeItem;
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export function ActivityTypeForm({
-  activityType,
   open,
   onOpenChange,
+  activityType,
 }: ActivityTypeFormProps) {
-  const isEdit = !!activityType;
+  const isEdit = activityType !== undefined;
 
-  const [createActivityType] = useMutation(CREATE_ACTIVITY_TYPE, {
-    refetchQueries: ['GetMyActivityTypes'],
-  });
+  const [createActivityType] = useMutation<
+    CreateActivityTypeMutation,
+    CreateActivityTypeMutationVariables
+  >(CREATE_ACTIVITY_TYPE, { refetchQueries: ['MyActivityTypes'] });
 
-  const [updateActivityType] = useMutation(UPDATE_ACTIVITY_TYPE, {
-    refetchQueries: ['GetMyActivityTypes'],
-  });
+  const [updateActivityType] = useMutation<
+    UpdateActivityTypeMutation,
+    UpdateActivityTypeMutationVariables
+  >(UPDATE_ACTIVITY_TYPE, { refetchQueries: ['MyActivityTypes'] });
 
-  const [deleteActivityType] = useMutation(DELETE_ACTIVITY_TYPE, {
-    refetchQueries: ['GetMyActivityTypes'],
-  });
+  const [deleteActivityType] = useMutation<
+    DeleteActivityTypeMutation,
+    DeleteActivityTypeMutationVariables
+  >(DELETE_ACTIVITY_TYPE, { refetchQueries: ['MyActivityTypes'] });
 
   const form = useAppForm({
     defaultValues: {
@@ -99,22 +110,30 @@ export function ActivityTypeForm({
     } as ActivityTypeFormValues,
     validators: { onChange: activityTypeSchema },
     onSubmit: async ({ value }) => {
-      if (isEdit && activityType) {
+      if (isEdit) {
         await updateActivityType({
-          variables: { input: { id: activityType.id, ...value } },
+          variables: {
+            input: {
+              id: activityType.id,
+              name: value.name,
+              color: value.color,
+            },
+          },
         });
       } else {
-        await createActivityType({ variables: { input: value } });
+        await createActivityType({
+          variables: { input: { name: value.name, color: value.color } },
+        });
       }
       onOpenChange(false);
     },
   });
 
-  const handleDelete = async () => {
-    if (!activityType) return;
+  async function handleDelete() {
+    if (!isEdit) return;
     await deleteActivityType({ variables: { id: activityType.id } });
     onOpenChange(false);
-  };
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -125,8 +144,8 @@ export function ActivityTypeForm({
           </DialogTitle>
           <DialogDescription>
             {isEdit
-              ? 'Update the name or color of this activity type.'
-              : 'Create a new activity type to categorize your todos, habits, and time blocks.'}
+              ? 'Update this activity type used to categorize your tasks.'
+              : 'Create an activity type to categorize your todos, habits, and time blocks.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -136,18 +155,10 @@ export function ActivityTypeForm({
               {/* Name */}
               <form.AppField name="name">
                 {(field) => (
-                  <Field>
-                    <FieldLabel>Name</FieldLabel>
-                    <FieldControl>
-                      <Input
-                        placeholder="e.g. Work, Exercise, Learning"
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        onBlur={field.handleBlur}
-                      />
-                    </FieldControl>
-                    <FieldError />
-                  </Field>
+                  <field.InputField
+                    label="Name"
+                    placeholder="e.g. Work, Exercise, Learning"
+                  />
                 )}
               </form.AppField>
 

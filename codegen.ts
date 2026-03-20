@@ -17,7 +17,8 @@ const config: CodegenConfig = {
   generates: {
     [`${path.resolve(__dirname, 'packages/client/src/__generated__')}/`]: {
       preset: 'client',
-      config: { documentMode: 'string' },
+      presetConfig: { fragmentMasking: false },
+//       config: { documentMode: 'string' },
     },
   },
 };
