@@ -232,10 +232,14 @@ function App() {
                     Error loading todos: {todosError.message}
                   </p>
                 )}
-                {todosData?.myTodos.length === 0 && (
-                  <p className="text-muted-foreground">
-                    No todos yet. Create your first one!
-                  </p>
+                {!todosLoading && todosData?.myTodos.length === 0 && (
+                  <div className="flex flex-col items-center gap-3 py-8 text-center">
+                    <p className="text-muted-foreground">No todos yet.</p>
+                    <Button size="sm" onClick={openCreateTodo}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create your first todo
+                    </Button>
+                  </div>
                 )}
                 <div className="space-y-2">
                   {todosData?.myTodos.map((todo) => {
@@ -314,10 +318,14 @@ function App() {
                     Error loading habits: {habitsError.message}
                   </p>
                 )}
-                {habitsData?.myHabits.length === 0 && (
-                  <p className="text-muted-foreground">
-                    No habits yet. Create your first one!
-                  </p>
+                {!habitsLoading && habitsData?.myHabits.length === 0 && (
+                  <div className="flex flex-col items-center gap-3 py-8 text-center">
+                    <p className="text-muted-foreground">No habits yet.</p>
+                    <Button size="sm" onClick={() => setHabitFormOpen(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create your first habit
+                    </Button>
+                  </div>
                 )}
                 <div className="space-y-2">
                   {habitsData?.myHabits.map((habit) => {
@@ -385,11 +393,21 @@ function App() {
                     Error loading time blocks: {timeBlocksError.message}
                   </p>
                 )}
-                {timeBlocksData?.myTimeBlocks.length === 0 && (
-                  <p className="text-muted-foreground">
-                    No time blocks yet. Create your first one!
-                  </p>
-                )}
+                {!timeBlocksLoading &&
+                  timeBlocksData?.myTimeBlocks.length === 0 && (
+                    <div className="flex flex-col items-center gap-3 py-8 text-center">
+                      <p className="text-muted-foreground">
+                        No time blocks yet.
+                      </p>
+                      <Button
+                        size="sm"
+                        onClick={() => setTimeBlockFormOpen(true)}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create your first time block
+                      </Button>
+                    </div>
+                  )}
                 <div className="space-y-2">
                   {timeBlocksData?.myTimeBlocks.map((block) => {
                     const actType = block.activityTypeId
