@@ -14,6 +14,7 @@ import {
 } from 'graphql';
 import { z } from 'zod';
 import type { Context } from '../context.ts';
+import { persistScheduleForUser } from '../services/scheduler.ts';
 
 // Zod validation schemas
 const CreateActivityTypeInput = z.object({
@@ -176,6 +177,7 @@ const extensionSDL = `
     myCompleteHabit(input: CompleteHabitArgs!): HabitCompletion!
     myCreateTimeBlock(input: CreateTimeBlockArgs!): TimeBlock!
     myDeleteTimeBlock(id: ID!): Boolean!
+    myReschedule: Boolean!
   }
 `;
 
@@ -435,6 +437,9 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
       })
       .returning();
     if (!todo) throw new Error('Failed to create todo');
+    persistScheduleForUser(context.userId, context.db).catch((err) =>
+      console.error('Failed to persist schedule:', err),
+    );
     return todo;
   };
 
@@ -473,6 +478,9 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
       .where(eq(todos.id, input.id))
       .returning();
     if (!updated) throw new Error(`Failed to update todo ${input.id}`);
+    persistScheduleForUser(context.userId, context.db).catch((err) =>
+      console.error('Failed to persist schedule:', err),
+    );
     return updated;
   };
 
@@ -602,6 +610,9 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
       })
       .returning();
     if (!block) throw new Error('Failed to create time block');
+    persistScheduleForUser(context.userId, context.db).catch((err) =>
+      console.error('Failed to persist schedule:', err),
+    );
     return block;
   };
 
@@ -618,6 +629,20 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     if (!existing) throw new Error(`Time block ${args.id} not found`);
     if (existing.userId !== context.userId) throw new Error('Forbidden');
     await context.db.delete(timeBlocks).where(eq(timeBlocks.id, args.id));
+    persistScheduleForUser(context.userId, context.db).catch((err) =>
+      console.error('Failed to persist schedule:', err),
+    );
+    return true;
+  };
+
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  mutationFields.myReschedule!.resolve = async (
+    _parent,
+    _args,
+    context: Context,
+  ) => {
+    if (!context.userId) throw new Error('Not authenticated');
+    await persistScheduleForUser(context.userId, context.db);
     return true;
   };
 
