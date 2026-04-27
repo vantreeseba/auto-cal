@@ -14,7 +14,8 @@
     "db:studio": "env-cmd -f ../../.env drizzle-kit studio"
   },
   "dependencies": {
-    "@electric-sql/pglite": "^0.2.15"
+    "@electric-sql/pglite": "^0.2.15",
+    "postgres": "^3.4.9"
   },
   "peerDependencies": {
     "drizzle-orm": "~1.0.0-beta"

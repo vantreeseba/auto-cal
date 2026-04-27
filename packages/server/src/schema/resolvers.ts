@@ -1,4 +1,5 @@
 import {
+  type Todo,
   activityTypes,
   habitCompletions,
   habits,
@@ -289,7 +290,9 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
       const allTodos = await context.db._query.todos.findMany({
         where: and(...todoConditions),
       });
-      const completedTodos = allTodos.filter((t) => t.completedAt !== null);
+      const completedTodos = allTodos.filter(
+        (t: Todo) => t.completedAt !== null,
+      );
       const habitConditions = [
         eq(habits.userId, context.userId),
         eq(habits.activityTypeId, activityType.id),

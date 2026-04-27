@@ -104,7 +104,7 @@ Embedded Postgres — no separate database server needed. Perfect for:
 - Embedded deployments
 - Testing
 
-Can swap for full Postgres in production by changing the connection string.
+**Switching to full Postgres:** Set the `DATABASE_URL` environment variable (e.g. `postgresql://user:password@localhost:5432/autocal`) and the runtime will automatically use the `postgres.js` driver instead of PGLite. If `DATABASE_URL` is not set, `PGLITE_DATA_DIR` is required and PGLite is used. See `.env.example` and `docker-compose.yml` for both modes.
 
 ### Why --experimental-strip-types?
 Node 22+ can run TypeScript directly without a build step. Benefits:
@@ -234,7 +234,8 @@ When adding tests:
 
 ### Environment Variables
 - `PORT` — server port (default 4000)
-- `PGLITE_DATA_DIR` — path to PGLite data directory (default ./pgdata)
+- `DATABASE_URL` — Postgres connection string (e.g. `postgresql://user:pass@host:5432/db`); when set, uses postgres.js driver
+- `PGLITE_DATA_DIR` — path to PGLite data directory; required when `DATABASE_URL` is not set
 - `NODE_ENV` — production/development
 - `DEMO_USER_ID` — demo user for development (no auth yet)
 
