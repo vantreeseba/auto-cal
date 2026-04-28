@@ -138,10 +138,22 @@ function sortTasks(tasks: Task[]): Task[] {
  * Returns true if the slot's current cursor position (start + used) is in the future.
  * Used to skip past slots when re-slotting overdue todos.
  */
-function slotCursorIsInFuture(slot: Slot, now: Date): boolean {
+/**
+ * Returns the effective start (minutes since midnight) for the next item
+ * placed into this slot, advancing past `now` if the cursor is in the past.
+ * Returns null if there is no future capacity left in the slot.
+ */
+function effectiveSlotStart(slot: Slot, now: Date, durationMins: number): number | null {
+  const slotEndMins = slot.startMinutes + slot.totalMinutes;
   const cursorMins = slot.startMinutes + slot.usedMinutes;
-  const naiveStr = naiveDateTime(slot.dateStr, cursorMins);
-  return new Date(naiveStr) > now;
+
+  // Convert now to minutes since midnight on the slot's date
+  const slotDayMidnight = new Date(`${slot.dateStr}T00:00:00`);
+  const nowMins = (now.getTime() - slotDayMidnight.getTime()) / (1000 * 60);
+
+  const startMins = Math.max(cursorMins, nowMins);
+  if (startMins + durationMins > slotEndMins) return null;
+  return startMins;
 }
 
 // ─── Main Export ─────────────────────────────────────────────────────────────
@@ -274,31 +286,31 @@ export function computeSchedule(
 
     // First pass: prefer a slot on a date this habit hasn't been placed yet
     let chosenSlot: Slot | null = null;
+    let chosenStart: number | null = null;
     if (isHabit && usedDates) {
       for (const slot of slots) {
-        if (
-          slotCursorIsInFuture(slot, now) &&
-          !usedDates.has(slot.dateStr) &&
-          slot.totalMinutes - slot.usedMinutes >= task.estimatedLength
-        ) {
+        const start = effectiveSlotStart(slot, now, task.estimatedLength);
+        if (start !== null && !usedDates.has(slot.dateStr)) {
           chosenSlot = slot;
+          chosenStart = start;
           break;
         }
       }
     }
 
-    // Fallback: any future slot with sufficient capacity
+    // Fallback: any slot with future capacity sufficient for this task
     if (!chosenSlot) {
       for (const slot of slots) {
-        if (!slotCursorIsInFuture(slot, now)) continue;
-        if (slot.totalMinutes - slot.usedMinutes >= task.estimatedLength) {
+        const start = effectiveSlotStart(slot, now, task.estimatedLength);
+        if (start !== null) {
           chosenSlot = slot;
+          chosenStart = start;
           break;
         }
       }
     }
 
-    if (!chosenSlot) {
+    if (!chosenSlot || chosenStart === null) {
       results.push({
         ...task,
         activityType,
@@ -310,9 +322,10 @@ export function computeSchedule(
       continue;
     }
 
-    const taskStartMins = chosenSlot.startMinutes + chosenSlot.usedMinutes;
+    const taskStartMins = chosenStart;
     const taskEndMins = taskStartMins + task.estimatedLength;
-    chosenSlot.usedMinutes += task.estimatedLength;
+    // Advance usedMinutes to after this task (accounting for any gap skipped past now)
+    chosenSlot.usedMinutes = taskEndMins - chosenSlot.startMinutes;
 
     // Record the date used for this habit base ID
     if (habitBaseId && usedDates) {

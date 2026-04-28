@@ -214,9 +214,11 @@ export function CalendarView({ timeBlocks, schedule, date, view }: CalendarViewP
 
   const scheduledEvents = useMemo<CalendarEvent[]>(() => {
     return schedule
-      .filter(
-        (item) => item.isScheduled && item.scheduledStart && item.scheduledEnd,
-      )
+      .filter((item) => {
+        if (!item.isScheduled || !item.scheduledStart || !item.scheduledEnd) return false;
+        // Don't show incomplete events that have already ended
+        return new Date(item.scheduledEnd) > now;
+      })
       .map((item) => {
         const kindPrefix = item.kind === 'todo' ? '✓ ' : '↻ ';
         return {
