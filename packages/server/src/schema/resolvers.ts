@@ -4,6 +4,7 @@ import {
   habits,
   timeBlocks,
   todos,
+  users,
 } from '@auto-cal/db/schema';
 import {
   and,
@@ -294,7 +295,7 @@ const extensionSDL = `
     activityTypeStats(startDate: String, endDate: String): [ActivityTypeStats!]!
     habitStats(habitId: ID, startDate: String, endDate: String): [HabitStats!]!
     myHabitDetail(habitId: ID!, periods: Int): HabitDetail!
-    mySchedule(weekStart: String): [ScheduledItem!]!
+    mySchedule(weekStart: String, timezone: String): [ScheduledItem!]!
   }
 
   extend type Mutation {
@@ -313,6 +314,7 @@ const extensionSDL = `
     myCreateTimeBlock(input: CreateTimeBlockArgs!): TimeBlock!
     myDeleteTimeBlock(id: ID!): Boolean!
     myReschedule(weekStart: String): Boolean!
+    myUpdateProfile(timezone: String!): Boolean!
   }
 `;
 
@@ -593,10 +595,19 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
   queryFields.mySchedule!.resolve = async (
     _parent,
-    args: { weekStart?: string },
+    args: { weekStart?: string; timezone?: string },
     context: Context,
   ) => {
     if (!context.userId) throw new Error('Not authenticated');
+
+    // If timezone provided, persist it to the user record (fire-and-forget)
+    if (args.timezone) {
+      context.db
+        .update(users)
+        .set({ timezone: args.timezone, updatedAt: new Date() })
+        .where(eq(users.id, context.userId))
+        .catch(console.error);
+    }
 
     // Validate and determine week start as both a "YYYY-MM-DD" string and a Date
     const weekStartStr = args.weekStart
@@ -1107,6 +1118,24 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   ) => {
     if (!context.userId) throw new Error('Not authenticated');
     await runSchedulerWriteback(context.db, context.userId, args.weekStart);
+    return true;
+  };
+
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  mutationFields.myUpdateProfile!.resolve = async (
+    _parent,
+    args: { timezone: string },
+    context: Context,
+  ) => {
+    if (!context.userId) throw new Error('Not authenticated');
+    const validTimezones = Intl.supportedValuesOf('timeZone');
+    if (!validTimezones.includes(args.timezone)) {
+      throw new Error(`Invalid timezone: ${args.timezone}`);
+    }
+    await context.db
+      .update(users)
+      .set({ timezone: args.timezone, updatedAt: new Date() })
+      .where(eq(users.id, context.userId));
     return true;
   };
 
