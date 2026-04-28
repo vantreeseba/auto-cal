@@ -46,7 +46,7 @@ export const Route = createFileRoute('/dashboard')({
   component: DashboardPage,
   errorComponent: ({ error, reset }) => <RouteError error={error} reset={reset} />,
   loader: ({ context }) => ({
-    calendarData: context.preloadQuery(GET_CALENDAR_DATA, { fetchPolicy: 'network-only' }),
+    calendarData: context.preloadQuery(GET_CALENDAR_DATA),
   }),
 });
 
@@ -65,7 +65,6 @@ function DashboardPage() {
 
   const { data: scheduleData } = useQuery(MY_SCHEDULE, {
     variables: { weekStart: weekStart.toISOString(), timezone: clientTimezone },
-    fetchPolicy: 'cache-and-network',
   });
 
   const weekEnd = addDays(weekStart, 6);

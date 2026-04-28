@@ -30,6 +30,9 @@ const httpLink = new HttpLink({
 const client = new ApolloClient({
   link: httpLink,
   cache: new InMemoryCache(),
+  defaultOptions: {
+    watchQuery: { fetchPolicy: 'cache-and-network' },
+  },
 });
 
 const router = createRouter({
