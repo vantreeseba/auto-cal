@@ -1,6 +1,7 @@
 import type { ScheduledItem_ScheduleViewFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { format, parseISO } from 'date-fns';
+import { AlertTriangle } from 'lucide-react';
 import { useMemo } from 'react';
 
 graphql(`
@@ -96,11 +97,12 @@ export function ScheduleView({ schedule }: ScheduleViewProps) {
         );
       })}
 
-      {/* Unscheduled section */}
+      {/* Unschedulable section */}
       {unscheduled.length > 0 && (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
-            Unscheduled ({unscheduled.length})
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5 flex items-center gap-1.5">
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+            Unschedulable ({unscheduled.length})
           </p>
           <div className="flex flex-col gap-1.5">
             {unscheduled.map((item) => (
@@ -113,6 +115,11 @@ export function ScheduleView({ schedule }: ScheduleViewProps) {
   );
 }
 
+function unschedulableReason(item: ScheduledItem_ScheduleViewFragment): string {
+  if (!item.activityType) return 'No activity type assigned';
+  return 'No available slot — add a matching time block or reduce the estimated length';
+}
+
 function ScheduleCard({ item }: { item: ScheduledItem_ScheduleViewFragment }) {
   const timeRange =
     item.scheduledStart && item.scheduledEnd
@@ -120,22 +127,27 @@ function ScheduleCard({ item }: { item: ScheduledItem_ScheduleViewFragment }) {
       : null;
 
   return (
-    <div className="flex items-start gap-2.5 rounded-md border bg-card px-3 py-2.5">
+    <div className={`flex items-start gap-2.5 rounded-md border bg-card px-3 py-2.5 ${!item.isScheduled ? 'border-amber-200 bg-amber-50/50' : ''}`}>
       {/* Activity type color bar */}
       <div
         className="mt-0.5 h-4 w-1 flex-shrink-0 rounded-full"
         style={{ backgroundColor: item.activityType?.color ?? '#94a3b8' }}
       />
       <div className="min-w-0 flex-1">
-        <div className="flex items-baseline justify-between gap-2">
+        <div className="flex items-center justify-between gap-2">
           <p className="truncate text-sm font-medium leading-snug">
             {item.title}
           </p>
-          {timeRange && (
-            <span className="flex-shrink-0 text-xs text-muted-foreground">
-              {timeRange}
-            </span>
-          )}
+          <div className="flex flex-shrink-0 items-center gap-1.5">
+            {!item.isScheduled && (
+              <span title={unschedulableReason(item)}>
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+              </span>
+            )}
+            {timeRange && (
+              <span className="text-xs text-muted-foreground">{timeRange}</span>
+            )}
+          </div>
         </div>
         <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
           <span className="capitalize">{item.kind}</span>
