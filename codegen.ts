@@ -12,8 +12,12 @@ const config: CodegenConfig = {
   ),
   documents: [
     path.resolve(__dirname, 'packages/client/src/**/*.{tsx,ts}'),
+    // Exclude generated output and auth routes that use raw gql (not typed codegen)
     `!${path.resolve(__dirname, 'packages/client/src/__generated__/**')}`,
+    `!${path.resolve(__dirname, 'packages/client/src/routes/login.tsx')}`,
+    `!${path.resolve(__dirname, 'packages/client/src/routes/auth.verify.tsx')}`,
   ],
+  ignoreNoDocuments: true,
   generates: {
     [`${path.resolve(__dirname, 'packages/client/src/__generated__')}/`]: {
       preset: 'client',
