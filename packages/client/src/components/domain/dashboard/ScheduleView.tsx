@@ -1,8 +1,10 @@
 import type { ScheduledItem_ScheduleViewFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
+import { Button } from '@/components/ui/button';
 import { format, parseISO } from 'date-fns';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Check } from 'lucide-react';
 import { useMemo } from 'react';
+import { gql, useMutation } from '@apollo/client';
 
 graphql(`
   fragment ScheduledItem_ScheduleView on ScheduledItem {
@@ -22,6 +24,14 @@ graphql(`
   }
 `);
 
+const COMPLETE_HABIT = gql`
+  mutation CompleteHabitFromSchedule($input: CompleteHabitArgs!) {
+    myCompleteHabit(input: $input) {
+      id
+    }
+  }
+`;
+
 function priorityLabel(priority: number): string {
   if (priority >= 100) return 'Urgent';
   if (priority >= 50) return 'High';
@@ -40,7 +50,6 @@ function groupByDay(
     existing.push(item);
     map.set(dayKey, existing);
   }
-  // Sort each day's items by scheduledStart
   for (const [key, dayItems] of map) {
     map.set(
       key,
@@ -65,13 +74,26 @@ export function ScheduleView({ schedule }: ScheduleViewProps) {
   }, [schedule]);
 
   const byDay = useMemo(() => groupByDay(scheduled), [scheduled]);
-
-  // Sorted day keys
   const dayKeys = useMemo(() => [...byDay.keys()].sort(), [byDay]);
+
+  const [completeHabit, { loading: completing }] = useMutation(COMPLETE_HABIT, {
+    refetchQueries: ['MySchedule'],
+  });
+
+  function handleCompleteHabit(item: ScheduledItem_ScheduleViewFragment) {
+    const habitId = item.id.replace(/-\d+$/, '');
+    completeHabit({
+      variables: {
+        input: {
+          habitId,
+          scheduledAt: item.scheduledStart ?? undefined,
+        },
+      },
+    });
+  }
 
   return (
     <div className="flex flex-col gap-4 overflow-y-auto h-full">
-      {/* Scheduled section */}
       {dayKeys.length === 0 && unscheduled.length === 0 && (
         <p className="text-muted-foreground text-sm text-center py-8">
           No tasks scheduled this week. Create todos or habits and assign them
@@ -90,14 +112,21 @@ export function ScheduleView({ schedule }: ScheduleViewProps) {
             </p>
             <div className="flex flex-col gap-1.5">
               {items.map((item) => (
-                <ScheduleCard key={`${item.kind}-${item.id}`} item={item} />
+                <ScheduleCard
+                  key={`${item.kind}-${item.id}`}
+                  item={item}
+                  onComplete={
+                    item.kind === 'habit' && !completing
+                      ? () => handleCompleteHabit(item)
+                      : undefined
+                  }
+                />
               ))}
             </div>
           </div>
         );
       })}
 
-      {/* Unschedulable section */}
       {unscheduled.length > 0 && (
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5 flex items-center gap-1.5">
@@ -120,15 +149,24 @@ function unschedulableReason(item: ScheduledItem_ScheduleViewFragment): string {
   return 'No available slot — add a matching time block or reduce the estimated length';
 }
 
-function ScheduleCard({ item }: { item: ScheduledItem_ScheduleViewFragment }) {
+function ScheduleCard({
+  item,
+  onComplete,
+}: {
+  item: ScheduledItem_ScheduleViewFragment;
+  onComplete?: (() => void) | undefined;
+}) {
   const timeRange =
     item.scheduledStart && item.scheduledEnd
       ? `${format(parseISO(item.scheduledStart), 'h:mm a')} – ${format(parseISO(item.scheduledEnd), 'h:mm a')}`
       : null;
 
   return (
-    <div className={`flex items-start gap-2.5 rounded-md border bg-card px-3 py-2.5 ${!item.isScheduled ? 'border-amber-200 bg-amber-50/50' : ''}`}>
-      {/* Activity type color bar */}
+    <div
+      className={`flex items-start gap-2.5 rounded-md border bg-card px-3 py-2.5 ${
+        !item.isScheduled ? 'border-amber-200 bg-amber-50/50' : ''
+      }`}
+    >
       <div
         className="mt-0.5 h-4 w-1 flex-shrink-0 rounded-full"
         style={{ backgroundColor: item.activityType?.color ?? '#94a3b8' }}
@@ -138,7 +176,7 @@ function ScheduleCard({ item }: { item: ScheduledItem_ScheduleViewFragment }) {
           <p className="truncate text-sm font-medium leading-snug">
             {item.title}
           </p>
-          <div className="flex flex-shrink-0 items-center gap-1.5">
+          <div className="flex flex-shrink-0 items-center gap-1">
             {!item.isScheduled && (
               <span title={unschedulableReason(item)}>
                 <AlertTriangle className="h-4 w-4 text-amber-500" />
@@ -146,6 +184,17 @@ function ScheduleCard({ item }: { item: ScheduledItem_ScheduleViewFragment }) {
             )}
             {timeRange && (
               <span className="text-xs text-muted-foreground">{timeRange}</span>
+            )}
+            {onComplete && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6 text-muted-foreground hover:text-green-600"
+                title="Mark habit complete"
+                onClick={onComplete}
+              >
+                <Check className="h-3.5 w-3.5" />
+              </Button>
             )}
           </div>
         </div>
