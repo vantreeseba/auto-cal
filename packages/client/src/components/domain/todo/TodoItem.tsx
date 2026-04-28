@@ -41,11 +41,11 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
   const isCompleted = todo.completedAt !== null;
 
   const [completeTodo, { loading: completing }] = useMutation(COMPLETE_TODO, {
-    refetchQueries: ['GetMyTodosV2'],
+    refetchQueries: ['GetMyTodos'],
   });
 
   const [updateTodo, { loading: updatingLength }] = useMutation(UPDATE_TODO_LENGTH, {
-    refetchQueries: ['GetMyTodosV2'],
+    refetchQueries: ['GetMyTodos'],
   });
 
   function handleSaveLength(estimatedLength: number) {

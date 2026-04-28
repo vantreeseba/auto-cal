@@ -130,18 +130,18 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
     CreateTodoMutation,
     CreateTodoMutationVariables
   >(CREATE_TODO, {
-    refetchQueries: ['GetMyTodosV2'],
+    refetchQueries: ['GetMyTodos'],
   });
 
   const [updateTodo] = useMutation<
     UpdateTodoMutation,
     UpdateTodoMutationVariables
   >(UPDATE_TODO, {
-    refetchQueries: ['GetMyTodosV2'],
+    refetchQueries: ['GetMyTodos'],
   });
 
   const [completeTodo, { loading: completing }] = useMutation(COMPLETE_TODO, {
-    refetchQueries: ['GetMyTodosV2'],
+    refetchQueries: ['GetMyTodos'],
   });
 
   const form = useAppForm({

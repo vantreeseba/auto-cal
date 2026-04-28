@@ -5,7 +5,7 @@ import { useReadQuery } from '@apollo/client';
 import { createFileRoute } from '@tanstack/react-router';
 
 const GET_MY_TODOS = graphql(`
-  query GetMyTodosV2 {
+  query GetMyTodos {
     myTodos {
       ...Todo_TodoList
     }

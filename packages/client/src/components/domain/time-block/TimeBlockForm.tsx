@@ -110,14 +110,14 @@ export function TimeBlockForm({
     CreateTimeBlockMutation,
     CreateTimeBlockMutationVariables
   >(CREATE_TIME_BLOCK, {
-    refetchQueries: ['GetMyTimeBlocksV2'],
+    refetchQueries: ['GetMyTimeBlocks'],
   });
 
   const [updateTimeBlock] = useMutation<
     UpdateTimeBlockMutation,
     UpdateTimeBlockMutationVariables
   >(UPDATE_TIME_BLOCK, {
-    refetchQueries: ['GetMyTimeBlocksV2'],
+    refetchQueries: ['GetMyTimeBlocks'],
   });
 
   const form = useAppForm({

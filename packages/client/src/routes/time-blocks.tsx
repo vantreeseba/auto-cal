@@ -5,7 +5,7 @@ import { useReadQuery } from '@apollo/client';
 import { createFileRoute } from '@tanstack/react-router';
 
 const GET_MY_TIME_BLOCKS = graphql(`
-  query GetMyTimeBlocksV2 {
+  query GetMyTimeBlocks {
     myTimeBlocks {
       ...TimeBlock_TimeBlockList
     }
