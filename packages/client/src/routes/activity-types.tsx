@@ -1,5 +1,6 @@
 import { graphql } from '@/__generated__/index.js';
 import { ActivityTypeList } from '@/components/domain/activity-type/ActivityTypeList';
+import { RouteError } from '@/components/ui/route-error';
 import { useReadQuery } from '@apollo/client';
 import { createFileRoute } from '@tanstack/react-router';
 
@@ -13,6 +14,7 @@ const GET_MY_ACTIVITY_TYPES = graphql(`
 
 export const Route = createFileRoute('/activity-types')({
   component: ActivityTypesPage,
+  errorComponent: ({ error, reset }) => <RouteError error={error} reset={reset} />,
   loader: ({ context }) => ({
     GET_MY_ACTIVITY_TYPES: context.preloadQuery(GET_MY_ACTIVITY_TYPES),
   }),

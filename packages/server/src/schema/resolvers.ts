@@ -26,6 +26,11 @@ import {
 import { z } from 'zod';
 import type { Context } from '../context.ts';
 import {
+  signMagicToken,
+  signSessionToken,
+  verifyToken,
+} from '../auth.ts';
+import {
   computeSchedule,
   startOfISOWeek,
   startOfISOWeekStr,
@@ -315,6 +320,18 @@ const extensionSDL = `
     myDeleteTimeBlock(id: ID!): Boolean!
     myReschedule(weekStart: String): Boolean!
     myUpdateProfile(timezone: String!): Boolean!
+    requestMagicLink(email: String!): RequestMagicLinkResult!
+    verifyMagicLink(token: String!): VerifyMagicLinkResult!
+  }
+
+  type RequestMagicLinkResult {
+    ok: Boolean!
+    magicLink: String
+  }
+
+  type VerifyMagicLinkResult {
+    token: String!
+    userId: ID!
   }
 `;
 
@@ -1137,6 +1154,54 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
       .set({ timezone: args.timezone, updatedAt: new Date() })
       .where(eq(users.id, context.userId));
     return true;
+  };
+
+  // --- Auth Mutations (public — no userId required) ---
+
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  mutationFields.requestMagicLink!.resolve = async (
+    _parent,
+    args: { email: string },
+    context: Context,
+  ) => {
+    const email = z.string().email().parse(args.email).toLowerCase();
+    const token = await signMagicToken(email);
+    const baseUrl = process.env.APP_URL ?? 'http://localhost:3000';
+    const magicLink = `${baseUrl}/auth/verify?token=${token}`;
+
+    if (process.env.NODE_ENV === 'production') {
+      // TODO: integrate Resend or Nodemailer
+      console.log(`[auth] Magic link for ${email}: ${magicLink}`);
+      return { ok: true, magicLink: null };
+    }
+
+    console.log(`\n[auth] Magic link for ${email}:\n${magicLink}\n`);
+    return { ok: true, magicLink };
+  };
+
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  mutationFields.verifyMagicLink!.resolve = async (
+    _parent,
+    args: { token: string },
+    context: Context,
+  ) => {
+    const payload = await verifyToken(args.token);
+    if (!payload?.email) throw new Error('Invalid or expired magic link');
+
+    let user = await context.db._query.users.findFirst({
+      where: eq(users.email, payload.email),
+    });
+    if (!user) {
+      const [created] = await context.db
+        .insert(users)
+        .values({ email: payload.email })
+        .returning();
+      if (!created) throw new Error('Failed to create user');
+      user = created;
+    }
+
+    const sessionToken = await signSessionToken(user.id, user.email);
+    return { token: sessionToken, userId: user.id };
   };
 
   // --- ActivityType Field Resolvers ---

@@ -1,5 +1,6 @@
 import { graphql } from '@/__generated__/index.js';
 import { TodoList } from '@/components/domain/todo/TodoList';
+import { RouteError } from '@/components/ui/route-error';
 import { useReadQuery } from '@apollo/client';
 import { createFileRoute } from '@tanstack/react-router';
 
@@ -13,6 +14,7 @@ const GET_MY_TODOS = graphql(`
 
 export const Route = createFileRoute('/todos')({
   component: TodosPage,
+  errorComponent: ({ error, reset }) => <RouteError error={error} reset={reset} />,
   loader: ({ context }) => ({
     GET_MY_TODOS: context.preloadQuery(GET_MY_TODOS),
   }),

@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Plus } from 'lucide-react';
+import { Clock, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { TimeBlockForm } from './TimeBlockForm';
 import { TimeBlockItem } from './TimeBlockItem';
@@ -74,19 +74,29 @@ export function TimeBlockList({ items, loading, error }: TimeBlockListProps) {
           </div>
         </CardHeader>
         {loading && (
-          <p className="px-6 pb-4 text-muted-foreground">
+          <p className="px-6 pb-4 text-sm text-muted-foreground">
             Loading time blocks…
           </p>
         )}
         {error && (
-          <p className="px-6 pb-4 text-destructive">
+          <p className="px-6 pb-4 text-sm text-destructive">
             Error loading time blocks: {error.message}
           </p>
         )}
         {!loading && items.length === 0 && (
-          <p className="px-6 pb-4 text-muted-foreground">
-            No time blocks yet. Create your first one!
-          </p>
+          <div className="flex flex-col items-center gap-3 px-6 pb-10 pt-6 text-center">
+            <div className="rounded-full bg-muted p-3">
+              <Clock className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="font-medium text-sm">No time blocks yet</p>
+              <p className="text-sm text-muted-foreground">Define when you work on different activities</p>
+            </div>
+            <Button size="sm" onClick={openCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create time block
+            </Button>
+          </div>
         )}
         {items.length > 0 && (
           <div className="space-y-2 px-6 pb-6">

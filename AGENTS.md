@@ -268,4 +268,8 @@ When adding tests:
 6. **Mobile App**
    - React Native + NativeWind
    - Shared GraphQL types
-   - Push notifications
+    - Push notifications
+
+## Project Documentation
+
+For detailed project structure, schema definitions, and code patterns, see [`.agentic/project-structure.md`](.agentic/project-structure.md).

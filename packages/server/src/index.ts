@@ -8,7 +8,6 @@ import cors from 'cors';
 import express from 'express';
 import { verifyToken } from './auth.ts';
 import type { Context } from './context.ts';
-import { createAuthRouter } from './routes/auth.ts';
 import { schema } from './schema/index.ts';
 
 const app = express();
@@ -24,9 +23,6 @@ const clientDistExists = fs.existsSync(clientDist);
 if (clientDistExists) {
   app.use(express.static(clientDist));
 }
-
-// Mount auth routes
-app.use('/api/auth', createAuthRouter(db));
 
 app.use(
   '/graphql',

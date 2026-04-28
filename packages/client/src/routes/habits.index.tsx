@@ -1,5 +1,6 @@
 import { graphql } from '@/__generated__/index.js';
 import { HabitList } from '@/components/domain/habit/HabitList';
+import { RouteError } from '@/components/ui/route-error';
 import { useReadQuery } from '@apollo/client';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 
@@ -13,6 +14,7 @@ const GET_MY_HABITS = graphql(`
 
 export const Route = createFileRoute('/habits/')({
   component: HabitsPage,
+  errorComponent: ({ error, reset }) => <RouteError error={error} reset={reset} />,
   loader: ({ context }) => ({
     GET_MY_HABITS: context.preloadQuery(GET_MY_HABITS),
   }),

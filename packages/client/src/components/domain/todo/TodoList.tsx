@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Plus } from 'lucide-react';
+import { ClipboardList, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { TodoForm } from './TodoForm';
 import { TodoItem } from './TodoItem';
@@ -99,18 +99,30 @@ export function TodoList({ items, loading, error }: TodoListProps) {
         <CardContent>
           {loading && <p className="text-muted-foreground">Loading todos…</p>}
           {error && (
-            <p className="text-destructive">
+            <p className="text-destructive text-sm">
               Error loading todos: {error.message}
             </p>
           )}
           {!loading && visibleItems.length === 0 && (
-            <p className="text-muted-foreground">
-              {showCompleted
-                ? 'No todos yet. Create your first one!'
-                : items.length > 0
-                  ? 'All todos completed! 🎉'
-                  : 'No todos yet. Create your first one!'}
-            </p>
+            items.length > 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                All todos completed! 🎉
+              </p>
+            ) : (
+              <div className="flex flex-col items-center gap-3 py-10 text-center">
+                <div className="rounded-full bg-muted p-3">
+                  <ClipboardList className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm">No todos yet</p>
+                  <p className="text-sm text-muted-foreground">Add your first todo to get started</p>
+                </div>
+                <Button size="sm" onClick={openCreate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create todo
+                </Button>
+              </div>
+            )
           )}
           <div className="space-y-2">
             {visibleItems.map((todo) => (

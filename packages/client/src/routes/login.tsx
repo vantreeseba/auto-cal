@@ -1,6 +1,16 @@
 import { Button } from '@/components/ui/button';
-import { createFileRoute, useRouter } from '@tanstack/react-router';
+import { gql, useMutation } from '@apollo/client';
+import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
+
+const REQUEST_MAGIC_LINK = gql`
+  mutation RequestMagicLink($email: String!) {
+    requestMagicLink(email: $email) {
+      ok
+      magicLink
+    }
+  }
+`;
 
 export const Route = createFileRoute('/login')({
   component: LoginPage,
@@ -8,46 +18,43 @@ export const Route = createFileRoute('/login')({
 
 function LoginPage() {
   const [email, setEmail] = useState('');
-  const [sent, setSent] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  useRouter(); // keep router context available
+  const [magicLink, setMagicLink] = useState<string | null>(null);
 
-  async function requestLink(e: React.FormEvent) {
+  const [requestLink, { loading, error }] = useMutation(REQUEST_MAGIC_LINK, {
+    onCompleted(data) {
+      setMagicLink(data.requestMagicLink.magicLink ?? null);
+    },
+  });
+
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/auth/request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Request failed');
-      setSent(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
-    } finally {
-      setLoading(false);
-    }
+    requestLink({ variables: { email } });
   }
 
-  if (sent) {
+  if (magicLink) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="text-center max-w-sm p-8">
-          <h1 className="text-2xl font-bold mb-2">Check your email</h1>
-          <p className="text-muted-foreground">
-            We sent a magic link to <strong>{email}</strong>. Click the link to sign in.
+          <h1 className="text-2xl font-bold mb-2">Your magic link</h1>
+          <p className="text-muted-foreground mb-4">
+            Click the link below to sign in as <strong>{email}</strong>.
           </p>
-          <p className="mt-4 text-sm text-muted-foreground">
-            (In development, the link is printed to the server console.)
+          <a
+            href={magicLink}
+            className="break-all rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            Sign in →
+          </a>
+          <p className="mt-6 text-xs text-muted-foreground">
+            This link is shown here because the server is running in development mode.
           </p>
         </div>
       </div>
     );
   }
+
+  // Production: link was emailed, not returned
+  const sent = !loading && !error && magicLink === null && email !== '' && !magicLink;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
@@ -56,7 +63,7 @@ function LoginPage() {
         <p className="text-sm text-muted-foreground mb-6">
           Enter your email and we'll send you a magic link.
         </p>
-        <form onSubmit={requestLink} className="flex flex-col gap-3">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <input
             type="email"
             required
@@ -65,7 +72,11 @@ function LoginPage() {
             placeholder="you@example.com"
             className="rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && (
+            <p className="text-sm text-destructive">
+              {error.message.replace('Unexpected error value: ', '')}
+            </p>
+          )}
           <Button type="submit" disabled={loading}>
             {loading ? 'Sending…' : 'Send magic link'}
           </Button>

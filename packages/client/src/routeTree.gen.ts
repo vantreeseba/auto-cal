@@ -79,20 +79,20 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/time-blocks': typeof TimeBlocksRoute
   '/todos': typeof TodosRoute
+  '/auth/verify': typeof AuthVerifyRoute
   '/habits/$habitId': typeof HabitsHabitIdRoute
   '/habits/': typeof HabitsIndexRoute
-  '/auth/verify': typeof AuthVerifyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/activity-types': typeof ActivityTypesRoute
   '/dashboard': typeof DashboardRoute
-  '/time-blocks': typeof TimeBlocksRoute
   '/login': typeof LoginRoute
+  '/time-blocks': typeof TimeBlocksRoute
   '/todos': typeof TodosRoute
+  '/auth/verify': typeof AuthVerifyRoute
   '/habits/$habitId': typeof HabitsHabitIdRoute
   '/habits': typeof HabitsIndexRoute
-  '/auth/verify': typeof AuthVerifyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -103,9 +103,9 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/time-blocks': typeof TimeBlocksRoute
   '/todos': typeof TodosRoute
+  '/auth/verify': typeof AuthVerifyRoute
   '/habits/$habitId': typeof HabitsHabitIdRoute
   '/habits/': typeof HabitsIndexRoute
-  '/auth/verify': typeof AuthVerifyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -117,20 +117,20 @@ export interface FileRouteTypes {
     | '/login'
     | '/time-blocks'
     | '/todos'
+    | '/auth/verify'
     | '/habits/$habitId'
     | '/habits/'
-    | '/auth/verify'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/activity-types'
     | '/dashboard'
-    | '/time-blocks'
     | '/login'
+    | '/time-blocks'
     | '/todos'
+    | '/auth/verify'
     | '/habits/$habitId'
     | '/habits'
-    | '/auth/verify'
   id:
     | '__root__'
     | '/'
@@ -140,9 +140,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/time-blocks'
     | '/todos'
+    | '/auth/verify'
     | '/habits/$habitId'
     | '/habits/'
-    | '/auth/verify'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
