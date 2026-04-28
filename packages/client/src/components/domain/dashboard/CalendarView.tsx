@@ -185,13 +185,16 @@ function eventStyleGetter(event: CalendarEvent) {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
+type CalendarViewMode = 'day' | 'week' | 'month';
+
 type CalendarViewProps = {
   timeBlocks: Array<TimeBlock_CalendarViewFragment>;
   schedule: Array<ScheduledItem_CalendarViewFragment>;
-  weekStart: Date;
+  date: Date;
+  view: CalendarViewMode;
 };
 
-export function CalendarView({ timeBlocks, schedule, weekStart }: CalendarViewProps) {
+export function CalendarView({ timeBlocks, schedule, date, view }: CalendarViewProps) {
   const now = new Date();
 
   const [pinTodo] = useMutation(PIN_TODO, {
@@ -199,13 +202,15 @@ export function CalendarView({ timeBlocks, schedule, weekStart }: CalendarViewPr
   });
 
   const backgroundEvents = useMemo<CalendarEvent[]>(() => {
+    // Skip background time-block shading in month view — too noisy on a grid
+    if (view === 'month') return [];
     return timeBlocks.flatMap((block) =>
-      expandTimeBlock(block, weekStart).map((event) => ({
+      expandTimeBlock(block, date).map((event) => ({
         ...event,
         isPast: event.end < now,
       })),
     );
-  }, [timeBlocks, weekStart]);
+  }, [timeBlocks, date, view]);
 
   const scheduledEvents = useMemo<CalendarEvent[]>(() => {
     return schedule
@@ -276,13 +281,15 @@ export function CalendarView({ timeBlocks, schedule, weekStart }: CalendarViewPr
     <div className="rbc-calendar-wrapper h-full" style={{ minHeight: '400px' }}>
       <DnDCalendar
         localizer={localizer}
-        date={weekStart}
+        date={date}
+        view={view}
         onNavigate={() => {}}
+        onView={() => {}}
         toolbar={false}
         events={[...scheduledEvents, ...completedEvents]}
         backgroundEvents={backgroundEvents}
         defaultView="week"
-        views={['week', 'day']}
+        views={['day', 'week', 'month']}
         step={30}
         timeslots={2}
         eventPropGetter={eventStyleGetter as never}
