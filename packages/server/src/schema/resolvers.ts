@@ -30,6 +30,7 @@ import {
   startOfISOWeekStr,
   startOfLocalMonth,
 } from '../services/scheduler.ts';
+import { runSchedulerWriteback } from '../services/scheduler-writeback.ts';
 
 // Zod validation schemas
 const CreateActivityTypeInput = z.object({
@@ -66,6 +67,7 @@ const UpdateTodoInput = z.object({
   estimatedLength: z.number().int().min(1).max(1440).optional(),
   activityTypeId: z.string().uuid().nullable().optional(),
   scheduledAt: z.string().datetime().optional(),
+  isPinnedSchedule: z.boolean().optional(),
 });
 
 const CreateHabitInput = z.object({
@@ -228,6 +230,7 @@ const extensionSDL = `
     estimatedLength: Int
     activityTypeId: ID
     scheduledAt: String
+    isPinnedSchedule: Boolean
   }
 
   input CreateHabitArgs {
@@ -309,6 +312,7 @@ const extensionSDL = `
     myCompleteHabit(input: CompleteHabitArgs!): HabitCompletion!
     myCreateTimeBlock(input: CreateTimeBlockArgs!): TimeBlock!
     myDeleteTimeBlock(id: ID!): Boolean!
+    myReschedule(weekStart: String): Boolean!
   }
 `;
 
@@ -459,7 +463,10 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     });
     const results = [];
     for (const habit of userHabits) {
-      const completionConditions = [eq(habitCompletions.habitId, habit.id)];
+      const completionConditions = [
+        eq(habitCompletions.habitId, habit.id),
+        isNotNull(habitCompletions.completedAt),
+      ];
       if (args.startDate)
         completionConditions.push(
           gte(habitCompletions.completedAt, new Date(args.startDate)),
@@ -541,7 +548,10 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     }
 
     const allCompletions = await context.db._query.habitCompletions.findMany({
-      where: eq(habitCompletions.habitId, args.habitId),
+      where: and(
+        eq(habitCompletions.habitId, args.habitId),
+        isNotNull(habitCompletions.completedAt),
+      ),
     });
 
     const totalCompletions = allCompletions.length;
@@ -549,9 +559,10 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
 
     const periods = Array.from({ length: numPeriods }, (_, i) => {
       const { start, end, label } = getPeriodBounds(i);
-      const count = allCompletions.filter(
-        (c) => c.completedAt >= start && c.completedAt < end,
-      ).length;
+      const count = allCompletions.filter((c) => {
+        if (!c.completedAt) return false;
+        return c.completedAt >= start && c.completedAt < end;
+      }).length;
       return {
         label,
         periodStart: start.toISOString().replace('Z', ''),
@@ -654,6 +665,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
             context.db._query.habitCompletions.findMany({
               where: and(
                 inArray(habitCompletions.habitId, userHabitIds),
+                isNotNull(habitCompletions.completedAt),
                 gte(habitCompletions.completedAt, weekStart),
                 lte(habitCompletions.completedAt, weekEnd),
               ),
@@ -661,6 +673,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
             context.db._query.habitCompletions.findMany({
               where: and(
                 inArray(habitCompletions.habitId, userHabitIds),
+                isNotNull(habitCompletions.completedAt),
                 gte(habitCompletions.completedAt, monthStart),
                 lte(habitCompletions.completedAt, monthEnd),
               ),
@@ -817,6 +830,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
       })
       .returning();
     if (!todo) throw new Error('Failed to create todo');
+    runSchedulerWriteback(context.db, context.userId).catch(console.error);
     return todo;
   };
 
@@ -850,11 +864,15 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
         ...(input.scheduledAt !== undefined && {
           scheduledAt: new Date(input.scheduledAt),
         }),
+        ...(input.isPinnedSchedule !== undefined && {
+          isPinnedSchedule: input.isPinnedSchedule,
+        }),
         updatedAt: new Date(),
       })
       .where(eq(todos.id, input.id))
       .returning();
     if (!updated) throw new Error(`Failed to update todo ${input.id}`);
+    runSchedulerWriteback(context.db, context.userId).catch(console.error);
     return updated;
   };
 
@@ -892,6 +910,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     if (!existing) throw new Error(`Todo ${args.id} not found`);
     if (existing.userId !== context.userId) throw new Error('Forbidden');
     await context.db.delete(todos).where(eq(todos.id, args.id));
+    runSchedulerWriteback(context.db, context.userId).catch(console.error);
     return true;
   };
 
@@ -919,6 +938,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
       })
       .returning();
     if (!habit) throw new Error('Failed to create habit');
+    runSchedulerWriteback(context.db, context.userId).catch(console.error);
     return habit;
   };
 
@@ -935,6 +955,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     if (!existing) throw new Error(`Habit ${args.id} not found`);
     if (existing.userId !== context.userId) throw new Error('Forbidden');
     await context.db.delete(habits).where(eq(habits.id, args.id));
+    runSchedulerWriteback(context.db, context.userId).catch(console.error);
     return true;
   };
 
@@ -976,6 +997,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
       .where(eq(habits.id, input.id))
       .returning();
     if (!updated) throw new Error(`Failed to update habit ${input.id}`);
+    runSchedulerWriteback(context.db, context.userId).catch(console.error);
     return updated;
   };
 
@@ -1006,6 +1028,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
       .where(eq(timeBlocks.id, input.id))
       .returning();
     if (!updated) throw new Error(`Failed to update time block ${input.id}`);
+    runSchedulerWriteback(context.db, context.userId).catch(console.error);
     return updated;
   };
 
@@ -1055,6 +1078,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
       })
       .returning();
     if (!block) throw new Error('Failed to create time block');
+    runSchedulerWriteback(context.db, context.userId).catch(console.error);
     return block;
   };
 
@@ -1071,6 +1095,18 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     if (!existing) throw new Error(`Time block ${args.id} not found`);
     if (existing.userId !== context.userId) throw new Error('Forbidden');
     await context.db.delete(timeBlocks).where(eq(timeBlocks.id, args.id));
+    runSchedulerWriteback(context.db, context.userId).catch(console.error);
+    return true;
+  };
+
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  mutationFields.myReschedule!.resolve = async (
+    _parent,
+    args: { weekStart?: string },
+    context: Context,
+  ) => {
+    if (!context.userId) throw new Error('Not authenticated');
+    await runSchedulerWriteback(context.db, context.userId, args.weekStart);
     return true;
   };
 

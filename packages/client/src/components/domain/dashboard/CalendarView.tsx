@@ -3,6 +3,7 @@ import type {
   TimeBlock_CalendarViewFragment,
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
+import { gql, useMutation } from '@apollo/client';
 import {
   addDays,
   format,
@@ -16,6 +17,8 @@ import {
 import { enUS } from 'date-fns/locale/en-US';
 import { useMemo } from 'react';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
+import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
+import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 const locales = { 'en-US': enUS };
@@ -23,16 +26,22 @@ const locales = { 'en-US': enUS };
 const localizer = dateFnsLocalizer({
   format,
   parse,
-  startOfWeek: () => startOfWeek(new Date(), { weekStartsOn: 0 }),
+  startOfWeek: () => startOfWeek(new Date(), { weekStartsOn: 1 }),
   getDay,
   locales,
 });
+
+// Create DnD-enabled Calendar
+const DnDCalendar = withDragAndDrop(Calendar as any) as any;
 
 // ─── GraphQL ────────────────────────────────────────────────────────────────
 
 graphql(`
   fragment TimeBlock_CalendarView on TimeBlock {
     id
+    daysOfWeek
+    startTime
+    endTime
     activityType {
       id
       name
@@ -57,38 +66,13 @@ graphql(`
   }
 `);
 
+const PIN_TODO = gql`
+  mutation PinTodo($input: UpdateTodoArgs!) {
+    myUpdateTodo(input: $input) { id scheduledAt isPinnedSchedule }
+  }
+`;
+
 // ─── Types ──────────────────────────────────────────────────────────────────
-
-interface ActivityType {
-  id: string;
-  name: string;
-  color: string;
-}
-
-interface TimeBlock {
-  id: string;
-  activityType: ActivityType | null;
-  daysOfWeek: number[];
-  startTime: string;
-  endTime: string;
-}
-
-interface ScheduleItem {
-  kind: string;
-  id: string;
-  title: string;
-  isScheduled: boolean;
-  isOverdue: boolean;
-  scheduledStart: string | null;
-  scheduledEnd: string | null;
-  completedAt: string | null;
-  activityType: ActivityType | null;
-}
-
-type CalendarData = {
-  myTimeBlocks: TimeBlock[];
-  mySchedule: ScheduleItem[];
-};
 
 interface CalendarEvent {
   id: string;
@@ -99,18 +83,16 @@ interface CalendarEvent {
   isTask?: boolean;
   isPast?: boolean;
   isCompleted?: boolean;
-  resource?: TimeBlock;
+  kind?: string;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/** Parse "HH:MM" into { hours, minutes } */
 function parseTime(time: string): { hours: number; minutes: number } {
   const [h, m] = time.split(':').map(Number);
   return { hours: h ?? 0, minutes: m ?? 0 };
 }
 
-/** Darken a hex color by reducing each channel by ~20% */
 function darkenColor(hex: string): string {
   if (!hex.startsWith('#')) return hex;
   const n = Number.parseInt(hex.replace('#', ''), 16);
@@ -120,17 +102,12 @@ function darkenColor(hex: string): string {
   return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }
 
-/**
- * Desaturate a hex color by converting to greyscale-blended version.
- * amount 0 = fully desaturated (grey), 1 = original color.
- */
 function desaturateColor(hex: string, amount = 0.2): string {
   if (!hex.startsWith('#')) return hex;
   const n = Number.parseInt(hex.replace('#', ''), 16);
   const r = (n >> 16) & 0xff;
   const g = (n >> 8) & 0xff;
   const b = n & 0xff;
-  // Luminance-weighted greyscale
   const grey = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
   const nr = Math.round(grey + (r - grey) * amount);
   const ng = Math.round(grey + (g - grey) * amount);
@@ -138,22 +115,23 @@ function desaturateColor(hex: string, amount = 0.2): string {
   return `#${nr.toString(16).padStart(2, '0')}${ng.toString(16).padStart(2, '0')}${nb.toString(16).padStart(2, '0')}`;
 }
 
-/**
- * Expand a recurring time block into one concrete Date event per day-of-week
- * for the week containing `referenceDate`.
- */
 function expandTimeBlock(
-  block: TimeBlock,
+  block: TimeBlock_CalendarViewFragment,
   referenceDate: Date,
 ): CalendarEvent[] {
-  const weekStart = startOfWeek(referenceDate, { weekStartsOn: 0 }); // Sunday
+  if (!block.activityType) return [];
+  // weekStartsOn: 1 = Monday, matching the server's ISO week convention
+  const weekStart = startOfWeek(referenceDate, { weekStartsOn: 1 });
   const { hours: startH, minutes: startM } = parseTime(block.startTime);
   const { hours: endH, minutes: endM } = parseTime(block.endTime);
-  const title = block.activityType?.name ?? 'Unassigned';
-  const color = block.activityType?.color ?? '#94a3b8';
+  const title = block.activityType.name;
+  const color = block.activityType.color;
 
   return block.daysOfWeek.map((dayIndex: number) => {
-    const dayDate = addDays(weekStart, dayIndex);
+    // dayIndex: 0=Sun, 1=Mon…6=Sat. weekStart is Monday.
+    // offset from Monday: Mon=0, Tue=1…Sat=5, Sun=6
+    const offsetFromMonday = dayIndex === 0 ? 6 : dayIndex - 1;
+    const dayDate = addDays(weekStart, offsetFromMonday);
     const start = setMinutes(setHours(startOfDay(dayDate), startH), startM);
     const end = setMinutes(setHours(startOfDay(dayDate), endH), endM);
     return {
@@ -162,7 +140,6 @@ function expandTimeBlock(
       start,
       end,
       color,
-      resource: block,
     };
   });
 }
@@ -207,75 +184,69 @@ function eventStyleGetter(event: CalendarEvent) {
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
+
 type CalendarViewProps = {
   timeBlocks: Array<TimeBlock_CalendarViewFragment>;
   schedule: Array<ScheduledItem_CalendarViewFragment>;
+  weekStart: Date;
 };
 
-export function CalendarView({ timeBlocks, schedule }: CalendarViewProps) {
-  // Background events: time block slots rendered as shaded background fills
+export function CalendarView({ timeBlocks, schedule, weekStart }: CalendarViewProps) {
+  const now = new Date();
+
+  const [pinTodo] = useMutation(PIN_TODO, {
+    refetchQueries: ['MySchedule'],
+  });
+
   const backgroundEvents = useMemo<CalendarEvent[]>(() => {
-    if (timeBlocks) return [];
-    const now = new Date();
     return timeBlocks.flatMap((block) =>
-      expandTimeBlock(block, now).map((event) => ({
+      expandTimeBlock(block, weekStart).map((event) => ({
         ...event,
         isPast: event.end < now,
       })),
     );
-  }, [timeBlocks]);
+  }, [timeBlocks, weekStart]);
 
-  // Foreground events: scheduled tasks rendered as clickable overlays
   const scheduledEvents = useMemo<CalendarEvent[]>(() => {
-    if (schedule) return [];
-    const now = new Date();
     return schedule
-      .filter((item) => {
-        if (!item.isScheduled || !item.scheduledStart || !item.scheduledEnd)
-          return false;
-        // Only show future scheduled events — past ones are omitted from the calendar
-        const end = new Date(item.scheduledEnd);
-        return end > now;
-      })
+      .filter(
+        (item) => item.isScheduled && item.scheduledStart && item.scheduledEnd,
+      )
       .map((item) => {
         const kindPrefix = item.kind === 'todo' ? '✓ ' : '↻ ';
-        const end = new Date(item.scheduledEnd as string);
         return {
           id: `scheduled-${item.kind}-${item.id}`,
           title: `${kindPrefix}${item.title}`,
+          kind: item.kind,
           start: new Date(item.scheduledStart as string),
-          end,
+          end: new Date(item.scheduledEnd as string),
           color: item.activityType?.color ?? '#64748b',
           isTask: true,
         };
       });
   }, [schedule]);
 
-  // Completed todo events — shown at their completedAt time (duration = estimatedLength from schedule)
   const completedEvents = useMemo<CalendarEvent[]>(() => {
-    if (schedule) return [];
     return schedule
       .filter(
         (item) =>
           item.kind === 'todo' &&
           item.completedAt &&
-          item.scheduledEnd &&
-          item.scheduledStart,
+          item.scheduledStart &&
+          item.scheduledEnd,
       )
       .map((item) => {
         const start = new Date(item.completedAt as string);
-        // Duration = same as originally scheduled
         const scheduledStart = new Date(item.scheduledStart as string);
         const scheduledEnd = new Date(item.scheduledEnd as string);
         const durationMs = scheduledEnd.getTime() - scheduledStart.getTime();
-        const end = new Date(start.getTime() + durationMs);
-        const color = item.activityType?.color ?? '#64748b';
         return {
           id: `completed-todo-${item.id}`,
           title: `✓ ${item.title}`,
+          kind: 'todo',
           start,
-          end,
-          color,
+          end: new Date(start.getTime() + durationMs),
+          color: item.activityType?.color ?? '#64748b',
           isTask: true,
           isPast: true,
           isCompleted: true,
@@ -283,10 +254,31 @@ export function CalendarView({ timeBlocks, schedule }: CalendarViewProps) {
       });
   }, [schedule]);
 
+  function onEventDrop({ event, start }: { event: CalendarEvent; start: Date | string }) {
+    if (!event.isTask || event.kind !== 'todo') return;
+    // event.id format: "scheduled-todo-{id}"
+    const match = event.id.match(/^scheduled-todo-(.+)$/);
+    if (!match) return;
+    const todoId = match[1];
+    const newStart = start instanceof Date ? start : new Date(start);
+    pinTodo({
+      variables: {
+        input: {
+          id: todoId,
+          scheduledAt: newStart.toISOString(),
+          isPinnedSchedule: true,
+        },
+      },
+    }).catch(console.error);
+  }
+
   return (
     <div className="rbc-calendar-wrapper h-full" style={{ minHeight: '400px' }}>
-      <Calendar
+      <DnDCalendar
         localizer={localizer}
+        date={weekStart}
+        onNavigate={() => {}}
+        toolbar={false}
         events={[...scheduledEvents, ...completedEvents]}
         backgroundEvents={backgroundEvents}
         defaultView="week"
@@ -300,6 +292,8 @@ export function CalendarView({ timeBlocks, schedule }: CalendarViewProps) {
           eventTimeRangeFormat: ({ start, end }: { start: Date; end: Date }) =>
             `${format(start, 'h:mm')}–${format(end, 'h:mm a')}`,
         }}
+        onEventDrop={onEventDrop}
+        resizable={false}
       />
     </div>
   );
