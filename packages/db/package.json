@@ -11,7 +11,8 @@
     "migrate": "env-cmd -f ../../.env node --experimental-strip-types src/migrator.ts",
     "db:generate": "env-cmd -f ../../.env drizzle-kit generate",
     "db:migrate": "npm run migrate",
-    "db:studio": "env-cmd -f ../../.env drizzle-kit studio"
+    "db:studio": "env-cmd -f ../../.env drizzle-kit studio",
+    "seed": "env-cmd -f ../../.env node --experimental-strip-types src/seed.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.2.15"
