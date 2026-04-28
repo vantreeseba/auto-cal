@@ -124,6 +124,25 @@ function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Today — left of view switcher so nav arrows never shift position */}
+          {!isCurrent(date, view) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setDate(
+                  view === 'week'
+                    ? toMonday(new Date())
+                    : view === 'month'
+                      ? startOfMonth(new Date())
+                      : new Date(),
+                )
+              }
+            >
+              Today
+            </Button>
+          )}
+
           {/* View switcher */}
           <div className="flex rounded-md border p-0.5 gap-0.5">
             {(['day', 'week', 'month'] as const).map((v) => (
@@ -157,15 +176,6 @@ function DashboardPage() {
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
-          {!isCurrent(date, view) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setDate(view === 'week' ? toMonday(new Date()) : view === 'month' ? startOfMonth(new Date()) : new Date())}
-            >
-              Today
-            </Button>
-          )}
         </div>
       </div>
 
