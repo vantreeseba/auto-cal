@@ -1,9 +1,12 @@
+import { RouteError } from '@/components/ui/route-error';
 import { cn } from '@/lib/utils';
 import type { MyRouterContext } from '@/main.js';
 import {
   Link,
   Outlet,
   createRootRouteWithContext,
+  redirect,
+  useNavigate,
 } from '@tanstack/react-router';
 
 const NAV_LINKS = [
@@ -13,6 +16,25 @@ const NAV_LINKS = [
   { to: '/time-blocks', label: 'Time Blocks' },
   { to: '/activity-types', label: 'Activity Types' },
 ] as const;
+
+function LogoutButton() {
+  const navigate = useNavigate();
+
+  function handleLogout() {
+    localStorage.removeItem('auth_token');
+    navigate({ to: '/login' });
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleLogout}
+      className="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+    >
+      Sign out
+    </button>
+  );
+}
 
 function RootLayout() {
   return (
@@ -47,6 +69,7 @@ function RootLayout() {
                   </Link>
                 );
               })}
+              <LogoutButton />
             </nav>
           </div>
         </div>
@@ -60,19 +83,29 @@ function RootLayout() {
   );
 }
 
-// A custom component to render when an error occurs
-function RootErrorComponent({ error }: { error: unknown }) {
-  // You can use the error object to display different messages or log it
+function RootErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
   return (
-    <div>
-      <h1>Something Went Wrong Globally!</h1>
-      <p>{(error as Error).message}</p>
-      {/* You might also include a link back to the homepage */}
+    <div className="flex h-screen flex-col overflow-hidden bg-gray-50">
+      <header className="flex-shrink-0 border-b bg-white">
+        <div className="container mx-auto px-4 py-3">
+          <h1 className="text-2xl font-bold leading-none">Auto Cal</h1>
+        </div>
+      </header>
+      <main className="flex flex-1 items-center justify-center">
+        <RouteError error={error} reset={reset} />
+      </main>
     </div>
   );
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
+  beforeLoad: ({ location }) => {
+    const publicPaths = ['/login', '/auth/verify'];
+    const isPublic = publicPaths.some((p) => location.pathname.startsWith(p));
+    if (!isPublic && !localStorage.getItem('auth_token')) {
+      throw redirect({ to: '/login' });
+    }
+  },
   component: RootLayout,
   errorComponent: RootErrorComponent,
 });

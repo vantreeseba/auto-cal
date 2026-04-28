@@ -13,8 +13,17 @@ import './index.css';
 
 const httpLink = new HttpLink({
   uri: '/graphql',
-  headers: {
-    authorization: 'Bearer 00000000-0000-0000-0000-000000000001',
+  headers: {},
+  fetch: (uri, options) => {
+    const token = localStorage.getItem('auth_token');
+    const headers = new Headers(options?.headers as HeadersInit | undefined);
+    if (token) {
+      headers.set('authorization', `Bearer ${token}`);
+    } else {
+      // Fallback to seed demo user UUID for backwards-compat during development
+      headers.set('authorization', 'Bearer 00000000-0000-0000-0000-000000000001');
+    }
+    return fetch(uri as RequestInfo, { ...(options as RequestInit), headers });
   },
 });
 

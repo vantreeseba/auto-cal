@@ -6,7 +6,9 @@ import { db } from '@auto-cal/db';
 import { seedDemoUser } from '@auto-cal/db/seed';
 import cors from 'cors';
 import express from 'express';
+import { verifyToken } from './auth.ts';
 import type { Context } from './context.ts';
+import { createAuthRouter } from './routes/auth.ts';
 import { schema } from './schema/index.ts';
 
 const app = express();
@@ -23,6 +25,9 @@ if (clientDistExists) {
   app.use(express.static(clientDist));
 }
 
+// Mount auth routes
+app.use('/api/auth', createAuthRouter(db));
+
 app.use(
   '/graphql',
   cors<cors.CorsRequest>(),
@@ -31,11 +36,19 @@ app.use(
   expressMiddleware(server, {
     context: async ({ req }: { req: express.Request }): Promise<Context> => {
       const authHeader = req.headers.authorization;
-      const userId = authHeader?.startsWith('Bearer ')
+      const rawToken = authHeader?.startsWith('Bearer ')
         ? authHeader.slice(7)
         : undefined;
 
-      if (userId) return { db, userId };
+      if (!rawToken) return { db };
+
+      // Try JWT verification first
+      const payload = await verifyToken(rawToken);
+      if (payload?.sub) return { db, userId: payload.sub };
+
+      // Fall back to raw UUID for backwards-compat with dev/seed
+      if (/^[0-9a-f-]{36}$/i.test(rawToken)) return { db, userId: rawToken };
+
       return { db };
     },
   }),
