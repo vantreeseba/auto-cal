@@ -1,4 +1,4 @@
-import type { TodoListFieldsFragment } from '@/__generated__/graphql.js';
+import type { Todo_TodoListFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,7 +8,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { useMutation } from '@apollo/client';
+import { InlineLengthEdit } from '@/components/ui/inline-length-edit';
+import { gql, useMutation } from '@apollo/client';
 import { Check, Pencil } from 'lucide-react';
 
 const COMPLETE_TODO = graphql(`
@@ -20,7 +21,16 @@ const COMPLETE_TODO = graphql(`
   }
 `);
 
-type Todo = TodoListFieldsFragment;
+const UPDATE_TODO_LENGTH = gql`
+  mutation UpdateTodoEstimatedLength($input: UpdateTodoArgs!) {
+    myUpdateTodo(input: $input) {
+      id
+      estimatedLength
+    }
+  }
+`;
+
+type Todo = Todo_TodoListFragment;
 
 type TodoItemProps = {
   todo: Todo;
@@ -31,8 +41,16 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
   const isCompleted = todo.completedAt !== null;
 
   const [completeTodo, { loading: completing }] = useMutation(COMPLETE_TODO, {
-    refetchQueries: ['GetMyTodos'],
+    refetchQueries: ['GetMyTodosV2'],
   });
+
+  const [updateTodo, { loading: updatingLength }] = useMutation(UPDATE_TODO_LENGTH, {
+    refetchQueries: ['GetMyTodosV2'],
+  });
+
+  function handleSaveLength(estimatedLength: number) {
+    updateTodo({ variables: { input: { id: todo.id, estimatedLength } } });
+  }
 
   return (
     <Card className={isCompleted ? 'opacity-60' : ''}>
@@ -55,7 +73,12 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
                   {' • '}
                 </span>
               )}
-              {todo.estimatedLength} min • Priority: {todo.priority}
+              <InlineLengthEdit
+                value={todo.estimatedLength}
+                saving={updatingLength}
+                onSave={handleSaveLength}
+              />
+              {' • '}Priority: {todo.priority}
               {isCompleted && (
                 <span className="ml-2 text-green-600 font-medium">✓ Done</span>
               )}

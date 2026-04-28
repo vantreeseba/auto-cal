@@ -7,7 +7,18 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { InlineLengthEdit } from '@/components/ui/inline-length-edit';
+import { gql, useMutation } from '@apollo/client';
 import { Pencil } from 'lucide-react';
+
+const UPDATE_HABIT_LENGTH = gql`
+  mutation UpdateHabitEstimatedLength($input: UpdateHabitArgs!) {
+    myUpdateHabit(input: $input) {
+      id
+      estimatedLength
+    }
+  }
+`;
 
 type Habit = Habit_HabitListFragment;
 
@@ -18,6 +29,14 @@ type HabitItemProps = {
 };
 
 export function HabitItem({ habit, onEdit, onSelect }: HabitItemProps) {
+  const [updateHabit, { loading: updatingLength }] = useMutation(UPDATE_HABIT_LENGTH, {
+    refetchQueries: ['GetMyHabits'],
+  });
+
+  function handleSaveLength(estimatedLength: number) {
+    updateHabit({ variables: { input: { id: habit.id, estimatedLength } } });
+  }
+
   return (
     <Card
       className="cursor-pointer hover:bg-muted/50 transition-colors"
@@ -38,8 +57,13 @@ export function HabitItem({ habit, onEdit, onSelect }: HabitItemProps) {
                   {' • '}
                 </span>
               )}
-              {habit.estimatedLength} min • {habit.frequencyCount}x per{' '}
-              {habit.frequencyUnit} • Priority: {habit.priority}
+              <InlineLengthEdit
+                value={habit.estimatedLength}
+                saving={updatingLength}
+                onSave={handleSaveLength}
+              />
+              {' • '}{habit.frequencyCount}x per {habit.frequencyUnit}
+              {' • '}Priority: {habit.priority}
             </CardDescription>
           </div>
           <Button
