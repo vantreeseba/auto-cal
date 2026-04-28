@@ -78,6 +78,7 @@ export function ScheduleView({ schedule }: ScheduleViewProps) {
 
   const [completeHabit, { loading: completing }] = useMutation(COMPLETE_HABIT, {
     refetchQueries: ['MySchedule'],
+    onError: (err) => console.error('[completeHabit]', err.message),
   });
 
   function handleCompleteHabit(item: ScheduledItem_ScheduleViewFragment) {

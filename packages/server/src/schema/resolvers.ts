@@ -106,7 +106,7 @@ const CreateTimeBlockInput = z
 
 const CompleteHabitInput = z.object({
   habitId: z.string().uuid(),
-  scheduledAt: z.string().datetime().optional(),
+  scheduledAt: z.string().optional(), // naive local-time ISO from the scheduler — no Z suffix
 });
 
 const UpdateHabitInput = z.object({
