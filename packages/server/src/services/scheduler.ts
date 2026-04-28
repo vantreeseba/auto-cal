@@ -273,11 +273,11 @@ export function computeSchedule(
       : null;
 
     // First pass: prefer a slot on a date this habit hasn't been placed yet
-    // (habit-only — habits are never overdue, so no future-only filter needed here)
     let chosenSlot: Slot | null = null;
     if (isHabit && usedDates) {
       for (const slot of slots) {
         if (
+          slotCursorIsInFuture(slot, now) &&
           !usedDates.has(slot.dateStr) &&
           slot.totalMinutes - slot.usedMinutes >= task.estimatedLength
         ) {
@@ -287,11 +287,10 @@ export function computeSchedule(
       }
     }
 
-    // Fallback: any slot with sufficient capacity
-    // For overdue todos, only consider slots whose cursor is in the future
+    // Fallback: any future slot with sufficient capacity
     if (!chosenSlot) {
       for (const slot of slots) {
-        if (task.isOverdue && !slotCursorIsInFuture(slot, now)) continue;
+        if (!slotCursorIsInFuture(slot, now)) continue;
         if (slot.totalMinutes - slot.usedMinutes >= task.estimatedLength) {
           chosenSlot = slot;
           break;
