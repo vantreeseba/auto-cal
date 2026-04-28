@@ -7,9 +7,9 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { gql, useQuery } from '@apollo/client';
+import { gql, useMutation, useQuery } from '@apollo/client';
 import { Pencil, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityTypeForm } from './components/ActivityTypeForm';
 import { HabitForm } from './components/HabitForm';
 import { TimeBlockForm } from './components/TimeBlockForm';
@@ -113,6 +113,14 @@ const GET_MY_TIME_BLOCKS = gql`
   }
 `;
 
+const UPDATE_TIMEZONE = gql`
+  mutation UpdateTimezone($timezone: String!) {
+    myUpdateProfile(timezone: $timezone) {
+      timezone
+    }
+  }
+`;
+
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 const DAY_NAMES = [
@@ -129,6 +137,12 @@ const DAY_NAMES = [
 
 function App() {
   const [activeTab, setActiveTab] = useState('todos');
+
+  const [updateTimezone] = useMutation(UPDATE_TIMEZONE);
+  useEffect(() => {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    updateTimezone({ variables: { timezone: tz } }).catch(() => {});
+  }, [updateTimezone]);
 
   const [todoFormOpen, setTodoFormOpen] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
