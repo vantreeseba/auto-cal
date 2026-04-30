@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/card';
 import { InlineLengthEdit } from '@/components/ui/inline-length-edit';
 import { gql, useMutation } from '@apollo/client';
-import { Check, Pencil } from 'lucide-react';
+import { AlertTriangle, Check, Pencil } from 'lucide-react';
 
 const COMPLETE_TODO = graphql(`
   mutation CompleteTodo($id: ID!) {
@@ -79,6 +79,15 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
                 onSave={handleSaveLength}
               />
               {' • '}Priority: {todo.priority}
+              {!isCompleted && todo.activityType && !todo.scheduledAt && (
+                <span
+                  className="ml-2 inline-flex items-center gap-1 text-amber-600"
+                  title="No available slot — add a matching time block or reduce estimated length"
+                >
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  Unschedulable
+                </span>
+              )}
               {isCompleted && (
                 <span className="ml-2 text-green-600 font-medium">✓ Done</span>
               )}
