@@ -2,9 +2,11 @@ import {
   ApolloClient,
   ApolloProvider,
   createQueryPreloader,
+  from,
   HttpLink,
   InMemoryCache,
 } from '@apollo/client';
+import { onError } from '@apollo/client/link/error';
 import { RouterProvider, createRouter } from '@tanstack/react-router';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -24,8 +26,18 @@ const httpLink = new HttpLink({
   },
 });
 
+const errorLink = onError(({ graphQLErrors }) => {
+  const isUnauthenticated = graphQLErrors?.some((e) =>
+    e.message.includes('Not authenticated'),
+  );
+  if (isUnauthenticated) {
+    localStorage.removeItem('auth_token');
+    window.location.replace('/login');
+  }
+});
+
 const client = new ApolloClient({
-  link: httpLink,
+  link: from([errorLink, httpLink]),
   cache: new InMemoryCache(),
   defaultOptions: {
     watchQuery: { fetchPolicy: 'cache-and-network' },
