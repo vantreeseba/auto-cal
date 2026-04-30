@@ -4,6 +4,7 @@ import type {
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { gql, useMutation } from '@apollo/client';
+import { Check } from 'lucide-react';
 import {
   addDays,
   format,
@@ -69,6 +70,12 @@ graphql(`
 const PIN_TODO = gql`
   mutation PinTodo($input: UpdateTodoArgs!) {
     myUpdateTodo(input: $input) { id scheduledAt isPinnedSchedule }
+  }
+`;
+
+const COMPLETE_HABIT = gql`
+  mutation CompleteHabitFromCalendar($input: CompleteHabitArgs!) {
+    myCompleteHabit(input: $input) { id }
   }
 `;
 
@@ -181,6 +188,45 @@ function eventStyleGetter(event: CalendarEvent) {
       fontSize: '0.8rem',
     },
   };
+}
+
+// ─── Custom Event Component ──────────────────────────────────────────────────
+
+function CalendarEventComponent({ event }: { event: CalendarEvent }) {
+  const [completeHabit] = useMutation(COMPLETE_HABIT, {
+    refetchQueries: ['MySchedule'],
+    onError: (err) => console.error('[completeHabit]', err.message),
+  });
+
+  const isHabit = event.isTask && event.kind === 'habit';
+
+  return (
+    <div className="flex h-full items-center justify-between gap-1 overflow-hidden px-0.5">
+      <span className="truncate text-xs leading-tight">{event.title}</span>
+      {isHabit && (
+        <button
+          type="button"
+          className="flex-shrink-0 rounded p-0.5 opacity-80 hover:opacity-100 hover:bg-black/20"
+          title="Mark habit complete"
+          onClick={(e) => {
+            e.stopPropagation();
+            const raw = event.id.replace(/^scheduled-habit-/, '');
+            const habitId = raw.replace(/-\d+$/, '');
+            completeHabit({
+              variables: {
+                input: {
+                  habitId,
+                  scheduledAt: format(event.start, "yyyy-MM-dd'T'HH:mm:ss"),
+                },
+              },
+            }).catch(console.error);
+          }}
+        >
+          <Check className="h-3 w-3" />
+        </button>
+      )}
+    </div>
+  );
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -296,6 +342,7 @@ export function CalendarView({ timeBlocks, schedule, date, view }: CalendarViewP
         step={30}
         timeslots={2}
         eventPropGetter={eventStyleGetter as never}
+        components={{ event: CalendarEventComponent as never }}
         style={{ height: '100%' }}
         formats={{
           timeGutterFormat: (date: Date) => format(date, 'h a'),
