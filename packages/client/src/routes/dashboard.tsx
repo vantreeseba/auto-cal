@@ -104,7 +104,7 @@ function DashboardPage() {
   // Schedule is always week-scoped regardless of calendar view
   const weekStart = toMonday(date);
   const { data: scheduleData } = useQuery(MY_SCHEDULE, {
-    variables: { weekStart: weekStart.toISOString(), timezone: clientTimezone },
+    variables: { weekStart: format(weekStart, 'yyyy-MM-dd'), timezone: clientTimezone },
   });
 
   function handleViewChange(next: CalendarViewMode) {

@@ -18,11 +18,13 @@ export const Route = createFileRoute('/login')({
 
 function LoginPage() {
   const [email, setEmail] = useState('');
+  const [submitted, setSubmitted] = useState(false);
   const [magicLink, setMagicLink] = useState<string | null>(null);
 
   const [requestLink, { loading, error }] = useMutation(REQUEST_MAGIC_LINK, {
     onCompleted(data) {
       setMagicLink(data.requestMagicLink.magicLink ?? null);
+      setSubmitted(true);
     },
   });
 
@@ -31,7 +33,7 @@ function LoginPage() {
     requestLink({ variables: { email } });
   }
 
-  if (magicLink) {
+  if (submitted && magicLink) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="text-center max-w-sm p-8">
@@ -53,8 +55,25 @@ function LoginPage() {
     );
   }
 
-  // Production: link was emailed, not returned
-  const sent = !loading && !error && magicLink === null && email !== '' && !magicLink;
+  if (submitted && !magicLink) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center max-w-sm p-8">
+          <h1 className="text-2xl font-bold mb-2">Check your email</h1>
+          <p className="text-muted-foreground mb-4">
+            We sent a magic link to <strong>{email}</strong>. Click it to sign in.
+          </p>
+          <button
+            type="button"
+            onClick={() => { setSubmitted(false); setEmail(''); }}
+            className="text-sm underline text-muted-foreground"
+          >
+            Use a different email
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">

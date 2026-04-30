@@ -62,7 +62,7 @@ const CreateTodoInput = z.object({
   priority: z.number().int().min(0).max(100).default(0),
   estimatedLength: z.number().int().min(1).max(1440).optional(),
   activityTypeId: z.string().uuid().optional(),
-  scheduledAt: z.string().datetime().optional(),
+  scheduledAt: z.string().optional(), // naive local-time ISO — no Z suffix
 });
 
 const UpdateTodoInput = z.object({
@@ -72,7 +72,7 @@ const UpdateTodoInput = z.object({
   priority: z.number().int().min(0).max(100).optional(),
   estimatedLength: z.number().int().min(1).max(1440).optional(),
   activityTypeId: z.string().uuid().nullable().optional(),
-  scheduledAt: z.string().datetime().optional(),
+  scheduledAt: z.string().optional(), // naive local-time ISO — no Z suffix
   isPinnedSchedule: z.boolean().optional(),
 });
 
@@ -629,8 +629,13 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     // Validate and determine week start as both a "YYYY-MM-DD" string and a Date
     const weekStartStr = args.weekStart
       ? (() => {
-          z.string().datetime().parse(args.weekStart);
-          return startOfISOWeekStr(new Date(args.weekStart));
+          const dateStr = z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}$/, 'weekStart must be YYYY-MM-DD')
+            .parse(args.weekStart);
+          const parsed = new Date(`${dateStr}T00:00:00`);
+          if (Number.isNaN(parsed.getTime())) throw new Error('Invalid weekStart date');
+          return startOfISOWeekStr(parsed);
         })()
       : startOfISOWeekStr(new Date());
 
@@ -648,7 +653,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     // Fetch user-scoped data first (habits needed to scope completions)
     const [
       userTimeBlocks,
-      userTodos,
+      allIncompleteTodos,
       userCompletedTodos,
       userHabits,
       userActivityTypes,
@@ -681,6 +686,10 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
         where: eq(activityTypes.userId, context.userId),
       }),
     ]);
+
+    // Split todos: pinned show at their stored scheduledAt; unpinned go through the scheduler
+    const pinnedTodos = allIncompleteTodos.filter((t) => t.isPinnedSchedule && t.scheduledAt);
+    const userTodos = allIncompleteTodos.filter((t) => !t.isPinnedSchedule);
 
     // habit_completions has no userId — scope by the user's own habit IDs
     const userHabitIds = userHabits.map((h) => h.id);
@@ -759,14 +768,34 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
       userCompletedTodos.map((t) => [t.id, t.completedAt]),
     );
 
-    return items.map((item) => ({
+    const scheduledItems = items.map((item) => ({
       ...item,
       completedAt:
         item.kind === 'todo'
-          ? (todoCompletedAtMap.get(item.id)?.toISOString().replace('Z', '') ??
-            null)
+          ? (todoCompletedAtMap.get(item.id)?.toISOString().replace('Z', '') ?? null)
           : null,
     }));
+
+    // Pinned todos bypass the algorithm — appear at their stored scheduledAt
+    const pinnedItems = pinnedTodos.map((t) => {
+      const start = t.scheduledAt!;
+      const end = new Date(start.getTime() + t.estimatedLength * 60_000);
+      return {
+        kind: 'todo' as const,
+        id: t.id,
+        title: t.title,
+        priority: t.priority,
+        estimatedLength: t.estimatedLength,
+        activityType: t.activityTypeId ? (activityTypeMap.get(t.activityTypeId) ?? null) : null,
+        scheduledStart: start.toISOString().replace('Z', ''),
+        scheduledEnd: end.toISOString().replace('Z', ''),
+        isScheduled: true,
+        isOverdue: false,
+        completedAt: null,
+      };
+    });
+
+    return [...scheduledItems, ...pinnedItems];
   };
 
   // --- ActivityType Mutations ---

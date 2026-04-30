@@ -268,11 +268,12 @@ export function CalendarView({ timeBlocks, schedule, date, view }: CalendarViewP
     if (!match) return;
     const todoId = match[1];
     const newStart = start instanceof Date ? start : new Date(start);
+    // Send naive local datetime (no Z) so the server stores local time, not UTC
     pinTodo({
       variables: {
         input: {
           id: todoId,
-          scheduledAt: newStart.toISOString(),
+          scheduledAt: format(newStart, "yyyy-MM-dd'T'HH:mm:ss"),
           isPinnedSchedule: true,
         },
       },
