@@ -6,7 +6,7 @@ import {
   timeBlocks,
   todos,
 } from '@auto-cal/db/schema';
-import { and, eq, inArray, isNotNull, isNull, ne } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, lt, ne, or } from 'drizzle-orm';
 import {
   computeSchedule,
   startOfISOWeek,
@@ -33,10 +33,12 @@ export async function runSchedulerWriteback(
     1,
   );
 
+  const now = new Date();
+
   // Fetch all user data in parallel
   const [
     userTimeBlocks,
-    userTodos,
+    allIncompleteTodos,
     userHabits,
     userActivityTypes,
   ] = await Promise.all([
@@ -48,7 +50,11 @@ export async function runSchedulerWriteback(
         eq(todos.userId, userId),
         isNull(todos.completedAt),
         isNotNull(todos.activityTypeId),
-        ne(todos.isPinnedSchedule, true),
+        // Include all non-pinned todos plus any pinned todos whose time has passed
+        or(
+          ne(todos.isPinnedSchedule, true),
+          and(eq(todos.isPinnedSchedule, true), lt(todos.scheduledAt, now)),
+        ),
       ),
     }),
     db._query.habits.findMany({
@@ -61,6 +67,24 @@ export async function runSchedulerWriteback(
       where: eq(activityTypes.userId, userId),
     }),
   ]);
+
+  // Unpin todos whose scheduled time has passed — they re-enter the scheduler
+  const overduePinnedIds = allIncompleteTodos
+    .filter((t) => t.isPinnedSchedule && t.scheduledAt && t.scheduledAt < now)
+    .map((t) => t.id);
+
+  if (overduePinnedIds.length > 0) {
+    await db
+      .update(todos)
+      .set({ isPinnedSchedule: false, scheduledAt: null, updatedAt: now })
+      .where(inArray(todos.id, overduePinnedIds));
+  }
+
+  const userTodos = allIncompleteTodos.map((t) =>
+    overduePinnedIds.includes(t.id)
+      ? { ...t, isPinnedSchedule: false, scheduledAt: null }
+      : t,
+  );
 
   const userHabitIds = userHabits.map((h) => h.id);
 

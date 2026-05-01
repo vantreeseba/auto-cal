@@ -687,9 +687,29 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
       }),
     ]);
 
-    // Split todos: pinned show at their stored scheduledAt; unpinned go through the scheduler
-    const pinnedTodos = allIncompleteTodos.filter((t) => t.isPinnedSchedule && t.scheduledAt);
-    const userTodos = allIncompleteTodos.filter((t) => !t.isPinnedSchedule);
+    const now = new Date();
+
+    // Split todos: pinned show at their stored scheduledAt; unpinned go through the scheduler.
+    // Overdue pinned todos (past scheduledAt, not completed) lose their pin and re-enter the
+    // scheduler so they get placed at the next available future slot.
+    const overduePinnedIds = allIncompleteTodos
+      .filter((t) => t.isPinnedSchedule && t.scheduledAt && t.scheduledAt < now)
+      .map((t) => t.id);
+
+    if (overduePinnedIds.length > 0) {
+      context.db
+        .update(todos)
+        .set({ isPinnedSchedule: false, scheduledAt: null, updatedAt: now })
+        .where(inArray(todos.id, overduePinnedIds))
+        .catch(console.error);
+    }
+
+    const pinnedTodos = allIncompleteTodos.filter(
+      (t) => t.isPinnedSchedule && t.scheduledAt && !overduePinnedIds.includes(t.id),
+    );
+    const userTodos = allIncompleteTodos.filter(
+      (t) => !t.isPinnedSchedule || overduePinnedIds.includes(t.id),
+    );
 
     // habit_completions has no userId — scope by the user's own habit IDs
     const userHabitIds = userHabits.map((h) => h.id);
