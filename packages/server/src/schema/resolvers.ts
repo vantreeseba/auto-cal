@@ -8,6 +8,7 @@ import {
 } from '@auto-cal/db/schema';
 import {
   and,
+  asc,
   desc,
   eq,
   gte,
@@ -294,7 +295,7 @@ const extensionSDL = `
 
   extend type Query {
     myActivityTypes: [ActivityType!]!
-    myTodos(activityTypeId: ID, completed: Boolean): [Todo!]!
+    myTodos(activityTypeId: ID, completed: Boolean, orderBy: String): [Todo!]!
     myHabits(activityTypeId: ID): [Habit!]!
     myTimeBlocks(activityTypeId: ID, containsDay: Int): [TimeBlock!]!
     activityTypeStats(startDate: String, endDate: String): [ActivityTypeStats!]!
@@ -360,10 +361,20 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
 
   // --- Todo Queries ---
 
+  // biome-ignore lint/suspicious/noExplicitAny: drizzle orderBy accepts SQL expressions
+  const TODO_ORDER_BY: Record<string, any[]> = {
+    priority_desc: [desc(todos.priority), desc(todos.createdAt)],
+    priority_asc: [asc(todos.priority), desc(todos.createdAt)],
+    created_desc: [desc(todos.createdAt)],
+    created_asc: [asc(todos.createdAt)],
+    title_asc: [asc(todos.title)],
+    scheduled_asc: [asc(todos.scheduledAt), desc(todos.priority)],
+  };
+
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
   queryFields.myTodos!.resolve = async (
     _parent,
-    args: { activityTypeId?: string; completed?: boolean },
+    args: { activityTypeId?: string; completed?: boolean; orderBy?: string },
     context: Context,
   ) => {
     if (!context.userId) throw new Error('Not authenticated');
@@ -373,12 +384,13 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     if (args.completed === true) conditions.push(isNotNull(todos.completedAt));
     else if (args.completed === false)
       conditions.push(isNull(todos.completedAt));
-    const result = await context.db._query.todos.findMany({
+    const orderBy = (args.orderBy && TODO_ORDER_BY[args.orderBy])
+      ? TODO_ORDER_BY[args.orderBy]
+      : TODO_ORDER_BY.priority_desc;
+    return context.db._query.todos.findMany({
       where: and(...conditions),
-      orderBy: [desc(todos.priority), desc(todos.createdAt)],
+      orderBy,
     });
-
-    return result;
   };
 
   // --- Habit Queries ---

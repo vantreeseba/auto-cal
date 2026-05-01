@@ -8,10 +8,26 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { ClipboardList, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { TodoForm } from './TodoForm';
 import { TodoItem } from './TodoItem';
+
+const SORT_OPTIONS = [
+  { value: 'priority_desc', label: 'Priority: High → Low' },
+  { value: 'priority_asc', label: 'Priority: Low → High' },
+  { value: 'scheduled_asc', label: 'Scheduled time' },
+  { value: 'created_desc', label: 'Newest first' },
+  { value: 'created_asc', label: 'Oldest first' },
+  { value: 'title_asc', label: 'Title A → Z' },
+] as const;
 
 export const TODO_LIST_FRAGMENT = graphql(`
   fragment Todo_TodoList on Todo {
@@ -37,9 +53,11 @@ type TodoListProps = {
   items: Todo[];
   loading?: boolean;
   error?: Error | null;
+  orderBy?: string;
+  onOrderByChange?: (value: string) => void;
 };
 
-export function TodoList({ items, loading, error }: TodoListProps) {
+export function TodoList({ items, loading, error, orderBy = 'priority_desc', onOrderByChange }: TodoListProps) {
   const [formOpen, setFormOpen] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -77,6 +95,20 @@ export function TodoList({ items, loading, error }: TodoListProps) {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
+              {onOrderByChange && (
+                <Select value={orderBy} onValueChange={onOrderByChange}>
+                  <SelectTrigger className="h-8 w-[180px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SORT_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               {completedCount > 0 && (
                 <Button
                   size="sm"
