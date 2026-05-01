@@ -1,4 +1,4 @@
-import type { Habit_HabitListFragment } from '@/__generated__/graphql.js';
+import type { Habit_HabitListFragment, HabitPeriod } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
 import {
@@ -56,12 +56,6 @@ interface HabitDetailProps {
   onEdit: (habit: Habit) => void;
 }
 
-interface HabitPeriod {
-  label: string;
-  completions: number;
-  target: number;
-  rate: number;
-}
 
 export function HabitDetail({ habit, onBack, onEdit }: HabitDetailProps) {
   const { data, loading, error } = useQuery(GET_HABIT_DETAIL, {

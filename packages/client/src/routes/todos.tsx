@@ -1,6 +1,7 @@
 import { TODO_LIST_FRAGMENT, type TodoOrderBy } from '@/components/domain/todo/TodoList';
 import { TodoList } from '@/components/domain/todo/TodoList';
 import { RouteError } from '@/components/ui/route-error';
+import { OrderDirection } from '@/__generated__/graphql.js';
 import { gql, useQuery } from '@apollo/client';
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
@@ -15,8 +16,8 @@ const GET_MY_TODOS = gql`
 `;
 
 const DEFAULT_ORDER_BY: TodoOrderBy = {
-  priority: { direction: 'desc', priority: 1 },
-  createdAt: { direction: 'desc', priority: 2 },
+  priority: { direction: OrderDirection.Desc, priority: 1 },
+  createdAt: { direction: OrderDirection.Desc, priority: 2 },
 };
 
 export const Route = createFileRoute('/todos')({

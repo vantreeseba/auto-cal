@@ -1,4 +1,4 @@
-import type { ActivityType_ActivityTypeListFragment } from '@/__generated__/graphql.js';
+import type { ActivityType_ActivityTypeListFragment, ActivityTypeStats } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,9 +30,10 @@ type ActivityTypeItem = ActivityType_ActivityTypeListFragment;
 
 type ActivityTypeListProps = {
   items: ActivityTypeItem[];
+  statsById?: Map<string, ActivityTypeStats>;
 };
 
-export function ActivityTypeList({ items }: ActivityTypeListProps) {
+export function ActivityTypeList({ items, statsById }: ActivityTypeListProps) {
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ActivityTypeItem | null>(null);
 
@@ -75,28 +76,38 @@ export function ActivityTypeList({ items }: ActivityTypeListProps) {
             </p>
           )}
           <div className="space-y-2">
-            {items.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between rounded-md border px-3 py-2"
-              >
-                <div className="flex items-center gap-3">
-                  <span
-                    className="inline-block h-4 w-4 rounded-full border border-border"
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <span className="text-sm font-medium">{item.name}</span>
-                </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => openEdit(item)}
-                  aria-label={`Edit ${item.name}`}
+            {items.map((item) => {
+              const stats = statsById?.get(item.id);
+              return (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between rounded-md border px-3 py-2"
                 >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="inline-block h-4 w-4 rounded-full border border-border"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className="text-sm font-medium">{item.name}</span>
+                    {stats && (
+                      <span className="text-xs text-muted-foreground">
+                        {stats.totalTodos} todo{stats.totalTodos !== 1 ? 's' : ''}
+                        {' · '}
+                        {stats.totalHabits} habit{stats.totalHabits !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => openEdit(item)}
+                    aria-label={`Edit ${item.name}`}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>

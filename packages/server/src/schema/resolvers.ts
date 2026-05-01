@@ -26,6 +26,7 @@ import {
 } from 'graphql';
 import { z } from 'zod';
 import type { Context } from '../context.ts';
+import type { InnerOrder, TodoOrderBy } from '../__generated__/resolvers.ts';
 import {
   signMagicToken,
   signSessionToken,
@@ -361,12 +362,6 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
 
   // --- Todo Queries ---
 
-  type InnerOrderInput = { direction: 'asc' | 'desc'; priority: number };
-  type TodoOrderByInput = Partial<Record<
-    'id' | 'title' | 'priority' | 'estimatedLength' | 'scheduledAt' | 'completedAt' | 'createdAt' | 'updatedAt',
-    InnerOrderInput
-  >>;
-
   const TODO_COLUMN_MAP = {
     id: todos.id,
     title: todos.title,
@@ -378,10 +373,10 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     updatedAt: todos.updatedAt,
   } as const;
 
-  function buildTodoOrderBy(orderBy?: TodoOrderByInput) {
+  function buildTodoOrderBy(orderBy?: TodoOrderBy) {
     if (!orderBy) return [desc(todos.priority), desc(todos.createdAt)];
     const entries = Object.entries(orderBy)
-      .filter((e): e is [string, InnerOrderInput] => e[1] != null)
+      .filter((e): e is [string, InnerOrder] => e[1] != null)
       .sort(([, a], [, b]) => a.priority - b.priority);
     if (entries.length === 0) return [desc(todos.priority), desc(todos.createdAt)];
     return entries.map(([field, inner]) => {
@@ -393,7 +388,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
   queryFields.myTodos!.resolve = async (
     _parent,
-    args: { activityTypeId?: string; completed?: boolean; orderBy?: TodoOrderByInput },
+    args: { activityTypeId?: string; completed?: boolean; orderBy?: TodoOrderBy },
     context: Context,
   ) => {
     if (!context.userId) throw new Error('Not authenticated');

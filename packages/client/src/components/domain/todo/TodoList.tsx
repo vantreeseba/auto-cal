@@ -1,4 +1,5 @@
-import type { Todo_TodoListFragment } from '@/__generated__/graphql.js';
+import { OrderDirection } from '@/__generated__/graphql.js';
+import type { Todo_TodoListFragment, TodoOrderBy } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,39 +21,40 @@ import { useState } from 'react';
 import { TodoForm } from './TodoForm';
 import { TodoItem } from './TodoItem';
 
-type InnerOrder = { direction: 'asc' | 'desc'; priority: number };
-export type TodoOrderBy = Partial<Record<string, InnerOrder>>;
+export type { TodoOrderBy };
+
+const D = OrderDirection;
 
 const SORT_OPTIONS: { value: string; label: string; orderBy: TodoOrderBy }[] = [
   {
     value: 'priority_desc',
     label: 'Priority: High → Low',
-    orderBy: { priority: { direction: 'desc', priority: 1 }, createdAt: { direction: 'desc', priority: 2 } },
+    orderBy: { priority: { direction: D.Desc, priority: 1 }, createdAt: { direction: D.Desc, priority: 2 } },
   },
   {
     value: 'priority_asc',
     label: 'Priority: Low → High',
-    orderBy: { priority: { direction: 'asc', priority: 1 }, createdAt: { direction: 'desc', priority: 2 } },
+    orderBy: { priority: { direction: D.Asc, priority: 1 }, createdAt: { direction: D.Desc, priority: 2 } },
   },
   {
     value: 'scheduled_asc',
     label: 'Scheduled time',
-    orderBy: { scheduledAt: { direction: 'asc', priority: 1 }, priority: { direction: 'desc', priority: 2 } },
+    orderBy: { scheduledAt: { direction: D.Asc, priority: 1 }, priority: { direction: D.Desc, priority: 2 } },
   },
   {
     value: 'created_desc',
     label: 'Newest first',
-    orderBy: { createdAt: { direction: 'desc', priority: 1 } },
+    orderBy: { createdAt: { direction: D.Desc, priority: 1 } },
   },
   {
     value: 'created_asc',
     label: 'Oldest first',
-    orderBy: { createdAt: { direction: 'asc', priority: 1 } },
+    orderBy: { createdAt: { direction: D.Asc, priority: 1 } },
   },
   {
     value: 'title_asc',
     label: 'Title A → Z',
-    orderBy: { title: { direction: 'asc', priority: 1 } },
+    orderBy: { title: { direction: D.Asc, priority: 1 } },
   },
 ];
 
