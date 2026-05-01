@@ -124,24 +124,24 @@ function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Today — left of view switcher so nav arrows never shift position */}
-          {!isCurrent(date, view) && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                setDate(
-                  view === 'week'
-                    ? toMonday(new Date())
-                    : view === 'month'
-                      ? startOfMonth(new Date())
-                      : new Date(),
-                )
-              }
-            >
-              Today
-            </Button>
-          )}
+          {/* Today — always rendered so nav arrows don't shift on navigate */}
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isCurrent(date, view)}
+            className="disabled:opacity-40"
+            onClick={() =>
+              setDate(
+                view === 'week'
+                  ? toMonday(new Date())
+                  : view === 'month'
+                    ? startOfMonth(new Date())
+                    : new Date(),
+              )
+            }
+          >
+            Today
+          </Button>
 
           {/* View switcher */}
           <div className="flex rounded-md border p-0.5 gap-0.5">
