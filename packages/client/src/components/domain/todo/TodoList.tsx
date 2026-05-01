@@ -20,14 +20,41 @@ import { useState } from 'react';
 import { TodoForm } from './TodoForm';
 import { TodoItem } from './TodoItem';
 
-const SORT_OPTIONS = [
-  { value: 'priority_desc', label: 'Priority: High → Low' },
-  { value: 'priority_asc', label: 'Priority: Low → High' },
-  { value: 'scheduled_asc', label: 'Scheduled time' },
-  { value: 'created_desc', label: 'Newest first' },
-  { value: 'created_asc', label: 'Oldest first' },
-  { value: 'title_asc', label: 'Title A → Z' },
-] as const;
+type InnerOrder = { direction: 'asc' | 'desc'; priority: number };
+export type TodoOrderBy = Partial<Record<string, InnerOrder>>;
+
+const SORT_OPTIONS: { value: string; label: string; orderBy: TodoOrderBy }[] = [
+  {
+    value: 'priority_desc',
+    label: 'Priority: High → Low',
+    orderBy: { priority: { direction: 'desc', priority: 1 }, createdAt: { direction: 'desc', priority: 2 } },
+  },
+  {
+    value: 'priority_asc',
+    label: 'Priority: Low → High',
+    orderBy: { priority: { direction: 'asc', priority: 1 }, createdAt: { direction: 'desc', priority: 2 } },
+  },
+  {
+    value: 'scheduled_asc',
+    label: 'Scheduled time',
+    orderBy: { scheduledAt: { direction: 'asc', priority: 1 }, priority: { direction: 'desc', priority: 2 } },
+  },
+  {
+    value: 'created_desc',
+    label: 'Newest first',
+    orderBy: { createdAt: { direction: 'desc', priority: 1 } },
+  },
+  {
+    value: 'created_asc',
+    label: 'Oldest first',
+    orderBy: { createdAt: { direction: 'asc', priority: 1 } },
+  },
+  {
+    value: 'title_asc',
+    label: 'Title A → Z',
+    orderBy: { title: { direction: 'asc', priority: 1 } },
+  },
+];
 
 export const TODO_LIST_FRAGMENT = graphql(`
   fragment Todo_TodoList on Todo {
@@ -53,11 +80,11 @@ type TodoListProps = {
   items: Todo[];
   loading?: boolean;
   error?: Error | null;
-  orderBy?: string;
-  onOrderByChange?: (value: string) => void;
+  sortKey?: string;
+  onSortChange?: (key: string, orderBy: TodoOrderBy) => void;
 };
 
-export function TodoList({ items, loading, error, orderBy = 'priority_desc', onOrderByChange }: TodoListProps) {
+export function TodoList({ items, loading, error, sortKey = 'priority_desc', onSortChange }: TodoListProps) {
   const [formOpen, setFormOpen] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -95,8 +122,14 @@ export function TodoList({ items, loading, error, orderBy = 'priority_desc', onO
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              {onOrderByChange && (
-                <Select value={orderBy} onValueChange={onOrderByChange}>
+              {onSortChange && (
+                <Select
+                  value={sortKey}
+                  onValueChange={(key) => {
+                    const opt = SORT_OPTIONS.find((o) => o.value === key);
+                    if (opt) onSortChange(key, opt.orderBy);
+                  }}
+                >
                   <SelectTrigger className="h-8 w-[180px] text-xs">
                     <SelectValue />
                   </SelectTrigger>
