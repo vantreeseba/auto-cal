@@ -66,6 +66,9 @@ const UPDATE_TIME_BLOCK = graphql(`
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
+// 0=Sun, 1=Mon … 6=Sat
+const WEEKDAYS = [1, 2, 3, 4, 5];
+const WEEKEND = [0, 6];
 
 // ─── Validation Schema ──────────────────────────────────────────────────────
 
@@ -200,6 +203,23 @@ export function TimeBlockForm({
                     Days of Week
                   </p>
                   <div className="flex gap-1 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => field.handleChange([...WEEKDAYS])}
+                      className="px-2 py-1 rounded text-xs font-medium border border-border bg-background text-muted-foreground hover:bg-muted transition-colors"
+                    >
+                      Weekdays
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => field.handleChange([...WEEKEND])}
+                      className="px-2 py-1 rounded text-xs font-medium border border-border bg-background text-muted-foreground hover:bg-muted transition-colors"
+                    >
+                      Weekend
+                    </button>
+                    <span className="self-center text-muted-foreground text-xs">·</span>
+                  </div>
+                  <div className="flex gap-1 flex-wrap">
                     {DAY_NAMES.map((day, index) => {
                       const current = field.state.value as number[];
                       const selected = current.includes(index);
@@ -233,6 +253,7 @@ export function TimeBlockForm({
                         </button>
                       );
                     })}
+                  </div>
                   </div>
                   {field.state.meta.errors.length > 0 && (
                     <p className="text-sm text-destructive">
