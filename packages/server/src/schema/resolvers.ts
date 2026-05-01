@@ -454,39 +454,52 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     context: Context,
   ) => {
     if (!context.userId) throw new Error('Not authenticated');
-    const userActivityTypes = await context.db._query.activityTypes.findMany({
-      where: eq(activityTypes.userId, context.userId),
-    });
-    const results = [];
-    for (const activityType of userActivityTypes) {
-      const todoConditions = [
-        eq(todos.userId, context.userId),
-        eq(todos.activityTypeId, activityType.id),
-      ];
-      if (args.startDate)
-        todoConditions.push(gte(todos.createdAt, new Date(args.startDate)));
-      if (args.endDate)
-        todoConditions.push(lte(todos.createdAt, new Date(args.endDate)));
-      const allTodos = await context.db._query.todos.findMany({
+
+    const todoConditions = [
+      eq(todos.userId, context.userId),
+      isNotNull(todos.activityTypeId),
+    ];
+    if (args.startDate)
+      todoConditions.push(gte(todos.createdAt, new Date(args.startDate)));
+    if (args.endDate)
+      todoConditions.push(lte(todos.createdAt, new Date(args.endDate)));
+
+    const [userActivityTypes, allTodos, allHabits] = await Promise.all([
+      context.db._query.activityTypes.findMany({
+        where: eq(activityTypes.userId, context.userId),
+      }),
+      context.db._query.todos.findMany({
         where: and(...todoConditions),
-      });
-      const completedTodos = allTodos.filter((t) => t.completedAt !== null);
-      const habitConditions = [
-        eq(habits.userId, context.userId),
-        eq(habits.activityTypeId, activityType.id),
-      ];
-      const allHabits = await context.db._query.habits.findMany({
-        where: and(...habitConditions),
-      });
-      results.push({
-        activityTypeId: activityType.id,
-        activityTypeName: activityType.name,
-        totalTodos: allTodos.length,
-        completedTodos: completedTodos.length,
-        totalHabits: allHabits.length,
-      });
+      }),
+      context.db._query.habits.findMany({
+        where: and(eq(habits.userId, context.userId), isNotNull(habits.activityTypeId)),
+      }),
+    ]);
+
+    const todosByType = new Map<string, typeof allTodos>();
+    for (const todo of allTodos) {
+      if (!todo.activityTypeId) continue;
+      const bucket = todosByType.get(todo.activityTypeId) ?? [];
+      bucket.push(todo);
+      todosByType.set(todo.activityTypeId, bucket);
     }
-    return results;
+
+    const habitsByType = new Map<string, number>();
+    for (const habit of allHabits) {
+      if (!habit.activityTypeId) continue;
+      habitsByType.set(habit.activityTypeId, (habitsByType.get(habit.activityTypeId) ?? 0) + 1);
+    }
+
+    return userActivityTypes.map((at) => {
+      const typeTodos = todosByType.get(at.id) ?? [];
+      return {
+        activityTypeId: at.id,
+        activityTypeName: at.name,
+        totalTodos: typeTodos.length,
+        completedTodos: typeTodos.filter((t) => t.completedAt !== null).length,
+        totalHabits: habitsByType.get(at.id) ?? 0,
+      };
+    });
   };
 
   // --- Habit Stats Query ---
@@ -498,36 +511,42 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     context: Context,
   ) => {
     if (!context.userId) throw new Error('Not authenticated');
+
     const habitConditions = [eq(habits.userId, context.userId)];
     if (args.habitId) habitConditions.push(eq(habits.id, args.habitId));
     const userHabits = await context.db._query.habits.findMany({
       where: and(...habitConditions),
     });
-    const results = [];
-    for (const habit of userHabits) {
-      const completionConditions = [
-        eq(habitCompletions.habitId, habit.id),
-        isNotNull(habitCompletions.completedAt),
-      ];
-      if (args.startDate)
-        completionConditions.push(
-          gte(habitCompletions.completedAt, new Date(args.startDate)),
-        );
-      if (args.endDate)
-        completionConditions.push(
-          lte(habitCompletions.completedAt, new Date(args.endDate)),
-        );
-      const completions = await context.db._query.habitCompletions.findMany({
-        where: and(...completionConditions),
-      });
-      results.push({
+
+    if (userHabits.length === 0) return [];
+
+    const completionConditions = [
+      inArray(habitCompletions.habitId, userHabits.map((h) => h.id)),
+      isNotNull(habitCompletions.completedAt),
+    ];
+    if (args.startDate)
+      completionConditions.push(gte(habitCompletions.completedAt, new Date(args.startDate)));
+    if (args.endDate)
+      completionConditions.push(lte(habitCompletions.completedAt, new Date(args.endDate)));
+
+    const allCompletions = await context.db._query.habitCompletions.findMany({
+      where: and(...completionConditions),
+    });
+
+    const completionsByHabit = new Map<string, number>();
+    for (const c of allCompletions) {
+      completionsByHabit.set(c.habitId, (completionsByHabit.get(c.habitId) ?? 0) + 1);
+    }
+
+    return userHabits.map((habit) => {
+      const totalCompletions = completionsByHabit.get(habit.id) ?? 0;
+      return {
         habitId: habit.id,
         title: habit.title,
-        completionRate: completions.length / habit.frequencyCount,
-        totalCompletions: completions.length,
-      });
-    }
-    return results;
+        completionRate: totalCompletions / habit.frequencyCount,
+        totalCompletions,
+      };
+    });
   };
 
   // --- Habit Detail Query ---
@@ -1280,44 +1299,22 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
 
   type RowWithActivityTypeId = { activityTypeId?: string | null };
 
+  function resolveActivityType(parent: RowWithActivityTypeId, _args: unknown, context: Context) {
+    if (!parent.activityTypeId) return null;
+    return context.loaders.activityType.load(parent.activityTypeId);
+  }
+
   const todoType = extended.getType('Todo') as GraphQLObjectType;
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  todoType.getFields().activityType!.resolve = async (
-    parent: RowWithActivityTypeId,
-    _args,
-    context: Context,
-  ) => {
-    if (!parent.activityTypeId) return null;
-    return context.db._query.activityTypes.findFirst({
-      where: eq(activityTypes.id, parent.activityTypeId),
-    });
-  };
+  todoType.getFields().activityType!.resolve = resolveActivityType;
 
   const habitType = extended.getType('Habit') as GraphQLObjectType;
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  habitType.getFields().activityType!.resolve = async (
-    parent: RowWithActivityTypeId,
-    _args,
-    context: Context,
-  ) => {
-    if (!parent.activityTypeId) return null;
-    return context.db._query.activityTypes.findFirst({
-      where: eq(activityTypes.id, parent.activityTypeId),
-    });
-  };
+  habitType.getFields().activityType!.resolve = resolveActivityType;
 
   const timeBlockType = extended.getType('TimeBlock') as GraphQLObjectType;
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  timeBlockType.getFields().activityType!.resolve = async (
-    parent: RowWithActivityTypeId,
-    _args,
-    context: Context,
-  ) => {
-    if (!parent.activityTypeId) return null;
-    return context.db._query.activityTypes.findFirst({
-      where: eq(activityTypes.id, parent.activityTypeId),
-    });
-  };
+  timeBlockType.getFields().activityType!.resolve = resolveActivityType;
 
   return extended;
 }
