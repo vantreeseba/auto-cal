@@ -3,7 +3,7 @@ import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
 import { priorityLabel } from '@/lib/utils';
 import { Link } from '@tanstack/react-router';
-import { format, parseISO } from 'date-fns';
+import { addDays, format, parseISO, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
 import { AlertTriangle, Check } from 'lucide-react';
 import { useMemo } from 'react';
 import { gql, useMutation } from '@apollo/client';
@@ -57,17 +57,48 @@ function groupByDay(
   return map;
 }
 
+type CalendarViewMode = 'day' | 'week' | 'month';
+
 type ScheduleViewProps = {
   schedule: Array<ScheduledItem_ScheduleViewFragment>;
+  view: CalendarViewMode;
+  date: Date;
 };
 
-export function ScheduleView({ schedule }: ScheduleViewProps) {
+function viewWindow(view: CalendarViewMode, date: Date): { start: Date; end: Date } {
+  switch (view) {
+    case 'day':
+      return { start: startOfDay(date), end: endOfDay(date) };
+    case 'month':
+      return { start: startOfMonth(date), end: endOfMonth(date) };
+    case 'week':
+    default: {
+      // week starts on Monday
+      const d = new Date(date);
+      const day = d.getDay();
+      const monday = addDays(d, day === 0 ? -6 : 1 - day);
+      return { start: startOfDay(monday), end: endOfDay(addDays(monday, 6)) };
+    }
+  }
+}
+
+export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
+  const { start: windowStart, end: windowEnd } = useMemo(
+    () => viewWindow(view, date),
+    [view, date],
+  );
+
   const { scheduled, unscheduled } = useMemo(() => {
+    const inWindow = (item: ScheduledItem_ScheduleViewFragment) => {
+      if (!item.scheduledStart) return false;
+      const d = parseISO(item.scheduledStart);
+      return d >= windowStart && d <= windowEnd;
+    };
     return {
-      scheduled: schedule.filter((i) => i.isScheduled),
+      scheduled: schedule.filter((i) => i.isScheduled && inWindow(i)),
       unscheduled: schedule.filter((i) => !i.isScheduled),
     };
-  }, [schedule]);
+  }, [schedule, windowStart, windowEnd]);
 
   const byDay = useMemo(() => groupByDay(scheduled), [scheduled]);
   const dayKeys = useMemo(() => [...byDay.keys()].sort(), [byDay]);

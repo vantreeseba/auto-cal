@@ -186,7 +186,7 @@ function DashboardPage() {
           date={date}
           view={view}
         />
-        <ScheduleView schedule={scheduleData?.mySchedule ?? []} />
+        <ScheduleView schedule={scheduleData?.mySchedule ?? []} view={view} date={date} />
       </div>
     </div>
   );
