@@ -11,6 +11,7 @@ import {
 import { InlineLengthEdit } from '@/components/ui/inline-length-edit';
 import { gql, useMutation } from '@apollo/client';
 import { priorityLabel } from '@/lib/utils';
+import { Link } from '@tanstack/react-router';
 import { AlertTriangle, Check, Pencil } from 'lucide-react';
 
 const COMPLETE_TODO = graphql(`
@@ -81,13 +82,14 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
               />
               {' • '}Priority: {priorityLabel(todo.priority)}
               {!isCompleted && todo.activityType && !todo.scheduledAt && (
-                <span
-                  className="ml-2 inline-flex items-center gap-1 text-amber-600"
-                  title="No available slot — add a matching time block or reduce estimated length"
+                <Link
+                  to="/time-blocks"
+                  className="ml-2 inline-flex items-center gap-1 text-amber-600 hover:text-amber-700 hover:underline"
+                  title="No available slot — click to add a matching time block or reduce estimated length"
                 >
                   <AlertTriangle className="h-3.5 w-3.5" />
                   Unschedulable
-                </span>
+                </Link>
               )}
               {isCompleted && (
                 <span className="ml-2 text-green-600 font-medium">✓ Done</span>
