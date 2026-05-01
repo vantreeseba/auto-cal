@@ -4,7 +4,7 @@ import type {
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { gql, useMutation } from '@apollo/client';
-import { Check } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import {
   addDays,
   format,
@@ -193,7 +193,7 @@ function eventStyleGetter(event: CalendarEvent) {
 // ─── Custom Event Component ──────────────────────────────────────────────────
 
 function CalendarEventComponent({ event }: { event: CalendarEvent }) {
-  const [completeHabit] = useMutation(COMPLETE_HABIT, {
+  const [completeHabit, { loading: completing }] = useMutation(COMPLETE_HABIT, {
     refetchQueries: ['MySchedule'],
     onError: (err) => console.error('[completeHabit]', err.message),
   });
@@ -201,12 +201,16 @@ function CalendarEventComponent({ event }: { event: CalendarEvent }) {
   const isHabit = event.isTask && event.kind === 'habit';
 
   return (
-    <div className="flex h-full items-center justify-between gap-1 overflow-hidden px-0.5">
+    <div
+      className="flex h-full items-center justify-between gap-1 overflow-hidden px-0.5"
+      style={{ opacity: completing ? 0.5 : 1, transition: 'opacity 150ms' }}
+    >
       <span className="truncate text-xs leading-tight">{event.title}</span>
       {isHabit && (
         <button
           type="button"
-          className="flex-shrink-0 rounded p-0.5 opacity-80 hover:opacity-100 hover:bg-black/20"
+          disabled={completing}
+          className="flex-shrink-0 rounded p-0.5 opacity-80 hover:opacity-100 hover:bg-black/20 disabled:cursor-not-allowed"
           title="Mark habit complete"
           onClick={(e) => {
             e.stopPropagation();
@@ -222,7 +226,11 @@ function CalendarEventComponent({ event }: { event: CalendarEvent }) {
             }).catch(console.error);
           }}
         >
-          <Check className="h-3 w-3" />
+          {completing ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <Check className="h-3 w-3" />
+          )}
         </button>
       )}
     </div>
