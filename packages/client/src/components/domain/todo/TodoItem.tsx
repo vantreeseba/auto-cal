@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/card';
 import { InlineLengthEdit } from '@/components/ui/inline-length-edit';
 import { gql, useMutation } from '@apollo/client';
+import { priorityLabel } from '@/lib/utils';
 import { AlertTriangle, Check, Pencil } from 'lucide-react';
 
 const COMPLETE_TODO = graphql(`
@@ -78,7 +79,7 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
                 saving={updatingLength}
                 onSave={handleSaveLength}
               />
-              {' • '}Priority: {todo.priority}
+              {' • '}Priority: {priorityLabel(todo.priority)}
               {!isCompleted && todo.activityType && !todo.scheduledAt && (
                 <span
                   className="ml-2 inline-flex items-center gap-1 text-amber-600"

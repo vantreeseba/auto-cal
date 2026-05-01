@@ -1,6 +1,7 @@
 import type { ScheduledItem_ScheduleViewFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
+import { priorityLabel } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { AlertTriangle, Check } from 'lucide-react';
 import { useMemo } from 'react';
@@ -32,12 +33,6 @@ const COMPLETE_HABIT = gql`
   }
 `;
 
-function priorityLabel(priority: number): string {
-  if (priority >= 100) return 'Urgent';
-  if (priority >= 50) return 'High';
-  if (priority >= 25) return 'Medium';
-  return 'Low';
-}
 
 function groupByDay(
   items: ScheduledItem_ScheduleViewFragment[],
