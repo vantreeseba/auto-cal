@@ -69,8 +69,26 @@ The app should track the number of completed todo's by activity type.
 | Completed early (future freed) | Card at `completedAt` time, checkmark      | Yes         |
 | Overdue (past slot, no complete) | Card with red/amber tint, overdue badge  | Yes         |
 
-### Open questions (to be decided)
-- Should overdue items be rescheduled automatically to the next available slot, or stay put
-  as a visual record until the user acts?
-- What is the display behavior when `completedAt` falls outside any time block (e.g. 2am)?
-- Should there be a cap on how far back a user can set `completedAt`?
+### Overdue items
+- Items past their scheduled slot with no `completedAt` are **overdue**.
+- They are automatically moved to the next available slot by the scheduler but flagged
+  visually as overdue (red/amber tint + badge) so the user knows they are running late.
+- They do not stay pinned to the missed slot; yesterday's calendar should not accumulate
+  unactioned items.
+
+### Completion time outside time blocks
+- `completedAt` is recorded exactly as the user enters it, regardless of whether that time
+  falls within any defined time block.
+- The calendar renders the completed item floating at its exact `completedAt` time — there
+  is no snapping to time block boundaries.
+
+### Habit occurrence matching
+- Habit completions are not matched to specific scheduled occurrences.
+- A completion record is created with the user-entered `completedAt` timestamp.
+- Period credit (e.g. "3 times this week") is calculated purely by counting completion
+  timestamps that fall within the period window — no occurrence ID is tracked.
+
+### Todo re-completion
+- A todo is a single-time task. It has at most one `completedAt` value at any given time.
+- Uncompleting and re-completing is valid (e.g. to correct the timestamp), but the latest
+  `completedAt` always wins — there is no completion history log.
