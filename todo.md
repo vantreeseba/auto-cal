@@ -107,14 +107,9 @@ If you're unsure what to work on, these three are the highest-leverage next step
 
 ## P1 — High-value features
 
-### #4 — Dashboard: drag-to-reschedule on the calendar
-**Problem:** The `CalendarView` displays the schedule but has no interaction — users cannot drag a task to a different slot to manually override the auto-scheduler.  
-**Work:**
-- Enable `react-big-calendar` drag-and-drop addon
-- On drop, call `myUpdateTodo` with the new `scheduledAt`
-- Lock the slot so the auto-scheduler doesn't overwrite the manual assignment (add an `isPinnedSchedule` flag to `todos`)
-
-**Acceptance:** User can drag a todo to a new slot; it stays there on page refresh.
+### #4 — Calendar: drag-to-reschedule
+**Problem:** The `CalendarView` displays the schedule but has no interaction — users cannot drag a task to a different slot to manually override the auto-scheduler.
+**Note:** Superseded by #21, which covers drag-to-schedule as part of the broader isPinnedSchedule → manuallyScheduled refactor. Close this when #21 is done.
 
 ---
 
@@ -163,16 +158,20 @@ If you're unsure what to work on, these three are the highest-leverage next step
 
 ---
 
-### #9 — Analytics: productivity insights
-**Problem:** The `activityTypeStats` and `habitStats` queries exist but the UI only shows raw numbers; there are no trends or insights.  
+### #9 — Analytics page
+**Problem:** The `activityTypeStats` and `habitStats` queries exist but nothing is surfaced beyond raw numbers. There is no `/analytics` route.
+**Spec:** See `specifications.md` → "Analytics" section.
 **Work:**
-- Add a `/analytics` route with charts (use Recharts or visx)
-- Completion rate over time by activity type (line chart)
-- Todo throughput per week (bar chart)
-- Habit streak history (heatmap, GitHub-style)
-- "Best day" and "best time of day" computed from completion timestamps
+- Install shadcn charts (Recharts 3); do not add a second charting library
+- Add `/analytics` route and nav link; rename "Dashboard" nav link to "Calendar"
+- **Composite score** at top: weighted average of habit consistency + todo completion rate, displayed as % with a plain-English label
+- **Habit consistency section**: bar chart (one bar per habit, completion rate % capped at 100%, colored by activity type); click a bar to expand a week-by-week trend line
+- **Time distribution section**: grouped bar or donut chart — scheduled time vs completed time side-by-side per activity type
+- **Todo throughput section**: bar chart of completed todos per bucket; toggle daily/weekly x-axis; overdue count as a secondary line overlay
+- All sections share a single fixed time-range filter: This week / This month / Last 3 months / All time
+- All data real-time (no caching layer yet)
 
-**Acceptance:** User can see a 30-day productivity trend broken down by activity type.
+**Acceptance:** User can open `/analytics`, select "Last 3 months", and see habit rates, time distribution, and todo throughput with working charts. Clicking a habit bar shows its week-by-week trend.
 
 ---
 

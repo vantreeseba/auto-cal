@@ -159,6 +159,60 @@ The app should track the number of completed todo's by activity type.
 
 ---
 
+## Analytics
+
+### Route structure
+- A dedicated `/analytics` route is added to the nav.
+- Habit per-period stats remain on `/habits/$id` (existing `HabitDetail`).
+- Activity type stats remain on `/activity-types` (existing list).
+- The current "Dashboard" nav link is **renamed to "Calendar"** — it is purely a
+  scheduling/calendar view, not a stats surface.
+
+### Time range filter
+- Fixed presets only: **This week / This month / Last 3 months / All time**.
+- No custom date range picker (can be added later).
+- Filter applies to all sections on the page simultaneously.
+
+### Data freshness
+- All queries are real-time (no caching). May be pre-aggregated later.
+
+### Page layout (top to bottom)
+
+#### 1. Composite productivity score
+- A single prominent number at the top of the page.
+- Calculated as a weighted average of:
+  - **Habit consistency** — average completion rate across all habits in the period
+    (capped at 100% per habit; over-completion does not inflate the score)
+  - **Todo completion rate** — completed todos / total todos created in the period
+- Weighting TBD (start 50/50, tune later).
+- Displayed as a percentage with a label and a brief plain-English interpretation
+  (e.g. "Great week", "Room to improve").
+
+#### 2. Habit consistency
+- **Summary bar chart**: one bar per habit, showing completion rate % for the selected
+  period. Capped at 100%. Color-coded by activity type color.
+- **Trend expand**: clicking a habit bar expands a line chart below it showing
+  week-by-week completion rate over the selected range.
+- Uses shadcn/recharts3.
+
+#### 3. Time distribution
+- **Donut or grouped bar chart** showing time by activity type.
+- Two series side-by-side per activity type: **scheduled time** vs **completed time**
+  (in minutes, converted to hours for display).
+- Gives a clear picture of where plans matched reality.
+- Uses shadcn/recharts3.
+
+#### 4. Todo throughput
+- **Bar chart** of todos completed per time bucket.
+- Toggle between **daily** and **weekly** x-axis.
+- Secondary line overlay showing overdue count (todos past due with no `completedAt`).
+- Uses shadcn/recharts3.
+
+### Charting library
+- **shadcn charts** (built on Recharts 3). Do not introduce a second charting library.
+
+---
+
 ## Time Blocks
 
 ### Overlapping time blocks and priority
