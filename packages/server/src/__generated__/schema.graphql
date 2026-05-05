@@ -692,6 +692,7 @@ type TimeBlock {
   daysOfWeek: [Int!]!
   startTime: String!
   endTime: String!
+  priority: Int!
 
   """DateTime"""
   createdAt: DateTime!
@@ -909,6 +910,7 @@ input CreateTimeBlockArgs {
   daysOfWeek: [Int!]!
   startTime: String!
   endTime: String!
+  priority: Int
 }
 
 input UpdateHabitArgs {
@@ -928,6 +930,7 @@ input UpdateTimeBlockArgs {
   daysOfWeek: [Int!]
   startTime: String
   endTime: String
+  priority: Int
 }
 
 input CompleteHabitArgs {

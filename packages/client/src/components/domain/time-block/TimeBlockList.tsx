@@ -23,6 +23,7 @@ export const TIME_BLOCK_LIST_FRAGMENT = graphql(`
     daysOfWeek
     startTime
     endTime
+    priority
     createdAt
   }
 `);

@@ -30,6 +30,8 @@ type Slot = {
   totalMinutes: number;
   /** Minutes consumed so far */
   usedMinutes: number;
+  /** Time block priority — higher is preferred */
+  priority: number;
 };
 
 type Task = {
@@ -122,6 +124,7 @@ function expandSlots(weekStartStr: string, block: TimeBlock): Slot[] {
       startMinutes: startMins,
       totalMinutes,
       usedMinutes: 0,
+      priority: block.priority ?? 0,
     };
   });
 }
@@ -187,7 +190,9 @@ export function computeSchedule(
     slotsByActivityType.set(slot.activityTypeId, existing);
   }
   for (const slots of slotsByActivityType.values()) {
+    // Higher priority first; ties broken by date then start time
     slots.sort((a, b) => {
+      if (b.priority !== a.priority) return b.priority - a.priority;
       const dateCmp = a.dateStr.localeCompare(b.dateStr);
       return dateCmp !== 0 ? dateCmp : a.startMinutes - b.startMinutes;
     });

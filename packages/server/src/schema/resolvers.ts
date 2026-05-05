@@ -101,6 +101,7 @@ const CreateTimeBlockInput = z
       }),
     startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
     endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
+    priority: z.number().int().min(0).max(100).default(0),
   })
   .refine((data) => data.endTime > data.startTime, {
     message: 'End time must be after start time',
@@ -143,6 +144,7 @@ const UpdateTimeBlockInput = z
       .string()
       .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
       .optional(),
+    priority: z.number().int().min(0).max(100).optional(),
   })
   .refine(
     (data) => {
@@ -258,6 +260,7 @@ const extensionSDL = `
     daysOfWeek: [Int!]!
     startTime: String!
     endTime: String!
+    priority: Int
   }
 
   input UpdateHabitArgs {
@@ -277,6 +280,7 @@ const extensionSDL = `
     daysOfWeek: [Int!]
     startTime: String
     endTime: String
+    priority: Int
   }
 
   input CompleteHabitArgs {
@@ -1154,6 +1158,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
         ...(input.daysOfWeek !== undefined && { daysOfWeek: input.daysOfWeek }),
         ...(input.startTime !== undefined && { startTime: input.startTime }),
         ...(input.endTime !== undefined && { endTime: input.endTime }),
+        ...(input.priority !== undefined && { priority: input.priority }),
         updatedAt: new Date(),
       })
       .where(eq(timeBlocks.id, input.id))
@@ -1206,6 +1211,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
         daysOfWeek: input.daysOfWeek,
         startTime: input.startTime,
         endTime: input.endTime,
+        priority: input.priority,
       })
       .returning();
     if (!block) throw new Error('Failed to create time block');

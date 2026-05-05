@@ -49,6 +49,7 @@ export function TimeBlockItem({ timeBlock, onEdit }: TimeBlockItemProps) {
                 .map((d) => DAY_NAMES[d] ?? `Day ${d}`)
                 .join(', ')}{' '}
               • {timeBlock.startTime} – {timeBlock.endTime}
+              {timeBlock.priority > 0 && ` • Priority ${timeBlock.priority}`}
             </CardDescription>
           </div>
           <Button

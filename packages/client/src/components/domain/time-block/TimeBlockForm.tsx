@@ -84,6 +84,7 @@ const timeBlockSchema = z
       }),
     startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format'),
     endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format'),
+    priority: z.number().int().min(0).max(100),
   })
   .refine((data) => data.endTime > data.startTime, {
     message: 'End time must be after start time',
@@ -129,6 +130,7 @@ export function TimeBlockForm({
       daysOfWeek: timeBlock?.daysOfWeek ?? [1],
       startTime: timeBlock?.startTime ?? '09:00',
       endTime: timeBlock?.endTime ?? '10:00',
+      priority: timeBlock?.priority ?? 0,
     } as TimeBlockFormValues,
     validators: {
       onChange: timeBlockSchema,
@@ -143,6 +145,7 @@ export function TimeBlockForm({
               daysOfWeek: value.daysOfWeek,
               startTime: value.startTime,
               endTime: value.endTime,
+              priority: value.priority,
             },
           },
         });
@@ -154,6 +157,7 @@ export function TimeBlockForm({
               daysOfWeek: value.daysOfWeek,
               startTime: value.startTime,
               endTime: value.endTime,
+              priority: value.priority,
             },
           },
         });
@@ -307,6 +311,26 @@ export function TimeBlockForm({
                 )}
               </form.AppField>
             </div>
+
+            {/* Priority */}
+            <form.AppField name="priority">
+              {(field) => (
+                <Field>
+                  <FieldLabel>Priority (0 = lowest)</FieldLabel>
+                  <FieldControl>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(Number(e.target.value))}
+                    />
+                  </FieldControl>
+                  <FieldError />
+                </Field>
+              )}
+            </form.AppField>
 
             <DialogFooter>
               <form.Subscribe
