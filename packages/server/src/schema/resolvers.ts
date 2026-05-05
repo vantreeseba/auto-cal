@@ -1245,7 +1245,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     context: Context,
   ) => {
     if (!context.userId) throw new Error('Not authenticated');
-    await runSchedulerWriteback(context.db, context.userId, args.weekStart);
+    await runSchedulerWriteback(context.db, context.userId);
     return true;
   };
 
