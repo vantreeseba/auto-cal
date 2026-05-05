@@ -15,7 +15,8 @@
     "db:seed": "env-cmd -f ../../.env node --experimental-strip-types src/seed-runner.ts"
   },
   "dependencies": {
-    "@electric-sql/pglite": "^0.2.15"
+    "@electric-sql/pglite": "^0.2.15",
+    "postgres": "^3.4.9"
   },
   "peerDependencies": {
     "drizzle-orm": "~1.0.0-beta"
