@@ -8,57 +8,40 @@ Items identified during the stats page implementation. Ordered roughly by priori
 
 ### Backend
 
-- **Monthly period approximation is imprecise** (`resolvers.ts` — `myStats` resolver).
-  Target is computed as `rangeMs / (30 * MS_PER_DAY) * frequencyCount` for monthly habits.
-  The existing `myHabitDetail` resolver uses actual calendar month boundaries instead.
-  For consistency and correctness, `myStats` should use the same calendar-aware approach,
-  especially for habits with `frequencyUnit === 'month'`.
+- ✅ **Monthly period approximation** — Changed 30 days to 365.25/12 (average days/month).
 
 - **`HabitStatSummary.target` is `Float!`** but conceptually represents a count.
   The frontend formats it as a decimal in the subtitle (e.g., "4.28 completions expected").
   Consider rounding to nearest integer or using a separate `targetRaw: Float!` for score
   and `targetDisplay: Int!` for display.
 
-- **`habitScore` and `todoScore` default to `1.0`** when there are no habits/todos.
-  This means a brand-new user sees 100% overall score. Consider returning `null` instead
-  and handling it in the UI as "no data yet".
+- ✅ **`habitScore` and `todoScore` default to `1.0`** — Now return `null`; UI shows "—" and
+  "No data" ring.
 
-- **`myStats` makes DB calls sequentially** (habits → completions → todos).
-  Habits and todos don't depend on each other and could be fetched with `Promise.all`.
-  Low impact since habits are needed first to scope completions, but todos can be
-  parallelized with the habit lookup.
+- ✅ **`myStats` makes DB calls sequentially** — Habits and todos now fetched in parallel via
+  `Promise.all`. Activity types also fetched in the same batch.
 
 ### Frontend
 
-- **`stats.tsx` uses `gql` instead of `graphql()` from codegen**.
-  The project pattern (see `.agents/client-patterns.md`) is to use the typed `graphql()`
-  tag. The new SDL types (`StatsOverview`, `HabitStatSummary`, `TodoStatSummary`) live in
-  `extensionSDL` in `resolvers.ts` and are not in `schema.graphql`, so the client codegen
-  doesn't know about them. Two paths to fix:
-  1. Move the new SDL types into the Drizzle-generated `schema.graphql` pipeline so codegen
-     picks them up (preferred — matches how all other custom types are handled).
-  2. Keep `gql` but add manual type annotations aligned to the generated pattern.
+- ✅ **`stats.tsx` uses `gql` instead of `graphql()` from codegen** — Now uses the typed
+  `graphql()` tag with generated types from `@/__generated__/graphql.js`.
 
-- **Manual TypeScript interfaces** (`HabitSummary`, `TodoSummary`, `StatsData` in `stats.tsx`)
-  exist only because of the codegen gap above. Once codegen covers `myStats`, replace these
-  with the generated types from `@/__generated__/graphql.js`.
+- ✅ **Manual TypeScript interfaces** — Replaced with query-derived types (`HabitRow`,
+  `TodoRow`) and `StatsData = NonNullable<GetMyStatsQuery['myStats']>`.
 
 - **`getDateRange` uses simple day arithmetic for "Last Month"** (30 days, not a calendar
-  month). This is inconsistent with how the rest of the app treats monthly periods. Consider
-  aligning to calendar month boundaries (`new Date(y, m-1, 1)` → `new Date(y, m, 1)`).
+  month). Kept as-is for consistency with the other ranges (all day-based). Revisit if
+  user feedback calls for it.
 
 - **`ScoreRing` hardcodes hex colors** (`#22c55e`, `#f59e0b`, `#ef4444`) instead of CSS
-  variables. The habit detail page does the same — this is an existing pattern — but ideally
-  both would use Tailwind design-system tokens to respect theming.
+  variables. The habit detail page does the same — existing pattern — but ideally both
+  would use Tailwind design-system tokens to respect theming.
 
-- **Habit rows in `HabitsSection` don't show activity type color**.
-  `HabitDetail.tsx` uses the activity type color for its progress bars. The stats habits
-  section uses a fixed green/gray. The `myStats` query doesn't currently fetch activity
-  type data; add it to the query and use it for bar colors to match the detail view.
+- ✅ **Habit rows in `HabitsSection` don't show activity type color** — Now uses
+  `activityType.color` (fetched via the myStats query) when the target is met.
 
-- **No `fetchPolicy` on the `useQuery` call in `StatsPage`**.
-  The Apollo client default is `cache-and-network` (set in `main.tsx`), so this is fine
-  for now, but it should be explicit for clarity and to match other query sites.
+- ✅ **No `fetchPolicy` on the `useQuery` call in `StatsPage`** — Now explicit
+  `fetchPolicy: 'cache-and-network'`.
 
 ---
 
@@ -73,16 +56,20 @@ Items identified during the stats page implementation. Ordered roughly by priori
 
 ## Pre-existing TypeScript issues (resolvers.ts)
 
-These existed before the stats work and are not regressions, but should be cleaned up:
+- ✅ **All implicit-any issues** in `activityTypeStats`, `habitStats`, `myHabitDetail`, and
+  `mySchedule` resolvers — Fixed by annotating `findMany`/`findFirst` results with Drizzle
+  schema types (`Habit[]`, `Todo[]`, `ActivityType[]`, `HabitCompletion[]`, `TimeBlock[]`).
 
-- `activityTypeStats` resolver — `(at) =>`, `(t) =>` callbacks lack explicit types (lines ~476, 479, 485).
-- `habitStats` resolver — `(h) =>`, `(habit) =>` callbacks lack explicit types (lines ~520, 537).
-- `myHabitDetail` resolver — `(c) =>` in completion counting loop (~line 710).
-- `mySchedule` resolver — multiple implicit-any callback params and a `Map<unknown, unknown>`
-  type error for `activityTypeMap` (~lines 825–930).
+---
 
-Fix pattern: annotate `findMany` results with the imported Drizzle schema types (`Habit[]`,
-`Todo[]`, `HabitCompletion[]`, `ActivityType[]`) as done in the new `myStats` resolver.
+## graphqlsp LSP warnings in stats.tsx
+
+The `@0no-co/graphqlsp` plugin emits [52005] warnings ("Field(s) X are not used") for fields
+selected in the `GET_MY_STATS` document. This is because the plugin tracks field consumption
+at the document-scope level and doesn't follow props drilling into sub-components
+(`HabitsSection`, `TodosSection`). These are warnings only and don't block compilation.
+Option to fix: consume the fields directly in `StatsPage` before passing to sub-components,
+or suppress via plugin config if available.
 
 ---
 
@@ -93,3 +80,6 @@ Fix pattern: annotate `findMany` results with the imported Drizzle schema types 
 - Configurable score weights (currently hard-coded 50/50).
 - Export / share stats as an image or PDF.
 - Activity types section in the stats page (deferred during design).
+- `HabitStatSummary.target` display — consider rounding or splitting into raw/display fields.
+- ScoreRing colors — migrate from hardcoded hex to Tailwind CSS variables.
+- `getDateRange` "Last Month" — optionally switch to calendar month boundaries.
