@@ -1,10 +1,12 @@
+import type { GetMyStatsQuery, HabitStatSummary, TodoStatSummary } from '@/__generated__/graphql.js';
+import { graphql } from '@/__generated__/index.js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RouteError } from '@/components/ui/route-error';
-import { gql, useQuery } from '@apollo/client';
+import { useQuery } from '@apollo/client';
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 
-const GET_MY_STATS = gql`
+const GET_MY_STATS = graphql(`
   query GetMyStats($startDate: String, $endDate: String) {
     myStats(startDate: $startDate, endDate: $endDate) {
       weightedScore
@@ -27,7 +29,7 @@ const GET_MY_STATS = gql`
       }
     }
   }
-`;
+`);
 
 type DateRangeKey = 'week' | 'two_weeks' | 'month' | 'three_months' | 'all';
 
@@ -53,35 +55,24 @@ export const Route = createFileRoute('/stats')({
   errorComponent: ({ error, reset }) => <RouteError error={error} reset={reset} />,
 });
 
-interface HabitSummary {
-  habitId: string;
-  title: string;
-  completionRate: number;
-  completions: number;
-  target: number;
-  frequencyUnit: string;
-  frequencyCount: number;
-}
+type StatsData = NonNullable<GetMyStatsQuery['myStats']>;
 
-interface TodoSummary {
-  total: number;
-  completed: number;
-  overdue: number;
-  completionRate: number;
-}
-
-interface StatsData {
-  weightedScore: number;
-  habitScore: number;
-  todoScore: number;
-  habits: HabitSummary[];
-  todos: TodoSummary;
-}
-
-function ScoreRing({ score }: { score: number }) {
-  const pct = Math.round(score * 100);
+function ScoreRing({ score }: { score: number | null | undefined }) {
   const radius = 54;
   const circumference = 2 * Math.PI * radius;
+
+  if (score == null) {
+    return (
+      <div className="relative inline-flex items-center justify-center">
+        <svg width="128" height="128" className="-rotate-90" aria-hidden>
+          <circle cx="64" cy="64" r={radius} fill="none" stroke="currentColor" strokeWidth="10" className="text-muted" />
+        </svg>
+        <span className="absolute text-sm text-muted-foreground">No data</span>
+      </div>
+    );
+  }
+
+  const pct = Math.round(score * 100);
   const offset = circumference * (1 - Math.min(score, 1));
   const color = pct >= 80 ? '#22c55e' : pct >= 50 ? '#f59e0b' : '#ef4444';
 
@@ -107,15 +98,17 @@ function ScoreRing({ score }: { score: number }) {
   );
 }
 
-function HabitsSection({ habits, habitScore }: { habits: HabitSummary[]; habitScore: number }) {
+function HabitsSection({ habits, habitScore }: { habits: HabitStatSummary[]; habitScore: number | null | undefined }) {
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center justify-between">
           <span>Habits</span>
-          <span className="text-muted-foreground font-normal text-sm">
-            {Math.round(habitScore * 100)}% avg completion
-          </span>
+          {habitScore != null && (
+            <span className="text-muted-foreground font-normal text-sm">
+              {Math.round(habitScore * 100)}% avg completion
+            </span>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -156,15 +149,17 @@ function HabitsSection({ habits, habitScore }: { habits: HabitSummary[]; habitSc
   );
 }
 
-function TodosSection({ todos, todoScore }: { todos: TodoSummary; todoScore: number }) {
+function TodosSection({ todos, todoScore }: { todos: TodoStatSummary; todoScore: number | null | undefined }) {
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center justify-between">
           <span>Todos</span>
-          <span className="text-muted-foreground font-normal text-sm">
-            {Math.round(todoScore * 100)}% completion
-          </span>
+          {todoScore != null && (
+            <span className="text-muted-foreground font-normal text-sm">
+              {Math.round(todoScore * 100)}% completion
+            </span>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -192,7 +187,7 @@ function TodosSection({ todos, todoScore }: { todos: TodoSummary; todoScore: num
             <div className="h-2 rounded-full bg-muted overflow-hidden">
               <div
                 className="h-full rounded-full bg-primary transition-all duration-300"
-                style={{ width: `${Math.round(todoScore * 100)}%` }}
+                style={{ width: `${Math.round((todoScore ?? 0) * 100)}%` }}
               />
             </div>
           </div>
@@ -204,10 +199,10 @@ function TodosSection({ todos, todoScore }: { todos: TodoSummary; todoScore: num
 
 function StatsPage() {
   const [range, setRange] = useState<DateRangeKey>('month');
-  const { startDate, endDate } = getDateRange(range);
 
   const { data, loading, error } = useQuery(GET_MY_STATS, {
-    variables: { startDate, endDate },
+    variables: getDateRange(range),
+    fetchPolicy: 'cache-and-network',
   });
 
   const stats: StatsData | undefined = data?.myStats;
@@ -244,11 +239,15 @@ function StatsPage() {
               </div>
               <div className="flex gap-10 sm:flex-col sm:gap-4">
                 <div className="text-center">
-                  <p className="text-2xl font-bold">{Math.round(stats.habitScore * 100)}%</p>
+                  <p className="text-2xl font-bold">
+                    {stats.habitScore != null ? `${Math.round(stats.habitScore * 100)}%` : '—'}
+                  </p>
                   <p className="text-xs text-muted-foreground">Habits (50%)</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold">{Math.round(stats.todoScore * 100)}%</p>
+                  <p className="text-2xl font-bold">
+                    {stats.todoScore != null ? `${Math.round(stats.todoScore * 100)}%` : '—'}
+                  </p>
                   <p className="text-xs text-muted-foreground">Todos (50%)</p>
                 </div>
               </div>

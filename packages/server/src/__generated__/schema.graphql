@@ -764,6 +764,7 @@ type Query {
   activityTypeStats(startDate: String, endDate: String): [ActivityTypeStats!]!
   habitStats(habitId: ID, startDate: String, endDate: String): [HabitStats!]!
   myHabitDetail(habitId: ID!, periods: Int): HabitDetail!
+  myStats(startDate: String, endDate: String): StatsOverview!
   mySchedule(weekStart: String, timezone: String): [ScheduledItem!]!
 }
 
@@ -792,7 +793,7 @@ type Mutation {
   createUser(values: CreateUserInput!): User
   updateUsers(set: UpdateUserInput!, where: UserFilters): [User!]!
   deleteUsers(where: UserFilters): [User!]!
-  myUpdateProfile(timezone: String!): UserProfile!
+  myUpdateProfile(timezone: String!): Boolean!
   myCreateActivityType(input: CreateActivityTypeArgs!): ActivityType!
   myUpdateActivityType(input: UpdateActivityTypeArgs!): ActivityType!
   myDeleteActivityType(id: ID!): Boolean!
@@ -816,6 +817,31 @@ type UserProfile {
   id: ID!
   email: String!
   timezone: String!
+}
+
+type HabitStatSummary {
+  habitId: ID!
+  title: String!
+  completionRate: Float!
+  completions: Int!
+  target: Float!
+  frequencyUnit: String!
+  frequencyCount: Int!
+}
+
+type TodoStatSummary {
+  total: Int!
+  completed: Int!
+  overdue: Int!
+  completionRate: Float!
+}
+
+type StatsOverview {
+  weightedScore: Float
+  habitScore: Float
+  todoScore: Float
+  habits: [HabitStatSummary!]!
+  todos: TodoStatSummary!
 }
 
 type ActivityTypeStats {

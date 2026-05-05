@@ -179,6 +179,7 @@ export type CreateTimeBlockInput = {
   daysOfWeek: Array<Scalars['Int']['input']>;
   endTime: Scalars['String']['input'];
   id?: InputMaybe<Scalars['String']['input']>;
+  priority?: InputMaybe<Scalars['Int']['input']>;
   startTime: Scalars['String']['input'];
   /** DateTime */
   updatedAt?: InputMaybe<Scalars['DateTime']['input']>;
@@ -434,6 +435,17 @@ export type HabitPeriod = {
   periodStart: Scalars['String']['output'];
   rate: Scalars['Float']['output'];
   target: Scalars['Int']['output'];
+};
+
+export type HabitStatSummary = {
+  __typename?: 'HabitStatSummary';
+  completionRate: Scalars['Float']['output'];
+  completions: Scalars['Int']['output'];
+  frequencyCount: Scalars['Int']['output'];
+  frequencyUnit: Scalars['String']['output'];
+  habitId: Scalars['ID']['output'];
+  target: Scalars['Float']['output'];
+  title: Scalars['String']['output'];
 };
 
 export type HabitStats = {
@@ -764,7 +776,9 @@ export type Query = {
   myActivityTypes: Array<ActivityType>;
   myHabitDetail: HabitDetail;
   myHabits: Array<Habit>;
+  myProfile?: Maybe<UserProfile>;
   mySchedule: Array<ScheduledItem>;
+  myStats: StatsOverview;
   myTimeBlocks: Array<TimeBlock>;
   myTodos: Array<Todo>;
   timeBlock?: Maybe<TimeBlock>;
@@ -851,6 +865,12 @@ export type QueryMyScheduleArgs = {
 };
 
 
+export type QueryMyStatsArgs = {
+  endDate?: InputMaybe<Scalars['String']['input']>;
+  startDate?: InputMaybe<Scalars['String']['input']>;
+};
+
+
 export type QueryMyTimeBlocksArgs = {
   activityTypeId?: InputMaybe<Scalars['ID']['input']>;
   containsDay?: InputMaybe<Scalars['Int']['input']>;
@@ -934,6 +954,15 @@ export enum ScheduledItemKind {
   Todo = 'todo'
 }
 
+export type StatsOverview = {
+  __typename?: 'StatsOverview';
+  habitScore?: Maybe<Scalars['Float']['output']>;
+  habits: Array<HabitStatSummary>;
+  todoScore?: Maybe<Scalars['Float']['output']>;
+  todos: TodoStatSummary;
+  weightedScore?: Maybe<Scalars['Float']['output']>;
+};
+
 export type StringFilter = {
   OR?: InputMaybe<Array<StringFilterOr>>;
   eq?: InputMaybe<Scalars['String']['input']>;
@@ -996,6 +1025,7 @@ export type TimeBlockFilters = {
   daysOfWeek?: InputMaybe<FloatArrayFilter>;
   endTime?: InputMaybe<StringFilter>;
   id?: InputMaybe<IdFilter>;
+  priority?: InputMaybe<StringFilter>;
   startTime?: InputMaybe<StringFilter>;
   updatedAt?: InputMaybe<DateTimeFilter>;
   userId?: InputMaybe<IdFilter>;
@@ -1007,6 +1037,7 @@ export type TimeBlockFiltersOr = {
   daysOfWeek?: InputMaybe<FloatArrayFilter>;
   endTime?: InputMaybe<StringFilter>;
   id?: InputMaybe<IdFilter>;
+  priority?: InputMaybe<StringFilter>;
   startTime?: InputMaybe<StringFilter>;
   updatedAt?: InputMaybe<DateTimeFilter>;
   userId?: InputMaybe<IdFilter>;
@@ -1018,6 +1049,7 @@ export type TimeBlockOrderBy = {
   daysOfWeek?: InputMaybe<InnerOrder>;
   endTime?: InputMaybe<InnerOrder>;
   id?: InputMaybe<InnerOrder>;
+  priority?: InputMaybe<InnerOrder>;
   startTime?: InputMaybe<InnerOrder>;
   updatedAt?: InputMaybe<InnerOrder>;
   userId?: InputMaybe<InnerOrder>;
@@ -1088,6 +1120,14 @@ export type TodoOrderBy = {
   title?: InputMaybe<InnerOrder>;
   updatedAt?: InputMaybe<InnerOrder>;
   userId?: InputMaybe<InnerOrder>;
+};
+
+export type TodoStatSummary = {
+  __typename?: 'TodoStatSummary';
+  completed: Scalars['Int']['output'];
+  completionRate: Scalars['Float']['output'];
+  overdue: Scalars['Int']['output'];
+  total: Scalars['Int']['output'];
 };
 
 export type UpdateActivityTypeArgs = {
@@ -1161,6 +1201,7 @@ export type UpdateTimeBlockInput = {
   daysOfWeek?: InputMaybe<Array<Scalars['Int']['input']>>;
   endTime?: InputMaybe<Scalars['String']['input']>;
   id?: InputMaybe<Scalars['String']['input']>;
+  priority?: InputMaybe<Scalars['Int']['input']>;
   startTime?: InputMaybe<Scalars['String']['input']>;
   /** DateTime */
   updatedAt?: InputMaybe<Scalars['DateTime']['input']>;
@@ -1242,6 +1283,13 @@ export type UserOrderBy = {
   id?: InputMaybe<InnerOrder>;
   timezone?: InputMaybe<InnerOrder>;
   updatedAt?: InputMaybe<InnerOrder>;
+};
+
+export type UserProfile = {
+  __typename?: 'UserProfile';
+  email: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  timezone: Scalars['String']['output'];
 };
 
 export type VerifyMagicLinkResult = {
@@ -1431,6 +1479,14 @@ export type GetMyHabitsQueryVariables = Exact<{ [key: string]: never; }>;
 
 export type GetMyHabitsQuery = { __typename?: 'Query', myHabits: Array<{ __typename?: 'Habit', id: string, title: string, description?: string | null, priority: number, estimatedLength: number, frequencyCount: number, frequencyUnit: string, createdAt: any, activityType?: { __typename?: 'ActivityType', id: string, name: string, color: string } | null }> };
 
+export type GetMyStatsQueryVariables = Exact<{
+  startDate?: InputMaybe<Scalars['String']['input']>;
+  endDate?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type GetMyStatsQuery = { __typename?: 'Query', myStats: { __typename?: 'StatsOverview', weightedScore?: number | null, habitScore?: number | null, todoScore?: number | null, habits: Array<{ __typename?: 'HabitStatSummary', habitId: string, title: string, completionRate: number, completions: number, target: number, frequencyUnit: string, frequencyCount: number }>, todos: { __typename?: 'TodoStatSummary', total: number, completed: number, overdue: number, completionRate: number } } };
+
 export type GetMyTimeBlocksQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -1475,5 +1531,6 @@ export const GetCalendarDataDocument = {"kind":"Document","definitions":[{"kind"
 export const MyScheduleDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"MySchedule"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"weekStart"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"timezone"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"mySchedule"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"weekStart"},"value":{"kind":"Variable","name":{"kind":"Name","value":"weekStart"}}},{"kind":"Argument","name":{"kind":"Name","value":"timezone"},"value":{"kind":"Variable","name":{"kind":"Name","value":"timezone"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"FragmentSpread","name":{"kind":"Name","value":"ScheduledItem_CalendarView"}},{"kind":"FragmentSpread","name":{"kind":"Name","value":"ScheduledItem_ScheduleView"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ScheduledItem_CalendarView"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ScheduledItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"kind"}},{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"isScheduled"}},{"kind":"Field","name":{"kind":"Name","value":"isOverdue"}},{"kind":"Field","name":{"kind":"Name","value":"scheduledStart"}},{"kind":"Field","name":{"kind":"Name","value":"scheduledEnd"}},{"kind":"Field","name":{"kind":"Name","value":"completedAt"}},{"kind":"Field","name":{"kind":"Name","value":"activityType"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"color"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ScheduledItem_ScheduleView"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ScheduledItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"kind"}},{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"priority"}},{"kind":"Field","name":{"kind":"Name","value":"estimatedLength"}},{"kind":"Field","name":{"kind":"Name","value":"isScheduled"}},{"kind":"Field","name":{"kind":"Name","value":"scheduledStart"}},{"kind":"Field","name":{"kind":"Name","value":"scheduledEnd"}},{"kind":"Field","name":{"kind":"Name","value":"activityType"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"color"}}]}}]}}]} as unknown as DocumentNode<MyScheduleQuery, MyScheduleQueryVariables>;
 export const UpdateProfileDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UpdateProfile"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"timezone"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"myUpdateProfile"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"timezone"},"value":{"kind":"Variable","name":{"kind":"Name","value":"timezone"}}}]}]}}]} as unknown as DocumentNode<UpdateProfileMutation, UpdateProfileMutationVariables>;
 export const GetMyHabitsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetMyHabits"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"myHabits"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"Habit_HabitList"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"Habit_HabitList"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Habit"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"priority"}},{"kind":"Field","name":{"kind":"Name","value":"estimatedLength"}},{"kind":"Field","name":{"kind":"Name","value":"activityType"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"color"}}]}},{"kind":"Field","name":{"kind":"Name","value":"frequencyCount"}},{"kind":"Field","name":{"kind":"Name","value":"frequencyUnit"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}}]}}]} as unknown as DocumentNode<GetMyHabitsQuery, GetMyHabitsQueryVariables>;
+export const GetMyStatsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetMyStats"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"startDate"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"endDate"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"myStats"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"startDate"},"value":{"kind":"Variable","name":{"kind":"Name","value":"startDate"}}},{"kind":"Argument","name":{"kind":"Name","value":"endDate"},"value":{"kind":"Variable","name":{"kind":"Name","value":"endDate"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"weightedScore"}},{"kind":"Field","name":{"kind":"Name","value":"habitScore"}},{"kind":"Field","name":{"kind":"Name","value":"todoScore"}},{"kind":"Field","name":{"kind":"Name","value":"habits"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"habitId"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"completionRate"}},{"kind":"Field","name":{"kind":"Name","value":"completions"}},{"kind":"Field","name":{"kind":"Name","value":"target"}},{"kind":"Field","name":{"kind":"Name","value":"frequencyUnit"}},{"kind":"Field","name":{"kind":"Name","value":"frequencyCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"todos"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"total"}},{"kind":"Field","name":{"kind":"Name","value":"completed"}},{"kind":"Field","name":{"kind":"Name","value":"overdue"}},{"kind":"Field","name":{"kind":"Name","value":"completionRate"}}]}}]}}]}}]} as unknown as DocumentNode<GetMyStatsQuery, GetMyStatsQueryVariables>;
 export const GetMyTimeBlocksDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetMyTimeBlocks"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"myTimeBlocks"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"TimeBlock_TimeBlockList"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"TimeBlock_TimeBlockList"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"TimeBlock"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"activityType"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"color"}}]}},{"kind":"Field","name":{"kind":"Name","value":"daysOfWeek"}},{"kind":"Field","name":{"kind":"Name","value":"startTime"}},{"kind":"Field","name":{"kind":"Name","value":"endTime"}},{"kind":"Field","name":{"kind":"Name","value":"priority"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}}]}}]} as unknown as DocumentNode<GetMyTimeBlocksQuery, GetMyTimeBlocksQueryVariables>;
 export const GetMyTodosDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetMyTodos"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"orderBy"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"TodoOrderBy"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"myTodos"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"orderBy"},"value":{"kind":"Variable","name":{"kind":"Name","value":"orderBy"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"Todo_TodoList"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"Todo_TodoList"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Todo"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"priority"}},{"kind":"Field","name":{"kind":"Name","value":"estimatedLength"}},{"kind":"Field","name":{"kind":"Name","value":"activityType"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"color"}}]}},{"kind":"Field","name":{"kind":"Name","value":"scheduledAt"}},{"kind":"Field","name":{"kind":"Name","value":"completedAt"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}}]}}]} as unknown as DocumentNode<GetMyTodosQuery, GetMyTodosQueryVariables>;

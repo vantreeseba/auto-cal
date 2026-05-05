@@ -159,9 +159,9 @@ const extensionSDL = `
   }
 
   type StatsOverview {
-    weightedScore: Float!
-    habitScore: Float!
-    todoScore: Float!
+    weightedScore: Float
+    habitScore: Float
+    todoScore: Float
     habits: [HabitStatSummary!]!
     todos: TodoStatSummary!
   }
@@ -561,9 +561,22 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     const start = args.startDate ? new Date(args.startDate) : null;
     const end = args.endDate ? new Date(args.endDate) : now;
 
-    const userHabits: Habit[] = await context.db._query.habits.findMany({
-      where: eq(habits.userId, context.userId),
-    });
+    const todoConditions = [
+      eq(todos.userId, context.userId),
+      isNotNull(todos.scheduledAt),
+      lte(todos.scheduledAt, end),
+    ];
+    if (start) todoConditions.push(gte(todos.scheduledAt, start));
+
+    // Fetch habits and todos in parallel; completions depend on habit IDs so come after
+    const [userHabits, todosInRange]: [Habit[], Todo[]] = await Promise.all([
+      context.db._query.habits.findMany({
+        where: eq(habits.userId, context.userId),
+      }),
+      context.db._query.todos.findMany({
+        where: and(...todoConditions),
+      }),
+    ]);
 
     const completionsByHabit = new Map<string, number>();
     if (userHabits.length > 0) {
@@ -573,9 +586,10 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
         lte(habitCompletions.completedAt, end),
       ];
       if (start) conditions.push(gte(habitCompletions.completedAt, start));
-      const allHabitCompletions = await context.db._query.habitCompletions.findMany({
-        where: and(...conditions),
-      });
+      const allHabitCompletions: HabitCompletion[] =
+        await context.db._query.habitCompletions.findMany({
+          where: and(...conditions),
+        });
       for (const c of allHabitCompletions) {
         completionsByHabit.set(c.habitId, (completionsByHabit.get(c.habitId) ?? 0) + 1);
       }
@@ -585,7 +599,8 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     const habitSummaries = userHabits.map((habit) => {
       const completions = completionsByHabit.get(habit.id) ?? 0;
       const effectiveStart = start ?? habit.createdAt;
-      const periodDays = habit.frequencyUnit === 'week' ? 7 : 30;
+      // Use average days per month (365.25/12) for monthly habits to avoid 30-day approximation error
+      const periodDays = habit.frequencyUnit === 'week' ? 7 : 365.25 / 12;
       const rangeMs = Math.max(end.getTime() - effectiveStart.getTime(), 0);
       const periods = rangeMs / (periodDays * MS_PER_DAY);
       const target = periods * habit.frequencyCount;
@@ -604,28 +619,22 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     const habitScore =
       habitSummaries.length > 0
         ? habitSummaries.reduce((sum, h) => sum + h.completionRate, 0) / habitSummaries.length
-        : 1.0;
-
-    const todoConditions = [
-      eq(todos.userId, context.userId),
-      isNotNull(todos.scheduledAt),
-      lte(todos.scheduledAt, end),
-    ];
-    if (start) todoConditions.push(gte(todos.scheduledAt, start));
-
-    const todosInRange: Todo[] = await context.db._query.todos.findMany({
-      where: and(...todoConditions),
-    });
+        : null;
 
     const totalTodos = todosInRange.length;
     const completedTodos = todosInRange.filter((t) => t.completedAt !== null).length;
     const overdueTodos = todosInRange.filter(
       (t) => t.completedAt === null && t.scheduledAt! < now,
     ).length;
-    const todoScore = totalTodos > 0 ? completedTodos / totalTodos : 1.0;
+    const todoScore = totalTodos > 0 ? completedTodos / totalTodos : null;
+
+    const weightedScore =
+      habitScore !== null && todoScore !== null
+        ? (habitScore + todoScore) / 2
+        : habitScore ?? todoScore ?? null;
 
     return {
-      weightedScore: (habitScore + todoScore) / 2,
+      weightedScore,
       habitScore,
       todoScore,
       habits: habitSummaries,

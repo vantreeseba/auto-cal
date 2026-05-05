@@ -45,6 +45,7 @@ type Documents = {
     "\n  query MySchedule($weekStart: String, $timezone: String) {\n    mySchedule(weekStart: $weekStart, timezone: $timezone) {\n      id\n      ...ScheduledItem_CalendarView\n      ...ScheduledItem_ScheduleView\n    }\n  }\n": typeof types.MyScheduleDocument,
     "\n  mutation UpdateProfile($timezone: String!) {\n    myUpdateProfile(timezone: $timezone)\n  }\n": typeof types.UpdateProfileDocument,
     "\n  query GetMyHabits {\n    myHabits {\n      ...Habit_HabitList\n    }\n  }\n": typeof types.GetMyHabitsDocument,
+    "\n  query GetMyStats($startDate: String, $endDate: String) {\n    myStats(startDate: $startDate, endDate: $endDate) {\n      weightedScore\n      habitScore\n      todoScore\n      habits {\n        habitId\n        title\n        completionRate\n        completions\n        target\n        frequencyUnit\n        frequencyCount\n      }\n      todos {\n        total\n        completed\n        overdue\n        completionRate\n      }\n    }\n  }\n": typeof types.GetMyStatsDocument,
     "\n  query GetMyTimeBlocks {\n    myTimeBlocks {\n      ...TimeBlock_TimeBlockList\n    }\n  }\n": typeof types.GetMyTimeBlocksDocument,
     "\n  query GetMyTodos($orderBy: TodoOrderBy) {\n    myTodos(orderBy: $orderBy) {\n      ...Todo_TodoList\n    }\n  }\n": typeof types.GetMyTodosDocument,
 };
@@ -80,6 +81,7 @@ const documents: Documents = {
     "\n  query MySchedule($weekStart: String, $timezone: String) {\n    mySchedule(weekStart: $weekStart, timezone: $timezone) {\n      id\n      ...ScheduledItem_CalendarView\n      ...ScheduledItem_ScheduleView\n    }\n  }\n": types.MyScheduleDocument,
     "\n  mutation UpdateProfile($timezone: String!) {\n    myUpdateProfile(timezone: $timezone)\n  }\n": types.UpdateProfileDocument,
     "\n  query GetMyHabits {\n    myHabits {\n      ...Habit_HabitList\n    }\n  }\n": types.GetMyHabitsDocument,
+    "\n  query GetMyStats($startDate: String, $endDate: String) {\n    myStats(startDate: $startDate, endDate: $endDate) {\n      weightedScore\n      habitScore\n      todoScore\n      habits {\n        habitId\n        title\n        completionRate\n        completions\n        target\n        frequencyUnit\n        frequencyCount\n      }\n      todos {\n        total\n        completed\n        overdue\n        completionRate\n      }\n    }\n  }\n": types.GetMyStatsDocument,
     "\n  query GetMyTimeBlocks {\n    myTimeBlocks {\n      ...TimeBlock_TimeBlockList\n    }\n  }\n": types.GetMyTimeBlocksDocument,
     "\n  query GetMyTodos($orderBy: TodoOrderBy) {\n    myTodos(orderBy: $orderBy) {\n      ...Todo_TodoList\n    }\n  }\n": types.GetMyTodosDocument,
 };
@@ -222,6 +224,10 @@ export function graphql(source: "\n  mutation UpdateProfile($timezone: String!) 
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  query GetMyHabits {\n    myHabits {\n      ...Habit_HabitList\n    }\n  }\n"): (typeof documents)["\n  query GetMyHabits {\n    myHabits {\n      ...Habit_HabitList\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query GetMyStats($startDate: String, $endDate: String) {\n    myStats(startDate: $startDate, endDate: $endDate) {\n      weightedScore\n      habitScore\n      todoScore\n      habits {\n        habitId\n        title\n        completionRate\n        completions\n        target\n        frequencyUnit\n        frequencyCount\n      }\n      todos {\n        total\n        completed\n        overdue\n        completionRate\n      }\n    }\n  }\n"): (typeof documents)["\n  query GetMyStats($startDate: String, $endDate: String) {\n    myStats(startDate: $startDate, endDate: $endDate) {\n      weightedScore\n      habitScore\n      todoScore\n      habits {\n        habitId\n        title\n        completionRate\n        completions\n        target\n        frequencyUnit\n        frequencyCount\n      }\n      todos {\n        total\n        completed\n        overdue\n        completionRate\n      }\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
