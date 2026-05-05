@@ -92,6 +92,12 @@ const UpdateTimeBlockInput = z
 
 // SDL extension
 const extensionSDL = `
+  type UserProfile {
+    id: ID!
+    email: String!
+    timezone: String!
+  }
+
   type ActivityTypeStats {
     activityTypeId: String!
     activityTypeName: String!
@@ -237,6 +243,7 @@ const extensionSDL = `
   }
 
   extend type Query {
+    myProfile: UserProfile
     myActivityTypes: [ActivityType!]!
     myTodos(activityTypeId: ID, completed: Boolean, orderBy: TodoOrderBy): [Todo!]!
     myHabits(activityTypeId: ID): [Habit!]!
@@ -248,6 +255,7 @@ const extensionSDL = `
   }
 
   extend type Mutation {
+    myUpdateProfile(timezone: String!): UserProfile!
     myCreateActivityType(input: CreateActivityTypeArgs!): ActivityType!
     myUpdateActivityType(input: UpdateActivityTypeArgs!): ActivityType!
     myDeleteActivityType(id: ID!): Boolean!
@@ -286,6 +294,16 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   const mutationType = extended.getType('Mutation') as GraphQLObjectType;
   const queryFields = queryType.getFields();
   const mutationFields = mutationType.getFields();
+
+  // --- Profile Query ---
+
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  queryFields.myProfile!.resolve = async (_parent, _args, context: Context) => {
+    if (!context.userId) throw new Error('Not authenticated');
+    return context.db._query.users.findFirst({
+      where: eq(users.id, context.userId),
+    });
+  };
 
   // --- ActivityType Queries ---
 
@@ -807,6 +825,24 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     });
 
     return [...scheduledItems, ...pinnedItems];
+  };
+
+  // --- Profile Mutations ---
+
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  mutationFields.myUpdateProfile!.resolve = async (
+    _parent,
+    args: { timezone: string },
+    context: Context,
+  ) => {
+    if (!context.userId) throw new Error('Not authenticated');
+    const [updated] = await context.db
+      .update(users)
+      .set({ timezone: args.timezone, updatedAt: new Date() })
+      .where(eq(users.id, context.userId))
+      .returning();
+    if (!updated) throw new Error('Failed to update profile');
+    return updated;
   };
 
   // --- ActivityType Mutations ---
