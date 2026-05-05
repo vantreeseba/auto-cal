@@ -16,6 +16,7 @@
     "lint:fix": "biome check --apply .",
     "db:generate": "npm run db:generate -w @auto-cal/db",
     "db:migrate": "npm run migrate -w @auto-cal/db",
+    "db:seed": "npm run seed -w @auto-cal/db",
     "db:studio": "npm run db:studio -w @auto-cal/db",
     "db:seed": "npm run db:seed -w @auto-cal/db",
     "codegen": "graphql-codegen --config codegen.ts",

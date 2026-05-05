@@ -47,12 +47,13 @@ export async function seedDemoData(): Promise<void> {
     ])
     .returning();
 
-  // biome-ignore lint/style/noNonNullAssertion: insert guarantees 3 rows
-  const work = insertedTypes[0]!;
-  // biome-ignore lint/style/noNonNullAssertion: insert guarantees 3 rows
-  const exercise = insertedTypes[1]!;
-  // biome-ignore lint/style/noNonNullAssertion: insert guarantees 3 rows
-  const learning = insertedTypes[2]!;
+  const work = insertedTypes.find((t) => t.name === 'Work');
+  const exercise = insertedTypes.find((t) => t.name === 'Exercise');
+  const learning = insertedTypes.find((t) => t.name === 'Learning');
+
+  if (!work || !exercise || !learning) {
+    throw new Error('Failed to insert activity types');
+  }
 
   console.log('Activity types created.');
 
@@ -111,7 +112,7 @@ export async function seedDemoData(): Promise<void> {
       activityTypeId: work.id,
       title: 'Write Q2 project proposal',
       description: 'Outline goals, timeline, and resource requirements for the Q2 roadmap.',
-      priority: 3,
+      priority: 80,
       estimatedLength: 90,
     },
     {
@@ -119,14 +120,14 @@ export async function seedDemoData(): Promise<void> {
       activityTypeId: work.id,
       title: 'Review pull requests',
       description: 'Review and merge outstanding PRs from the team.',
-      priority: 2,
+      priority: 60,
       estimatedLength: 45,
     },
     {
       userId: DEMO_USER_ID,
       activityTypeId: work.id,
       title: 'Update project documentation',
-      priority: 1,
+      priority: 40,
       estimatedLength: 60,
     },
     {
@@ -134,7 +135,7 @@ export async function seedDemoData(): Promise<void> {
       activityTypeId: learning.id,
       title: 'Complete TypeScript generics chapter',
       description: 'Finish reading and take notes on generics from the TS handbook.',
-      priority: 2,
+      priority: 60,
       estimatedLength: 60,
     },
     {
@@ -142,7 +143,7 @@ export async function seedDemoData(): Promise<void> {
       activityTypeId: exercise.id,
       title: 'Sign up for 5K run',
       description: 'Register for the local spring 5K and add it to the calendar.',
-      priority: 1,
+      priority: 30,
       estimatedLength: 15,
     },
   ]);
@@ -156,7 +157,7 @@ export async function seedDemoData(): Promise<void> {
       activityTypeId: exercise.id,
       title: 'Morning run',
       description: '30-minute easy run to start the day.',
-      priority: 3,
+      priority: 75,
       estimatedLength: 30,
       frequencyCount: 3,
       frequencyUnit: 'week',
@@ -166,7 +167,7 @@ export async function seedDemoData(): Promise<void> {
       activityTypeId: learning.id,
       title: 'Read technical articles',
       description: 'Stay current with industry blogs and papers.',
-      priority: 2,
+      priority: 65,
       estimatedLength: 20,
       frequencyCount: 5,
       frequencyUnit: 'week',
@@ -175,8 +176,8 @@ export async function seedDemoData(): Promise<void> {
       userId: DEMO_USER_ID,
       activityTypeId: work.id,
       title: 'Daily standup prep',
-      description: 'Review yesterday\'s work and plan today\'s tasks before standup.',
-      priority: 2,
+      description: "Review yesterday's work and plan today's tasks before standup.",
+      priority: 90,
       estimatedLength: 10,
       frequencyCount: 5,
       frequencyUnit: 'week',

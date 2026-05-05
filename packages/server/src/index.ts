@@ -3,7 +3,7 @@ import path from 'node:path';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
 import { db } from '@auto-cal/db';
-import { seedDemoUser } from '@auto-cal/db/seed';
+import { seedDemoData, seedDemoUser } from '@auto-cal/db/seed';
 import cors from 'cors';
 import express from 'express';
 import { verifyToken } from './auth.ts';
@@ -17,6 +17,9 @@ const server = new ApolloServer<Context>({ schema });
 
 await server.start();
 await seedDemoUser();
+if (process.env.NODE_ENV !== 'production') {
+  await seedDemoData();
+}
 
 const clientDist = path.resolve(process.cwd(), 'packages/client/dist');
 const clientDistExists = fs.existsSync(clientDist);
