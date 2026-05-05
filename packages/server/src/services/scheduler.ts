@@ -138,10 +138,6 @@ function sortTasks(tasks: Task[]): Task[] {
 }
 
 /**
- * Returns true if the slot's current cursor position (start + used) is in the future.
- * Used to skip past slots when re-slotting overdue todos.
- */
-/**
  * Returns the effective start (minutes since midnight) for the next item
  * placed into this slot, advancing past `now` if the cursor is in the past.
  * Returns null if there is no future capacity left in the slot.

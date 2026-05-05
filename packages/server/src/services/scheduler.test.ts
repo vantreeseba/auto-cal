@@ -40,6 +40,7 @@ function makeBlock(overrides: Partial<TimeBlock> = {}): TimeBlock {
     daysOfWeek: [1, 2, 3, 4, 5], // Mon–Fri
     startTime: '09:00',
     endTime: '17:00',
+    priority: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,

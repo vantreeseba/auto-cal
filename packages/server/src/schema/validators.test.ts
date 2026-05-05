@@ -1,0 +1,360 @@
+import { describe, expect, it } from 'vitest';
+import {
+  CompleteHabitInput,
+  CreateActivityTypeInput,
+  CreateHabitInput,
+  CreateTimeBlockInput,
+  CreateTodoInput,
+  UpdateActivityTypeInput,
+  UpdateHabitInput,
+  UpdateTimeBlockInput,
+  UpdateTodoInput,
+} from './validators.ts';
+
+describe('CreateActivityTypeInput', () => {
+  it('accepts valid input with name only (uses default color)', () => {
+    const result = CreateActivityTypeInput.parse({ name: 'Work' });
+    expect(result.name).toBe('Work');
+    expect(result.color).toBe('#6366f1');
+  });
+
+  it('accepts valid input with custom color', () => {
+    expect(() =>
+      CreateActivityTypeInput.parse({ name: 'Gym', color: '#10b981' }),
+    ).not.toThrow();
+  });
+
+  it('rejects empty name', () => {
+    expect(() => CreateActivityTypeInput.parse({ name: '' })).toThrow();
+  });
+
+  it('rejects name exceeding 100 characters', () => {
+    expect(() =>
+      CreateActivityTypeInput.parse({ name: 'a'.repeat(101) }),
+    ).toThrow();
+  });
+
+  it('rejects invalid color format (no hash)', () => {
+    expect(() =>
+      CreateActivityTypeInput.parse({ name: 'Work', color: '6366f1' }),
+    ).toThrow();
+  });
+
+  it('rejects invalid color format (wrong length)', () => {
+    expect(() =>
+      CreateActivityTypeInput.parse({ name: 'Work', color: '#fff' }),
+    ).toThrow();
+  });
+
+  it('rejects invalid color format (non-hex characters)', () => {
+    expect(() =>
+      CreateActivityTypeInput.parse({ name: 'Work', color: '#zzzzzz' }),
+    ).toThrow();
+  });
+});
+
+describe('UpdateActivityTypeInput', () => {
+  const validId = '00000000-0000-0000-0000-000000000001';
+
+  it('accepts valid update with only id', () => {
+    expect(() => UpdateActivityTypeInput.parse({ id: validId })).not.toThrow();
+  });
+
+  it('accepts partial update', () => {
+    expect(() =>
+      UpdateActivityTypeInput.parse({ id: validId, name: 'New Name' }),
+    ).not.toThrow();
+  });
+
+  it('rejects invalid uuid', () => {
+    expect(() => UpdateActivityTypeInput.parse({ id: 'not-a-uuid' })).toThrow();
+  });
+
+  it('rejects invalid color in update', () => {
+    expect(() =>
+      UpdateActivityTypeInput.parse({ id: validId, color: 'red' }),
+    ).toThrow();
+  });
+});
+
+describe('CreateTodoInput', () => {
+  it('accepts valid minimal input', () => {
+    const result = CreateTodoInput.parse({
+      title: 'My todo',
+      estimatedLength: 30,
+    });
+    expect(result.title).toBe('My todo');
+    expect(result.priority).toBe(0); // default
+  });
+
+  it('accepts all optional fields', () => {
+    expect(() =>
+      CreateTodoInput.parse({
+        title: 'Full todo',
+        description: 'A description',
+        priority: 75,
+        estimatedLength: 60,
+        activityTypeId: '00000000-0000-0000-0000-000000000001',
+        scheduledAt: '2026-04-28T09:00:00.000Z',
+      }),
+    ).not.toThrow();
+  });
+
+  it('rejects empty title', () => {
+    expect(() => CreateTodoInput.parse({ title: '' })).toThrow();
+  });
+
+  it('rejects title exceeding 200 characters', () => {
+    expect(() => CreateTodoInput.parse({ title: 'a'.repeat(201) })).toThrow();
+  });
+
+  it('rejects priority below 0', () => {
+    expect(() =>
+      CreateTodoInput.parse({ title: 'Test', priority: -1 }),
+    ).toThrow();
+  });
+
+  it('rejects priority above 100', () => {
+    expect(() =>
+      CreateTodoInput.parse({ title: 'Test', priority: 101 }),
+    ).toThrow();
+  });
+
+  it('rejects estimatedLength of 0', () => {
+    expect(() =>
+      CreateTodoInput.parse({ title: 'Test', estimatedLength: 0 }),
+    ).toThrow();
+  });
+
+  it('rejects estimatedLength exceeding 1440', () => {
+    expect(() =>
+      CreateTodoInput.parse({ title: 'Test', estimatedLength: 1441 }),
+    ).toThrow();
+  });
+
+  it('rejects invalid activityTypeId (not a UUID)', () => {
+    expect(() =>
+      CreateTodoInput.parse({ title: 'Test', activityTypeId: 'not-a-uuid' }),
+    ).toThrow();
+  });
+});
+
+describe('UpdateTodoInput', () => {
+  const validId = '00000000-0000-0000-0000-000000000001';
+
+  it('accepts update with only id', () => {
+    expect(() => UpdateTodoInput.parse({ id: validId })).not.toThrow();
+  });
+
+  it('accepts setting activityTypeId to null', () => {
+    expect(() =>
+      UpdateTodoInput.parse({ id: validId, activityTypeId: null }),
+    ).not.toThrow();
+  });
+
+  it('rejects non-uuid id', () => {
+    expect(() => UpdateTodoInput.parse({ id: 'bad-id' })).toThrow();
+  });
+
+  it('rejects priority out of range', () => {
+    expect(() =>
+      UpdateTodoInput.parse({ id: validId, priority: 150 }),
+    ).toThrow();
+  });
+});
+
+describe('CreateHabitInput', () => {
+  it('accepts valid input', () => {
+    const result = CreateHabitInput.parse({
+      title: 'Exercise',
+      frequencyCount: 3,
+      frequencyUnit: 'week',
+    });
+    expect(result.title).toBe('Exercise');
+    expect(result.priority).toBe(0);
+  });
+
+  it('rejects empty title', () => {
+    expect(() =>
+      CreateHabitInput.parse({
+        title: '',
+        frequencyCount: 3,
+        frequencyUnit: 'week',
+      }),
+    ).toThrow();
+  });
+
+  it('rejects frequencyCount of 0', () => {
+    expect(() =>
+      CreateHabitInput.parse({
+        title: 'Test',
+        frequencyCount: 0,
+        frequencyUnit: 'week',
+      }),
+    ).toThrow();
+  });
+
+  it('rejects frequencyCount exceeding 30', () => {
+    expect(() =>
+      CreateHabitInput.parse({
+        title: 'Test',
+        frequencyCount: 31,
+        frequencyUnit: 'week',
+      }),
+    ).toThrow();
+  });
+
+  it('rejects invalid frequencyUnit', () => {
+    expect(() =>
+      CreateHabitInput.parse({
+        title: 'Test',
+        frequencyCount: 3,
+        frequencyUnit: 'day',
+      }),
+    ).toThrow();
+  });
+
+  it('accepts month as frequencyUnit', () => {
+    expect(() =>
+      CreateHabitInput.parse({
+        title: 'Monthly review',
+        frequencyCount: 1,
+        frequencyUnit: 'month',
+      }),
+    ).not.toThrow();
+  });
+});
+
+describe('UpdateHabitInput', () => {
+  const validId = '00000000-0000-0000-0000-000000000001';
+
+  it('accepts partial update', () => {
+    expect(() =>
+      UpdateHabitInput.parse({ id: validId, title: 'New title' }),
+    ).not.toThrow();
+  });
+
+  it('rejects non-uuid id', () => {
+    expect(() => UpdateHabitInput.parse({ id: 'bad' })).toThrow();
+  });
+});
+
+describe('CreateTimeBlockInput', () => {
+  it('accepts valid time block', () => {
+    expect(() =>
+      CreateTimeBlockInput.parse({
+        daysOfWeek: [1, 3, 5],
+        startTime: '09:00',
+        endTime: '12:00',
+      }),
+    ).not.toThrow();
+  });
+
+  it('rejects when end time is before start time', () => {
+    expect(() =>
+      CreateTimeBlockInput.parse({
+        daysOfWeek: [1],
+        startTime: '12:00',
+        endTime: '09:00',
+      }),
+    ).toThrow();
+  });
+
+  it('rejects when end time equals start time', () => {
+    expect(() =>
+      CreateTimeBlockInput.parse({
+        daysOfWeek: [1],
+        startTime: '09:00',
+        endTime: '09:00',
+      }),
+    ).toThrow();
+  });
+
+  it('rejects duplicate days of week', () => {
+    expect(() =>
+      CreateTimeBlockInput.parse({
+        daysOfWeek: [1, 1, 3],
+        startTime: '09:00',
+        endTime: '12:00',
+      }),
+    ).toThrow();
+  });
+
+  it('rejects empty daysOfWeek array', () => {
+    expect(() =>
+      CreateTimeBlockInput.parse({
+        daysOfWeek: [],
+        startTime: '09:00',
+        endTime: '12:00',
+      }),
+    ).toThrow();
+  });
+
+  it('rejects day of week out of range', () => {
+    expect(() =>
+      CreateTimeBlockInput.parse({
+        daysOfWeek: [7],
+        startTime: '09:00',
+        endTime: '12:00',
+      }),
+    ).toThrow();
+  });
+
+  it('rejects invalid time format', () => {
+    expect(() =>
+      CreateTimeBlockInput.parse({
+        daysOfWeek: [1],
+        startTime: '9am',
+        endTime: '12:00',
+      }),
+    ).toThrow();
+  });
+
+  it('accepts optional activityTypeId', () => {
+    expect(() =>
+      CreateTimeBlockInput.parse({
+        activityTypeId: '00000000-0000-0000-0000-000000000001',
+        daysOfWeek: [1],
+        startTime: '08:00',
+        endTime: '09:00',
+      }),
+    ).not.toThrow();
+  });
+});
+
+describe('UpdateTimeBlockInput', () => {
+  const validId = '00000000-0000-0000-0000-000000000001';
+
+  it('accepts partial update with only id', () => {
+    expect(() => UpdateTimeBlockInput.parse({ id: validId })).not.toThrow();
+  });
+
+  it('rejects duplicate days in update', () => {
+    expect(() =>
+      UpdateTimeBlockInput.parse({ id: validId, daysOfWeek: [2, 2] }),
+    ).toThrow();
+  });
+});
+
+describe('CompleteHabitInput', () => {
+  it('accepts valid habitId', () => {
+    expect(() =>
+      CompleteHabitInput.parse({
+        habitId: '00000000-0000-0000-0000-000000000001',
+      }),
+    ).not.toThrow();
+  });
+
+  it('accepts optional scheduledAt', () => {
+    expect(() =>
+      CompleteHabitInput.parse({
+        habitId: '00000000-0000-0000-0000-000000000001',
+        scheduledAt: '2026-04-27T09:00:00.000Z',
+      }),
+    ).not.toThrow();
+  });
+
+  it('rejects non-uuid habitId', () => {
+    expect(() => CompleteHabitInput.parse({ habitId: 'not-a-uuid' })).toThrow();
+  });
+});
