@@ -18,6 +18,7 @@ const NAV_LINKS = [
   { to: '/habits', label: 'Habits' },
   { to: '/time-blocks', label: 'Time Blocks' },
   { to: '/activity-types', label: 'Activity Types' },
+  { to: '/stats', label: 'Stats' },
 ] as const;
 
 function getInitialDark(): boolean {

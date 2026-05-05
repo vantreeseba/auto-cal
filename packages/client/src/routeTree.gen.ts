@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TodosRouteImport } from './routes/todos'
 import { Route as TimeBlocksRouteImport } from './routes/time-blocks'
+import { Route as StatsRouteImport } from './routes/stats'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HabitsRouteImport } from './routes/habits'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -20,6 +21,11 @@ import { Route as HabitsIndexRouteImport } from './routes/habits.index'
 import { Route as HabitsHabitIdRouteImport } from './routes/habits.$habitId'
 import { Route as AuthVerifyRouteImport } from './routes/auth.verify'
 
+const StatsRoute = StatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TodosRoute = TodosRouteImport.update({
   id: '/todos',
   path: '/todos',
@@ -77,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/habits': typeof HabitsRouteWithChildren
   '/login': typeof LoginRoute
+  '/stats': typeof StatsRoute
   '/time-blocks': typeof TimeBlocksRoute
   '/todos': typeof TodosRoute
   '/auth/verify': typeof AuthVerifyRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByTo {
   '/activity-types': typeof ActivityTypesRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/stats': typeof StatsRoute
   '/time-blocks': typeof TimeBlocksRoute
   '/todos': typeof TodosRoute
   '/auth/verify': typeof AuthVerifyRoute
@@ -101,6 +109,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/habits': typeof HabitsRouteWithChildren
   '/login': typeof LoginRoute
+  '/stats': typeof StatsRoute
   '/time-blocks': typeof TimeBlocksRoute
   '/todos': typeof TodosRoute
   '/auth/verify': typeof AuthVerifyRoute
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/habits'
     | '/login'
+    | '/stats'
     | '/time-blocks'
     | '/todos'
     | '/auth/verify'
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/activity-types'
     | '/dashboard'
     | '/login'
+    | '/stats'
     | '/time-blocks'
     | '/todos'
     | '/auth/verify'
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/habits'
     | '/login'
+    | '/stats'
     | '/time-blocks'
     | '/todos'
     | '/auth/verify'
@@ -151,6 +163,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   HabitsRoute: typeof HabitsRouteWithChildren
   LoginRoute: typeof LoginRoute
+  StatsRoute: typeof StatsRoute
   TimeBlocksRoute: typeof TimeBlocksRoute
   TodosRoute: typeof TodosRoute
   AuthVerifyRoute: typeof AuthVerifyRoute
@@ -163,6 +176,13 @@ declare module '@tanstack/react-router' {
       path: '/todos'
       fullPath: '/todos'
       preLoaderRoute: typeof TodosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stats': {
+      id: '/stats'
+      path: '/stats'
+      fullPath: '/stats'
+      preLoaderRoute: typeof StatsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/time-blocks': {
@@ -250,6 +270,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   HabitsRoute: HabitsRouteWithChildren,
   LoginRoute: LoginRoute,
+  StatsRoute: StatsRoute,
   TimeBlocksRoute: TimeBlocksRoute,
   TodosRoute: TodosRoute,
   AuthVerifyRoute: AuthVerifyRoute,

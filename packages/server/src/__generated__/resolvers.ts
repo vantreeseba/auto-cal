@@ -180,6 +180,7 @@ export type CreateTimeBlockInput = {
   daysOfWeek: Array<Scalars['Int']['input']>;
   endTime: Scalars['String']['input'];
   id?: InputMaybe<Scalars['String']['input']>;
+  priority?: InputMaybe<Scalars['Int']['input']>;
   startTime: Scalars['String']['input'];
   /** DateTime */
   updatedAt?: InputMaybe<Scalars['DateTime']['input']>;
@@ -515,7 +516,7 @@ export type Mutation = {
   myReschedule: Scalars['Boolean']['output'];
   myUpdateActivityType: ActivityType;
   myUpdateHabit: Habit;
-  myUpdateProfile: Scalars['Boolean']['output'];
+  myUpdateProfile: UserProfile;
   myUpdateTimeBlock: TimeBlock;
   myUpdateTodo: Todo;
   requestMagicLink: RequestMagicLinkResult;
@@ -765,6 +766,7 @@ export type Query = {
   myActivityTypes: Array<ActivityType>;
   myHabitDetail: HabitDetail;
   myHabits: Array<Habit>;
+  myProfile: Maybe<UserProfile>;
   mySchedule: Array<ScheduledItem>;
   myTimeBlocks: Array<TimeBlock>;
   myTodos: Array<Todo>;
@@ -997,6 +999,7 @@ export type TimeBlockFilters = {
   daysOfWeek?: InputMaybe<FloatArrayFilter>;
   endTime?: InputMaybe<StringFilter>;
   id?: InputMaybe<IdFilter>;
+  priority?: InputMaybe<StringFilter>;
   startTime?: InputMaybe<StringFilter>;
   updatedAt?: InputMaybe<DateTimeFilter>;
   userId?: InputMaybe<IdFilter>;
@@ -1008,6 +1011,7 @@ export type TimeBlockFiltersOr = {
   daysOfWeek?: InputMaybe<FloatArrayFilter>;
   endTime?: InputMaybe<StringFilter>;
   id?: InputMaybe<IdFilter>;
+  priority?: InputMaybe<StringFilter>;
   startTime?: InputMaybe<StringFilter>;
   updatedAt?: InputMaybe<DateTimeFilter>;
   userId?: InputMaybe<IdFilter>;
@@ -1019,6 +1023,7 @@ export type TimeBlockOrderBy = {
   daysOfWeek?: InputMaybe<InnerOrder>;
   endTime?: InputMaybe<InnerOrder>;
   id?: InputMaybe<InnerOrder>;
+  priority?: InputMaybe<InnerOrder>;
   startTime?: InputMaybe<InnerOrder>;
   updatedAt?: InputMaybe<InnerOrder>;
   userId?: InputMaybe<InnerOrder>;
@@ -1162,6 +1167,7 @@ export type UpdateTimeBlockInput = {
   daysOfWeek?: InputMaybe<Array<Scalars['Int']['input']>>;
   endTime?: InputMaybe<Scalars['String']['input']>;
   id?: InputMaybe<Scalars['String']['input']>;
+  priority?: InputMaybe<Scalars['Int']['input']>;
   startTime?: InputMaybe<Scalars['String']['input']>;
   /** DateTime */
   updatedAt?: InputMaybe<Scalars['DateTime']['input']>;
@@ -1243,6 +1249,13 @@ export type UserOrderBy = {
   id?: InputMaybe<InnerOrder>;
   timezone?: InputMaybe<InnerOrder>;
   updatedAt?: InputMaybe<InnerOrder>;
+};
+
+export type UserProfile = {
+  __typename?: 'UserProfile';
+  email: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  timezone: Scalars['String']['output'];
 };
 
 export type VerifyMagicLinkResult = {
@@ -1396,6 +1409,7 @@ export type ResolversTypes = {
   UserFilters: UserFilters;
   UserFiltersOr: UserFiltersOr;
   UserOrderBy: UserOrderBy;
+  UserProfile: ResolverTypeWrapper<UserProfile>;
   VerifyMagicLinkResult: ResolverTypeWrapper<VerifyMagicLinkResult>;
 };
 
@@ -1471,6 +1485,7 @@ export type ResolversParentTypes = {
   UserFilters: UserFilters;
   UserFiltersOr: UserFiltersOr;
   UserOrderBy: UserOrderBy;
+  UserProfile: UserProfile;
   VerifyMagicLinkResult: VerifyMagicLinkResult;
 };
 
@@ -1580,7 +1595,7 @@ export type MutationResolvers<ContextType = Context, ParentType extends Resolver
   myReschedule?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, Partial<MutationMyRescheduleArgs>>;
   myUpdateActivityType?: Resolver<ResolversTypes['ActivityType'], ParentType, ContextType, RequireFields<MutationMyUpdateActivityTypeArgs, 'input'>>;
   myUpdateHabit?: Resolver<ResolversTypes['Habit'], ParentType, ContextType, RequireFields<MutationMyUpdateHabitArgs, 'input'>>;
-  myUpdateProfile?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationMyUpdateProfileArgs, 'timezone'>>;
+  myUpdateProfile?: Resolver<ResolversTypes['UserProfile'], ParentType, ContextType, RequireFields<MutationMyUpdateProfileArgs, 'timezone'>>;
   myUpdateTimeBlock?: Resolver<ResolversTypes['TimeBlock'], ParentType, ContextType, RequireFields<MutationMyUpdateTimeBlockArgs, 'input'>>;
   myUpdateTodo?: Resolver<ResolversTypes['Todo'], ParentType, ContextType, RequireFields<MutationMyUpdateTodoArgs, 'input'>>;
   requestMagicLink?: Resolver<ResolversTypes['RequestMagicLinkResult'], ParentType, ContextType, RequireFields<MutationRequestMagicLinkArgs, 'email'>>;
@@ -1605,6 +1620,7 @@ export type QueryResolvers<ContextType = Context, ParentType extends ResolversPa
   myActivityTypes?: Resolver<Array<ResolversTypes['ActivityType']>, ParentType, ContextType>;
   myHabitDetail?: Resolver<ResolversTypes['HabitDetail'], ParentType, ContextType, RequireFields<QueryMyHabitDetailArgs, 'habitId'>>;
   myHabits?: Resolver<Array<ResolversTypes['Habit']>, ParentType, ContextType, Partial<QueryMyHabitsArgs>>;
+  myProfile?: Resolver<Maybe<ResolversTypes['UserProfile']>, ParentType, ContextType>;
   mySchedule?: Resolver<Array<ResolversTypes['ScheduledItem']>, ParentType, ContextType, Partial<QueryMyScheduleArgs>>;
   myTimeBlocks?: Resolver<Array<ResolversTypes['TimeBlock']>, ParentType, ContextType, Partial<QueryMyTimeBlocksArgs>>;
   myTodos?: Resolver<Array<ResolversTypes['Todo']>, ParentType, ContextType, Partial<QueryMyTodosArgs>>;
@@ -1672,6 +1688,12 @@ export type UserResolvers<ContextType = Context, ParentType extends ResolversPar
   updatedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
 };
 
+export type UserProfileResolvers<ContextType = Context, ParentType extends ResolversParentTypes['UserProfile'] = ResolversParentTypes['UserProfile']> = {
+  email?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  timezone?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
 export type VerifyMagicLinkResultResolvers<ContextType = Context, ParentType extends ResolversParentTypes['VerifyMagicLinkResult'] = ResolversParentTypes['VerifyMagicLinkResult']> = {
   token?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   userId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
@@ -1693,6 +1715,7 @@ export type Resolvers<ContextType = Context> = {
   TimeBlock?: TimeBlockResolvers<ContextType>;
   Todo?: TodoResolvers<ContextType>;
   User?: UserResolvers<ContextType>;
+  UserProfile?: UserProfileResolvers<ContextType>;
   VerifyMagicLinkResult?: VerifyMagicLinkResultResolvers<ContextType>;
 };
 

@@ -5,6 +5,10 @@ import {
   timeBlocks,
   todos,
   users,
+  type ActivityType,
+  type Habit,
+  type HabitCompletion,
+  type Todo,
 } from '@auto-cal/db/schema';
 import {
   and,
@@ -136,6 +140,31 @@ const extensionSDL = `
     periods: [HabitPeriod!]!
   }
 
+  type HabitStatSummary {
+    habitId: ID!
+    title: String!
+    completionRate: Float!
+    completions: Int!
+    target: Float!
+    frequencyUnit: String!
+    frequencyCount: Int!
+  }
+
+  type TodoStatSummary {
+    total: Int!
+    completed: Int!
+    overdue: Int!
+    completionRate: Float!
+  }
+
+  type StatsOverview {
+    weightedScore: Float!
+    habitScore: Float!
+    todoScore: Float!
+    habits: [HabitStatSummary!]!
+    todos: TodoStatSummary!
+  }
+
   enum ScheduledItemKind {
     todo
     habit
@@ -251,11 +280,12 @@ const extensionSDL = `
     activityTypeStats(startDate: String, endDate: String): [ActivityTypeStats!]!
     habitStats(habitId: ID, startDate: String, endDate: String): [HabitStats!]!
     myHabitDetail(habitId: ID!, periods: Int): HabitDetail!
+    myStats(startDate: String, endDate: String): StatsOverview!
     mySchedule(weekStart: String, timezone: String): [ScheduledItem!]!
   }
 
   extend type Mutation {
-    myUpdateProfile(timezone: String!): UserProfile!
+    myUpdateProfile(timezone: String!): Boolean!
     myCreateActivityType(input: CreateActivityTypeArgs!): ActivityType!
     myUpdateActivityType(input: UpdateActivityTypeArgs!): ActivityType!
     myDeleteActivityType(id: ID!): Boolean!
@@ -271,7 +301,6 @@ const extensionSDL = `
     myCreateTimeBlock(input: CreateTimeBlockArgs!): TimeBlock!
     myDeleteTimeBlock(id: ID!): Boolean!
     myReschedule(weekStart: String): Boolean!
-    myUpdateProfile(timezone: String!): Boolean!
     requestMagicLink(email: String!): RequestMagicLinkResult!
     verifyMagicLink(token: String!): VerifyMagicLinkResult!
   }
@@ -514,6 +543,97 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
         totalCompletions,
       };
     });
+  };
+
+  // --- Stats Overview Query ---
+
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  queryFields.myStats!.resolve = async (
+    _parent,
+    args: { startDate?: string; endDate?: string },
+    context: Context,
+  ) => {
+    if (!context.userId) throw new Error('Not authenticated');
+
+    const now = new Date();
+    const start = args.startDate ? new Date(args.startDate) : null;
+    const end = args.endDate ? new Date(args.endDate) : now;
+
+    const userHabits: Habit[] = await context.db._query.habits.findMany({
+      where: eq(habits.userId, context.userId),
+    });
+
+    const completionsByHabit = new Map<string, number>();
+    if (userHabits.length > 0) {
+      const conditions = [
+        inArray(habitCompletions.habitId, userHabits.map((h) => h.id)),
+        isNotNull(habitCompletions.completedAt),
+        lte(habitCompletions.completedAt, end),
+      ];
+      if (start) conditions.push(gte(habitCompletions.completedAt, start));
+      const allHabitCompletions = await context.db._query.habitCompletions.findMany({
+        where: and(...conditions),
+      });
+      for (const c of allHabitCompletions) {
+        completionsByHabit.set(c.habitId, (completionsByHabit.get(c.habitId) ?? 0) + 1);
+      }
+    }
+
+    const MS_PER_DAY = 24 * 60 * 60 * 1000;
+    const habitSummaries = userHabits.map((habit) => {
+      const completions = completionsByHabit.get(habit.id) ?? 0;
+      const effectiveStart = start ?? habit.createdAt;
+      const periodDays = habit.frequencyUnit === 'week' ? 7 : 30;
+      const rangeMs = Math.max(end.getTime() - effectiveStart.getTime(), 0);
+      const periods = rangeMs / (periodDays * MS_PER_DAY);
+      const target = periods * habit.frequencyCount;
+      const rate = target > 0 ? Math.min(1.0, completions / target) : 1.0;
+      return {
+        habitId: habit.id,
+        title: habit.title,
+        completionRate: rate,
+        completions,
+        target,
+        frequencyUnit: habit.frequencyUnit,
+        frequencyCount: habit.frequencyCount,
+      };
+    });
+
+    const habitScore =
+      habitSummaries.length > 0
+        ? habitSummaries.reduce((sum, h) => sum + h.completionRate, 0) / habitSummaries.length
+        : 1.0;
+
+    const todoConditions = [
+      eq(todos.userId, context.userId),
+      isNotNull(todos.scheduledAt),
+      lte(todos.scheduledAt, end),
+    ];
+    if (start) todoConditions.push(gte(todos.scheduledAt, start));
+
+    const todosInRange: Todo[] = await context.db._query.todos.findMany({
+      where: and(...todoConditions),
+    });
+
+    const totalTodos = todosInRange.length;
+    const completedTodos = todosInRange.filter((t) => t.completedAt !== null).length;
+    const overdueTodos = todosInRange.filter(
+      (t) => t.completedAt === null && t.scheduledAt! < now,
+    ).length;
+    const todoScore = totalTodos > 0 ? completedTodos / totalTodos : 1.0;
+
+    return {
+      weightedScore: (habitScore + todoScore) / 2,
+      habitScore,
+      todoScore,
+      habits: habitSummaries,
+      todos: {
+        total: totalTodos,
+        completed: completedTodos,
+        overdue: overdueTodos,
+        completionRate: todoScore,
+      },
+    };
   };
 
   // --- Habit Detail Query ---
@@ -836,13 +956,14 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     context: Context,
   ) => {
     if (!context.userId) throw new Error('Not authenticated');
-    const [updated] = await context.db
+    if (!Intl.supportedValuesOf('timeZone').includes(args.timezone)) {
+      throw new Error(`Invalid timezone: ${args.timezone}`);
+    }
+    await context.db
       .update(users)
       .set({ timezone: args.timezone, updatedAt: new Date() })
-      .where(eq(users.id, context.userId))
-      .returning();
-    if (!updated) throw new Error('Failed to update profile');
-    return updated;
+      .where(eq(users.id, context.userId));
+    return true;
   };
 
   // --- ActivityType Mutations ---
@@ -1218,24 +1339,6 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   ) => {
     if (!context.userId) throw new Error('Not authenticated');
     await runSchedulerWriteback(context.db, context.userId);
-    return true;
-  };
-
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  mutationFields.myUpdateProfile!.resolve = async (
-    _parent,
-    args: { timezone: string },
-    context: Context,
-  ) => {
-    if (!context.userId) throw new Error('Not authenticated');
-    const validTimezones = Intl.supportedValuesOf('timeZone');
-    if (!validTimezones.includes(args.timezone)) {
-      throw new Error(`Invalid timezone: ${args.timezone}`);
-    }
-    await context.db
-      .update(users)
-      .set({ timezone: args.timezone, updatedAt: new Date() })
-      .where(eq(users.id, context.userId));
     return true;
   };
 
