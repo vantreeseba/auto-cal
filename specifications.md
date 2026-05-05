@@ -92,3 +92,43 @@ The app should track the number of completed todo's by activity type.
 - A todo is a single-time task. It has at most one `completedAt` value at any given time.
 - Uncompleting and re-completing is valid (e.g. to correct the timestamp), but the latest
   `completedAt` always wins — there is no completion history log.
+
+---
+
+## Scheduler
+
+### Horizon
+- The scheduler looks ahead **2 months** from the current date when placing items.
+- This may be made configurable in the future.
+
+### Conflict resolution (priority bumping)
+- When a higher-priority item needs a slot occupied by a lower-priority item, the
+  lower-priority item is bumped to its next available slot.
+- If no future slot exists within the 2-month horizon, the bumped item is marked
+  **unschedulable** until a slot opens or its priority/length changes.
+- Users are not prompted to resolve conflicts manually — the scheduler handles it.
+
+### No time blocks — onboarding gate
+- If a user has no time blocks, the scheduler cannot place any items.
+- The app surfaces a **blocking empty state** directing the user to create a time block
+  before anything will be scheduled. Todos and habits can still be created, but the
+  dashboard/schedule will show nothing until at least one time block exists.
+
+### Habit period boundaries
+- A "week" runs **Sunday → Saturday**.
+- A "month" is the calendar month.
+- If a period ends with fewer completions than the target frequency, it is recorded as a
+  partial failure — no catch-up scheduling into the next period.
+- The scheduler will not cram remaining occurrences into the final days of a period; it
+  schedules evenly across available slots and accepts whatever completes naturally.
+
+---
+
+## Time Blocks
+
+### Overlapping time blocks and priority
+- Time blocks can overlap in day/time coverage.
+- Each time block has an integer **priority** field (higher = preferred, default 0).
+- When two blocks cover the same slot, the scheduler fills the higher-priority block first
+  before using the lower-priority one.
+- Users set time block priority manually in the time block form.

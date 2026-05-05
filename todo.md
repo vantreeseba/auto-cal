@@ -16,6 +16,18 @@ If you're unsure what to work on, these three are the highest-leverage next step
 
 ## P0 — Core correctness / blocking
 
+### #20 — Time block priority field
+**Problem:** Time blocks can overlap. Currently there is no way to express which block should be preferred when two cover the same slot, so scheduler behavior is undefined for overlapping blocks.
+**Spec:** See `specifications.md` → "Time Blocks" section.
+**Work:**
+- Add `priority` integer column (default 0) to the `time_blocks` table + migration
+- Expose it in `TimeBlockForm` as a numeric input
+- Update the scheduler to sort candidate blocks by priority descending when selecting a slot
+
+**Acceptance:** A "Deep Work" block (priority 2) and "Side Project" block (priority 1) that overlap on Monday 10–11am will have todos scheduled into "Deep Work" first.
+
+---
+
 ### #19 — Completion datetime dialog + calendar move-on-completion
 **Problem:** Marking a todo or habit complete sets `completedAt = now` with no way to record when it actually happened. Completed items also don't move on the calendar to reflect their real completion time, and freeing future slots doesn't trigger rescheduling.  
 **Spec:** See `specifications.md` → "Completion Behavior" section.  
