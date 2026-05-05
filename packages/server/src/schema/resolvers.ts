@@ -149,6 +149,7 @@ const extensionSDL = `
     target: Float!
     frequencyUnit: String!
     frequencyCount: Int!
+    activityType: ActivityType
   }
 
   type TodoStatSummary {
@@ -568,15 +569,23 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     ];
     if (start) todoConditions.push(gte(todos.scheduledAt, start));
 
-    // Fetch habits and todos in parallel; completions depend on habit IDs so come after
-    const [userHabits, todosInRange]: [Habit[], Todo[]] = await Promise.all([
-      context.db._query.habits.findMany({
-        where: eq(habits.userId, context.userId),
-      }),
-      context.db._query.todos.findMany({
-        where: and(...todoConditions),
-      }),
-    ]);
+    // Fetch habits, todos, and activity types in parallel; completions depend on habit IDs
+    const [userHabits, todosInRange, userActivityTypes]: [Habit[], Todo[], ActivityType[]] =
+      await Promise.all([
+        context.db._query.habits.findMany({
+          where: eq(habits.userId, context.userId),
+        }),
+        context.db._query.todos.findMany({
+          where: and(...todoConditions),
+        }),
+        context.db._query.activityTypes.findMany({
+          where: eq(activityTypes.userId, context.userId),
+        }),
+      ]);
+
+    const activityTypeMap = new Map<string, ActivityType>(
+      userActivityTypes.map((at) => [at.id, at]),
+    );
 
     const completionsByHabit = new Map<string, number>();
     if (userHabits.length > 0) {
@@ -613,6 +622,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
         target,
         frequencyUnit: habit.frequencyUnit,
         frequencyCount: habit.frequencyCount,
+        activityType: habit.activityTypeId ? (activityTypeMap.get(habit.activityTypeId) ?? null) : null,
       };
     });
 

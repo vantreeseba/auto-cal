@@ -1,4 +1,4 @@
-import type { GetMyStatsQuery, HabitStatSummary, TodoStatSummary } from '@/__generated__/graphql.js';
+import type { GetMyStatsQuery } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RouteError } from '@/components/ui/route-error';
@@ -20,6 +20,10 @@ const GET_MY_STATS = graphql(`
         target
         frequencyUnit
         frequencyCount
+        activityType {
+          id
+          color
+        }
       }
       todos {
         total
@@ -56,6 +60,8 @@ export const Route = createFileRoute('/stats')({
 });
 
 type StatsData = NonNullable<GetMyStatsQuery['myStats']>;
+type HabitRow = StatsData['habits'][number];
+type TodoRow = StatsData['todos'];
 
 function ScoreRing({ score }: { score: number | null | undefined }) {
   const radius = 54;
@@ -98,7 +104,7 @@ function ScoreRing({ score }: { score: number | null | undefined }) {
   );
 }
 
-function HabitsSection({ habits, habitScore }: { habits: HabitStatSummary[]; habitScore: number | null | undefined }) {
+function HabitsSection({ habits, habitScore }: { habits: HabitRow[]; habitScore: number | null | undefined }) {
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -132,7 +138,9 @@ function HabitsSection({ habits, habitScore }: { habits: HabitStatSummary[]; hab
                       className="h-full rounded-full transition-all duration-300"
                       style={{
                         width: `${pct}%`,
-                        backgroundColor: met ? '#22c55e' : '#94a3b8',
+                        backgroundColor: met
+                          ? (h.activityType?.color ?? '#22c55e')
+                          : '#94a3b8',
                       }}
                     />
                   </div>
@@ -149,7 +157,7 @@ function HabitsSection({ habits, habitScore }: { habits: HabitStatSummary[]; hab
   );
 }
 
-function TodosSection({ todos, todoScore }: { todos: TodoStatSummary; todoScore: number | null | undefined }) {
+function TodosSection({ todos, todoScore }: { todos: TodoRow; todoScore: number | null | undefined }) {
   return (
     <Card>
       <CardHeader className="pb-3">
