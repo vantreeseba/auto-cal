@@ -8,6 +8,7 @@ import {
   type ActivityType,
   type Habit,
   type HabitCompletion,
+  type TimeBlock,
   type Todo,
 } from '@auto-cal/db/schema';
 import {
@@ -447,17 +448,18 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     const start = args.startDate ? new Date(args.startDate) : null;
     const end = args.endDate ? new Date(args.endDate) : null;
 
-    const [userActivityTypes, allTodos, allHabits] = await Promise.all([
-      context.db._query.activityTypes.findMany({
-        where: eq(activityTypes.userId, context.userId),
-      }),
-      context.db._query.todos.findMany({
-        where: and(eq(todos.userId, context.userId), isNotNull(todos.activityTypeId)),
-      }),
-      context.db._query.habits.findMany({
-        where: and(eq(habits.userId, context.userId), isNotNull(habits.activityTypeId)),
-      }),
-    ]);
+    const [userActivityTypes, allTodos, allHabits]: [ActivityType[], Todo[], Habit[]] =
+      await Promise.all([
+        context.db._query.activityTypes.findMany({
+          where: eq(activityTypes.userId, context.userId),
+        }),
+        context.db._query.todos.findMany({
+          where: and(eq(todos.userId, context.userId), isNotNull(todos.activityTypeId)),
+        }),
+        context.db._query.habits.findMany({
+          where: and(eq(habits.userId, context.userId), isNotNull(habits.activityTypeId)),
+        }),
+      ]);
 
     const todosByType = new Map<string, typeof allTodos>();
     for (const todo of allTodos) {
@@ -510,7 +512,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
 
     const habitConditions = [eq(habits.userId, context.userId)];
     if (args.habitId) habitConditions.push(eq(habits.id, args.habitId));
-    const userHabits = await context.db._query.habits.findMany({
+    const userHabits: Habit[] = await context.db._query.habits.findMany({
       where: and(...habitConditions),
     });
 
@@ -525,7 +527,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     if (args.endDate)
       completionConditions.push(lte(habitCompletions.completedAt, new Date(args.endDate)));
 
-    const allCompletions = await context.db._query.habitCompletions.findMany({
+    const allCompletions: HabitCompletion[] = await context.db._query.habitCompletions.findMany({
       where: and(...completionConditions),
     });
 
@@ -695,7 +697,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
       return { start, end, label };
     }
 
-    const allCompletions = await context.db._query.habitCompletions.findMany({
+    const allCompletions: HabitCompletion[] = await context.db._query.habitCompletions.findMany({
       where: and(
         eq(habitCompletions.habitId, args.habitId),
         isNotNull(habitCompletions.completedAt),
@@ -786,7 +788,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
       userCompletedTodos,
       userHabits,
       userActivityTypes,
-    ] = await Promise.all([
+    ]: [TimeBlock[], Todo[], Todo[], Habit[], ActivityType[]] = await Promise.all([
       context.db._query.timeBlocks.findMany({
         where: eq(timeBlocks.userId, context.userId),
       }),
@@ -844,7 +846,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     const userHabitIds = userHabits.map((h) => h.id);
 
     // Guard: if user has no habits, skip completion queries entirely
-    const [weekCompletions, monthCompletions] =
+    const [weekCompletions, monthCompletions]: [HabitCompletion[], HabitCompletion[]] =
       userHabitIds.length === 0
         ? [[], []]
         : await Promise.all([
@@ -867,7 +869,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
           ]);
 
     // Build activity type lookup map
-    const activityTypeMap = new Map(userActivityTypes.map((at) => [at.id, at]));
+    const activityTypeMap = new Map<string, ActivityType>(userActivityTypes.map((at) => [at.id, at]));
 
     // Build completion count maps
     const weekCompletionCounts = new Map<string, number>();
