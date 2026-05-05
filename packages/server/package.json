@@ -11,10 +11,12 @@
     "@apollo/server": "^4.11.3",
     "@auto-cal/db": "*",
     "cors": "^2.8.5",
-    "drizzle-graphql": "file://home/vantreeseba/code/vantreeseba/apps/drizzle-graphql",
+    "dataloader": "^2.2.3",
+    "@vantreeseba/drizzle-graphql": "latest",
     "drizzle-orm": "~1.0.0-beta",
     "express": "^4.21.2",
     "graphql": "^16.9.0",
+    "jose": "^5.10.0",
     "pluralize": "^8.0.0",
     "zod": "^3.24.1"
   },

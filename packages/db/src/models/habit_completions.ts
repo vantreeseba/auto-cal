@@ -7,7 +7,7 @@ export const habitCompletions = pgTable('habit_completions', {
     .notNull()
     .references(() => habits.id, { onDelete: 'cascade' }),
   scheduledAt: timestamp('scheduled_at'), // When it was scheduled
-  completedAt: timestamp('completed_at').notNull().defaultNow(),
+  completedAt: timestamp('completed_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 

@@ -4,10 +4,20 @@ import {
   FieldLabel as FieldLabelPrimitive,
   Field as FieldPrimitive,
 } from '@/components/ui/field';
+import { Input } from '@/components/ui/input.js';
 import type { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { Slot } from '@radix-ui/react-slot';
 import { createFormHookContexts, useStore } from '@tanstack/react-form';
 import * as React from 'react';
+import type { ReactNode } from 'react';
 
 export const { fieldContext, formContext, useFieldContext, useFormContext } =
   createFormHookContexts();
@@ -135,4 +145,112 @@ function FieldError({
   );
 }
 
-export { Form, Field, FieldLabel, FieldControl, FieldDescription, FieldError };
+type FieldWrapperProps = {
+  label: ReactNode;
+  control: ReactNode;
+};
+
+function FieldWrapper({ label, control }: FieldWrapperProps) {
+  return (
+    <Field>
+      <FieldLabel>{label}</FieldLabel>
+      <FieldControl>{control}</FieldControl>
+      <FieldError />
+    </Field>
+  );
+}
+
+type InputFieldProps = {
+  label: string;
+} & React.ComponentProps<'input'>;
+
+function InputField({ label, ...props }: InputFieldProps) {
+  const field = useFieldContext<string>(); // Access field data from context
+
+  return (
+    <FieldWrapper
+      label={label}
+      control={
+        <Input
+          {...props}
+          value={field.state.value}
+          onBlur={field.handleBlur}
+          onChange={(e) => field.handleChange(e.target.value)}
+        />
+      }
+    />
+  );
+}
+
+type TextAreaFieldProps = {
+  label: string;
+} & React.ComponentProps<'textarea'>;
+
+function TextAreaField({ label, ...props }: TextAreaFieldProps) {
+  const field = useFieldContext<string>();
+
+  return (
+    <FieldWrapper
+      label={label}
+      control={
+        <Textarea
+          {...props}
+          value={field.state.value ?? ''}
+          onBlur={field.handleBlur}
+          onChange={(e) => field.handleChange(e.target.value)}
+        />
+      }
+    />
+  );
+}
+
+type SelectOption = {
+  label: string;
+  value: string;
+};
+
+type SelectFieldProps = {
+  label: string;
+  options: readonly SelectOption[];
+  placeholder?: string;
+};
+
+function SelectField({ label, options, placeholder }: SelectFieldProps) {
+  const field = useFieldContext<string>();
+
+  return (
+    <FieldWrapper
+      label={label}
+      control={
+        <Select
+          value={field.state.value}
+          onValueChange={(v) => field.handleChange(v)}
+        >
+          <SelectTrigger onBlur={field.handleBlur}>
+            <SelectValue placeholder={placeholder} />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map(({ label: optionLabel, value }) => (
+              <SelectItem key={value} value={value}>
+                {optionLabel}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      }
+    />
+  );
+}
+
+export {
+  Form,
+  Field,
+  FieldLabel,
+  FieldControl,
+  FieldDescription,
+  FieldError,
+  FieldWrapper,
+  InputField,
+  TextAreaField,
+  SelectField,
+};

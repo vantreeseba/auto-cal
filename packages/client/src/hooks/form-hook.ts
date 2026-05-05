@@ -4,6 +4,9 @@ import {
   FieldDescription,
   FieldError,
   FieldLabel,
+  InputField,
+  SelectField,
+  TextAreaField,
   fieldContext,
   formContext,
 } from '@/components/ui/form';
@@ -18,6 +21,9 @@ export const { useAppForm, withForm } = createFormHook({
     Control: FieldControl,
     Description: FieldDescription,
     Error: FieldError,
+    InputField: InputField,
+    TextAreaField: TextAreaField,
+    SelectField: SelectField,
   },
   formComponents: {},
 });

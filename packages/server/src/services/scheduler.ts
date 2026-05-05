@@ -1,336 +1,348 @@
 import type { ActivityType, Habit, TimeBlock, Todo } from '@auto-cal/db';
 
-export interface ScheduledItem {
+// ─── Output Types ────────────────────────────────────────────────────────────
+
+export type ScheduledItemKind = 'todo' | 'habit';
+
+export type ScheduledItem = {
+  kind: ScheduledItemKind;
   id: string;
-  type: 'todo' | 'habit';
   title: string;
-  activityTypeId: string | null;
+  priority: number;
   estimatedLength: number;
+  activityTypeId: string | null;
+  activityType: ActivityType | null;
+  scheduledStart: string | null; // naive ISO "YYYY-MM-DDTHH:mm:ss" — no Z
+  scheduledEnd: string | null; // naive ISO "YYYY-MM-DDTHH:mm:ss" — no Z
   isScheduled: boolean;
-  scheduledStart: string | null;
-  scheduledEnd: string | null;
-  dayOfWeek: number | null;
-}
+  isOverdue: boolean;
+};
 
-/**
- * Returns the ISO week start (Monday) date string for the given date string.
- * E.g. '2026-04-29' (Wednesday) → '2026-04-27' (Monday)
- */
-export function startOfISOWeekStr(dateStr: string): string {
-  const date = new Date(`${dateStr}T00:00:00`);
-  const day = date.getDay(); // 0 = Sunday, 1 = Monday, ...
-  const diff = day === 0 ? -6 : 1 - day;
-  date.setDate(date.getDate() + diff);
-  return date.toISOString().slice(0, 10);
-}
+// ─── Internal Types ──────────────────────────────────────────────────────────
 
+type Slot = {
+  activityTypeId: string;
+  /** Naive ISO date string for the slot day: "YYYY-MM-DD" */
+  dateStr: string;
+  /** Minutes since midnight for slot start */
+  startMinutes: number;
+  /** Total capacity of the slot in minutes */
+  totalMinutes: number;
+  /** Minutes consumed so far */
+  usedMinutes: number;
+  /** Time block priority — higher is preferred */
+  priority: number;
+};
+
+type Task = {
+  kind: ScheduledItemKind;
+  id: string;
+  title: string;
+  priority: number;
+  estimatedLength: number;
+  activityTypeId: string | null;
+  isOverdue?: boolean;
+};
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Parse "HH:MM" into total minutes since midnight */
 function timeToMinutes(time: string): number {
   const [h, m] = time.split(':').map(Number);
   return (h ?? 0) * 60 + (m ?? 0);
 }
 
+/** Format minutes-since-midnight as "HH:MM:SS" */
 function minutesToTimeStr(minutes: number): string {
-  const h = Math.floor(minutes / 60)
-    .toString()
-    .padStart(2, '0');
-  const m = (minutes % 60).toString().padStart(2, '0');
-  return `${h}:${m}`;
+  const h = Math.floor(minutes / 60) % 24;
+  const m = minutes % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+}
+
+/** Build a naive ISO datetime string: "YYYY-MM-DDTHH:MM:SS" */
+function naiveDateTime(dateStr: string, minutes: number): string {
+  return `${dateStr}T${minutesToTimeStr(minutes)}`;
 }
 
 /**
- * Compute a schedule for one week starting at weekStartStr (ISO date, must be Monday).
+ * Return the ISO week start (Monday) as a "YYYY-MM-DD" string.
+ * Uses local date arithmetic — weekStart is treated as a local date.
+ */
+export function startOfISOWeekStr(ref: Date): string {
+  const d = new Date(ref);
+  const day = d.getDay(); // 0=Sun, 1=Mon … 6=Sat (local)
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Add `days` to a "YYYY-MM-DD" string and return a new "YYYY-MM-DD" string */
+function addDaysToDateStr(dateStr: string, days: number): string {
+  const d = new Date(`${dateStr}T00:00:00`); // parse as local midnight
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Return the Monday of the ISO week containing `ref` as a Date at local midnight.
+ * Used by the resolver for DB date range queries.
+ */
+export function startOfISOWeek(ref: Date): Date {
+  const dateStr = startOfISOWeekStr(ref);
+  return new Date(`${dateStr}T00:00:00`);
+}
+
+/**
+ * Return the first day of the calendar month containing `ref` as a Date at local midnight.
+ */
+export function startOfLocalMonth(ref: Date): Date {
+  const y = ref.getFullYear();
+  const m = String(ref.getMonth() + 1).padStart(2, '0');
+  return new Date(`${y}-${m}-01T00:00:00`);
+}
+
+/**
+ * Expand a recurring TimeBlock into concrete Slot objects for the week
+ * starting on `weekStartStr` (a "YYYY-MM-DD" string for a Monday).
+ * daysOfWeek: 0=Sun, 1=Mon … 6=Sat.
+ */
+function expandSlots(weekStartStr: string, block: TimeBlock): Slot[] {
+  if (!block.activityTypeId) return [];
+
+  const startMins = timeToMinutes(block.startTime);
+  const endMins = timeToMinutes(block.endTime);
+  const totalMinutes = endMins - startMins;
+  if (totalMinutes <= 0) return [];
+
+  return block.daysOfWeek.map((dayIndex) => {
+    // weekStartStr is Monday. dayIndex 0=Sun needs +6, 1=Mon needs +0, etc.
+    const offsetFromMonday = dayIndex === 0 ? 6 : dayIndex - 1;
+    const dateStr = addDaysToDateStr(weekStartStr, offsetFromMonday);
+    return {
+      activityTypeId: block.activityTypeId as string,
+      dateStr,
+      startMinutes: startMins,
+      totalMinutes,
+      usedMinutes: 0,
+      priority: block.priority ?? 0,
+    };
+  });
+}
+
+/** Sort tasks: priority DESC, then estimatedLength ASC */
+function sortTasks(tasks: Task[]): Task[] {
+  return [...tasks].sort((a, b) => {
+    if (b.priority !== a.priority) return b.priority - a.priority;
+    return a.estimatedLength - b.estimatedLength;
+  });
+}
+
+/**
+ * Returns the effective start (minutes since midnight) for the next item
+ * placed into this slot, advancing past `now` if the cursor is in the past.
+ * Returns null if there is no future capacity left in the slot.
+ */
+function effectiveSlotStart(slot: Slot, now: Date, durationMins: number): number | null {
+  const slotEndMins = slot.startMinutes + slot.totalMinutes;
+  const cursorMins = slot.startMinutes + slot.usedMinutes;
+
+  // Convert now to minutes since midnight on the slot's date
+  const slotDayMidnight = new Date(`${slot.dateStr}T00:00:00`);
+  const nowMins = (now.getTime() - slotDayMidnight.getTime()) / (1000 * 60);
+
+  const startMins = Math.max(cursorMins, nowMins);
+  if (startMins + durationMins > slotEndMins) return null;
+  return startMins;
+}
+
+// ─── Main Export ─────────────────────────────────────────────────────────────
+
+/**
+ * Pure scheduling function — no DB calls, no side effects.
+ * Produces naive datetime strings (no timezone suffix) so browsers
+ * interpret them as local time.
  *
- * Algorithm:
- * 1. Build a map of free time per (day, timeBlock).
- * 2. Sort todos by priority descending, then createdAt ascending.
- * 3. For each todo, try to find the earliest slot that fits.
- * 4. For habits, spread instances across different days.
+ * @param weekStartStr    "YYYY-MM-DD" string for the Monday of the target week
+ * @param timeBlocks      All user time blocks
+ * @param todos           Incomplete todos with activityTypeId set
+ * @param habits          Due habits with activityTypeId set
+ * @param activityTypeMap Map<activityTypeId, ActivityType> for O(1) lookup
  */
 export function computeSchedule(
   weekStartStr: string,
   timeBlocks: TimeBlock[],
   todos: Todo[],
-  habits: Habit[],
+  habits: Array<Habit & { instanceIndex: number }>,
   activityTypeMap: Map<string, ActivityType>,
 ): ScheduledItem[] {
+  // 1. Expand all time blocks into slots for this week
+  const allSlots = timeBlocks.flatMap((b) => expandSlots(weekStartStr, b));
+
+  // 2. Group slots by activityTypeId, sorted by (dateStr, startMinutes)
+  const slotsByActivityType = new Map<string, Slot[]>();
+  for (const slot of allSlots) {
+    const existing = slotsByActivityType.get(slot.activityTypeId) ?? [];
+    existing.push(slot);
+    slotsByActivityType.set(slot.activityTypeId, existing);
+  }
+  for (const slots of slotsByActivityType.values()) {
+    // Higher priority first; ties broken by date then start time
+    slots.sort((a, b) => {
+      if (b.priority !== a.priority) return b.priority - a.priority;
+      const dateCmp = a.dateStr.localeCompare(b.dateStr);
+      return dateCmp !== 0 ? dateCmp : a.startMinutes - b.startMinutes;
+    });
+  }
+
+  // 3. Build and sort the task list
   const now = new Date();
-  const weekStart = new Date(`${weekStartStr}T00:00:00`);
 
-  // Build slot availability: Map<blockId+day, { dayDate, startMin, remainingMin }>
-  type SlotKey = `${string}-${number}`;
-  const slots = new Map<
-    SlotKey,
-    {
-      blockId: string;
-      dayOfWeek: number;
-      dateStr: string;
-      startMin: number;
-      cursorMin: number;
-      endMin: number;
-    }
-  >();
+  const todoTasks: Task[] = todos
+    .filter((t) => t.activityTypeId !== null)
+    .map((t) => ({
+      kind: 'todo' as const,
+      id: t.id,
+      title: t.title,
+      priority: t.priority,
+      estimatedLength: t.estimatedLength,
+      activityTypeId: t.activityTypeId,
+      isOverdue: !!(
+        t.scheduledAt &&
+        new Date(t.scheduledAt) < now &&
+        !t.completedAt
+      ),
+    }));
 
-  for (const block of timeBlocks) {
-    for (const dow of block.daysOfWeek) {
-      const dayDate = new Date(weekStart);
-      // ISO weeks: weekStart is Monday (dow=1). getDay() 0=Sun,1=Mon,...
-      // dow: 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
-      // Monday offset = 0, Tuesday = 1, ... Sunday = 6
-      const offset = dow === 0 ? 6 : dow - 1;
-      dayDate.setDate(weekStart.getDate() + offset);
-      const dateStr = dayDate.toISOString().slice(0, 10);
-      const key: SlotKey = `${block.id}-${dow}`;
-      slots.set(key, {
-        blockId: block.id,
-        dayOfWeek: dow,
-        dateStr,
-        startMin: timeToMinutes(block.startTime),
-        cursorMin: timeToMinutes(block.startTime),
-        endMin: timeToMinutes(block.endTime),
+  const habitTasks: Task[] = habits
+    .filter((h) => h.activityTypeId !== null)
+    .map((h) => ({
+      kind: 'habit' as const,
+      id: `${h.id}-${h.instanceIndex}`,
+      title:
+        h.instanceIndex > 0 ? `${h.title} (${h.instanceIndex + 1})` : h.title,
+      priority: h.priority,
+      estimatedLength: h.estimatedLength,
+      activityTypeId: h.activityTypeId,
+    }));
+
+  const sortedTasks = sortTasks([...todoTasks, ...habitTasks]);
+
+  // 4. Schedule each task into the first fitting slot
+  // For habits, prefer spreading instances across different days
+  const habitDatesUsed = new Map<string, Set<string>>(); // habitBaseId → Set<dateStr>
+
+  const results: ScheduledItem[] = [];
+
+  for (const task of sortedTasks) {
+    const activityType = task.activityTypeId
+      ? (activityTypeMap.get(task.activityTypeId) ?? null)
+      : null;
+
+    if (!task.activityTypeId) {
+      results.push({
+        ...task,
+        activityType,
+        scheduledStart: null,
+        scheduledEnd: null,
+        isScheduled: false,
+        isOverdue: task.isOverdue ?? false,
       });
+      continue;
     }
-  }
 
-  const result: ScheduledItem[] = [];
-
-  // Helper: find a slot for an item with given activityTypeId and duration
-  function findSlot(
-    activityTypeId: string | null,
-    durationMin: number,
-    preferNotDays?: Set<number>,
-  ): {
-    dateStr: string;
-    startMin: number;
-    endMin: number;
-    dayOfWeek: number;
-  } | null {
-    // Find matching blocks
-    const matchingBlocks = timeBlocks.filter((b) => {
-      if (!activityTypeId) return true;
-      return b.activityTypeId === activityTypeId;
-    });
-
-    // Sort slots: prefer days not in preferNotDays, then by date
-    const candidateKeys = Array.from(slots.keys()).filter((k) => {
-      const slot = slots.get(k);
-      if (!slot) return false;
-      return matchingBlocks.some((b) => b.id === slot.blockId);
-    });
-
-    // Prefer days not already used by this habit
-    candidateKeys.sort((a, b) => {
-      const slotA = slots.get(a);
-      const slotB = slots.get(b);
-      if (!slotA || !slotB) return 0;
-      const aPref = preferNotDays?.has(slotA.dayOfWeek) ? 1 : 0;
-      const bPref = preferNotDays?.has(slotB.dayOfWeek) ? 1 : 0;
-      if (aPref !== bPref) return aPref - bPref;
-      // Then sort by date
-      if (slotA.dateStr !== slotB.dateStr)
-        return slotA.dateStr < slotB.dateStr ? -1 : 1;
-      return slotA.cursorMin - slotB.cursorMin;
-    });
-
-    for (const key of candidateKeys) {
-      const slot = slots.get(key);
-      if (!slot) continue;
-      const available = slot.endMin - slot.cursorMin;
-      if (available >= durationMin) {
-        return {
-          dateStr: slot.dateStr,
-          startMin: slot.cursorMin,
-          endMin: slot.cursorMin + durationMin,
-          dayOfWeek: slot.dayOfWeek,
-        };
-      }
+    if (task.estimatedLength <= 0) {
+      results.push({
+        ...task,
+        activityType,
+        scheduledStart: null,
+        scheduledEnd: null,
+        isScheduled: false,
+        isOverdue: task.isOverdue ?? false,
+      });
+      continue;
     }
-    return null;
-  }
 
-  function consumeSlot(
-    activityTypeId: string | null,
-    dateStr: string,
-    startMin: number,
-    durationMin: number,
-  ): void {
-    for (const [key, slot] of slots.entries()) {
-      if (slot.dateStr === dateStr && slot.cursorMin === startMin) {
-        const matchingBlocks = timeBlocks.filter((b) => {
-          if (!activityTypeId) return true;
-          return b.activityTypeId === activityTypeId;
-        });
-        if (matchingBlocks.some((b) => b.id === slot.blockId)) {
-          slot.cursorMin += durationMin;
-          slots.set(key, slot);
-          return;
+    const slots = slotsByActivityType.get(task.activityTypeId);
+    if (!slots || slots.length === 0) {
+      results.push({
+        ...task,
+        activityType,
+        scheduledStart: null,
+        scheduledEnd: null,
+        isScheduled: false,
+        isOverdue: task.isOverdue ?? false,
+      });
+      continue;
+    }
+
+    // Determine if this is a habit instance and extract the base ID
+    const isHabit = task.kind === 'habit';
+    // Habit instance IDs are "baseId-N" — base ID is everything before the last dash-number
+    const habitBaseId = isHabit ? task.id.replace(/-\d+$/, '') : null;
+
+    // For habit instances, get the set of dates already used by this habit
+    const usedDates = habitBaseId
+      ? (habitDatesUsed.get(habitBaseId) ?? new Set<string>())
+      : null;
+
+    // First pass: prefer a slot on a date this habit hasn't been placed yet
+    let chosenSlot: Slot | null = null;
+    let chosenStart: number | null = null;
+    if (isHabit && usedDates) {
+      for (const slot of slots) {
+        const start = effectiveSlotStart(slot, now, task.estimatedLength);
+        if (start !== null && !usedDates.has(slot.dateStr)) {
+          chosenSlot = slot;
+          chosenStart = start;
+          break;
         }
       }
     }
-  }
 
-  // Process todos sorted by priority desc, then createdAt asc
-  const sortedTodos = [...todos]
-    .filter((t) => t.completedAt === null)
-    .sort((a, b) => {
-      if (b.priority !== a.priority) return b.priority - a.priority;
-      return a.createdAt.getTime() - b.createdAt.getTime();
-    });
+    // Fallback: any slot with future capacity sufficient for this task
+    if (!chosenSlot) {
+      for (const slot of slots) {
+        const start = effectiveSlotStart(slot, now, task.estimatedLength);
+        if (start !== null) {
+          chosenSlot = slot;
+          chosenStart = start;
+          break;
+        }
+      }
+    }
 
-  for (const todo of sortedTodos) {
-    const duration = todo.estimatedLength ?? 0;
-    if (duration <= 0) {
-      result.push({
-        id: todo.id,
-        type: 'todo',
-        title: todo.title,
-        activityTypeId: todo.activityTypeId ?? null,
-        estimatedLength: duration,
-        isScheduled: false,
+    if (!chosenSlot || chosenStart === null) {
+      results.push({
+        ...task,
+        activityType,
         scheduledStart: null,
         scheduledEnd: null,
-        dayOfWeek: null,
+        isScheduled: false,
+        isOverdue: task.isOverdue ?? false,
       });
       continue;
     }
 
-    // Check if overdue: scheduledAt in the past
-    if (todo.scheduledAt && new Date(todo.scheduledAt) < now) {
-      // Only schedule into future slots (slots whose dateStr >= today)
-      // We continue with normal scheduling but filter to future slots
+    const taskStartMins = chosenStart;
+    const taskEndMins = taskStartMins + task.estimatedLength;
+    // Advance usedMinutes to after this task (accounting for any gap skipped past now)
+    chosenSlot.usedMinutes = taskEndMins - chosenSlot.startMinutes;
+
+    // Record the date used for this habit base ID
+    if (habitBaseId && usedDates) {
+      usedDates.add(chosenSlot.dateStr);
+      habitDatesUsed.set(habitBaseId, usedDates);
     }
 
-    // Check if activityTypeId is in the map (if specified)
-    if (todo.activityTypeId && !activityTypeMap.has(todo.activityTypeId)) {
-      result.push({
-        id: todo.id,
-        type: 'todo',
-        title: todo.title,
-        activityTypeId: todo.activityTypeId,
-        estimatedLength: duration,
-        isScheduled: false,
-        scheduledStart: null,
-        scheduledEnd: null,
-        dayOfWeek: null,
-      });
-      continue;
-    }
-
-    const slot = findSlot(todo.activityTypeId ?? null, duration);
-    if (!slot) {
-      result.push({
-        id: todo.id,
-        type: 'todo',
-        title: todo.title,
-        activityTypeId: todo.activityTypeId ?? null,
-        estimatedLength: duration,
-        isScheduled: false,
-        scheduledStart: null,
-        scheduledEnd: null,
-        dayOfWeek: null,
-      });
-      continue;
-    }
-
-    consumeSlot(
-      todo.activityTypeId ?? null,
-      slot.dateStr,
-      slot.startMin,
-      duration,
-    );
-
-    const startStr = `${slot.dateStr}T${minutesToTimeStr(slot.startMin)}:00`;
-    const endStr = `${slot.dateStr}T${minutesToTimeStr(slot.endMin)}:00`;
-
-    result.push({
-      id: todo.id,
-      type: 'todo',
-      title: todo.title,
-      activityTypeId: todo.activityTypeId ?? null,
-      estimatedLength: duration,
+    results.push({
+      ...task,
+      activityType,
+      scheduledStart: naiveDateTime(chosenSlot.dateStr, taskStartMins),
+      scheduledEnd: naiveDateTime(chosenSlot.dateStr, taskEndMins),
       isScheduled: true,
-      scheduledStart: startStr,
-      scheduledEnd: endStr,
-      dayOfWeek: slot.dayOfWeek,
+      isOverdue: task.isOverdue ?? false,
     });
   }
 
-  // Process habits: each habit needs frequencyCount instances per week
-  for (const habit of habits) {
-    const duration = habit.estimatedLength ?? 0;
-    const instances = habit.frequencyCount;
-    const usedDays = new Set<number>();
-
-    for (let i = 0; i < instances; i++) {
-      if (duration <= 0) {
-        result.push({
-          id: `${habit.id}-${i}`,
-          type: 'habit',
-          title: habit.title,
-          activityTypeId: habit.activityTypeId ?? null,
-          estimatedLength: duration,
-          isScheduled: false,
-          scheduledStart: null,
-          scheduledEnd: null,
-          dayOfWeek: null,
-        });
-        continue;
-      }
-
-      if (habit.activityTypeId && !activityTypeMap.has(habit.activityTypeId)) {
-        result.push({
-          id: `${habit.id}-${i}`,
-          type: 'habit',
-          title: habit.title,
-          activityTypeId: habit.activityTypeId,
-          estimatedLength: duration,
-          isScheduled: false,
-          scheduledStart: null,
-          scheduledEnd: null,
-          dayOfWeek: null,
-        });
-        continue;
-      }
-
-      const slot = findSlot(habit.activityTypeId ?? null, duration, usedDays);
-      if (!slot) {
-        result.push({
-          id: `${habit.id}-${i}`,
-          type: 'habit',
-          title: habit.title,
-          activityTypeId: habit.activityTypeId ?? null,
-          estimatedLength: duration,
-          isScheduled: false,
-          scheduledStart: null,
-          scheduledEnd: null,
-          dayOfWeek: null,
-        });
-        continue;
-      }
-
-      usedDays.add(slot.dayOfWeek);
-      consumeSlot(
-        habit.activityTypeId ?? null,
-        slot.dateStr,
-        slot.startMin,
-        duration,
-      );
-
-      const startStr = `${slot.dateStr}T${minutesToTimeStr(slot.startMin)}:00`;
-      const endStr = `${slot.dateStr}T${minutesToTimeStr(slot.endMin)}:00`;
-
-      result.push({
-        id: `${habit.id}-${i}`,
-        type: 'habit',
-        title: habit.title,
-        activityTypeId: habit.activityTypeId ?? null,
-        estimatedLength: duration,
-        isScheduled: true,
-        scheduledStart: startStr,
-        scheduledEnd: endStr,
-        dayOfWeek: slot.dayOfWeek,
-      });
-    }
-  }
-
-  return result;
+  return results;
 }

@@ -6,6 +6,8 @@ import { db } from '@auto-cal/db';
 import { seedDemoUser } from '@auto-cal/db/seed';
 import cors from 'cors';
 import express from 'express';
+import { verifyToken } from './auth.ts';
+import { createLoaders } from './context.ts';
 import type { Context } from './context.ts';
 import { schema } from './schema/index.ts';
 
@@ -31,12 +33,22 @@ app.use(
   expressMiddleware(server, {
     context: async ({ req }: { req: express.Request }): Promise<Context> => {
       const authHeader = req.headers.authorization;
-      const userId = authHeader?.startsWith('Bearer ')
+      const rawToken = authHeader?.startsWith('Bearer ')
         ? authHeader.slice(7)
         : undefined;
 
-      if (userId) return { db, userId };
-      return { db };
+      const loaders = createLoaders(db);
+
+      if (!rawToken) return { db, loaders };
+
+      // Try JWT verification first
+      const payload = await verifyToken(rawToken);
+      if (payload?.sub) return { db, userId: payload.sub, loaders };
+
+      // Fall back to raw UUID for backwards-compat with dev/seed
+      if (/^[0-9a-f-]{36}$/i.test(rawToken)) return { db, userId: rawToken, loaders };
+
+      return { db, loaders };
     },
   }),
 );

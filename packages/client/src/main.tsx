@@ -1,18 +1,71 @@
-import { ApolloClient, ApolloProvider, InMemoryCache } from '@apollo/client';
+import {
+  ApolloClient,
+  ApolloProvider,
+  createQueryPreloader,
+  from,
+  HttpLink,
+  InMemoryCache,
+} from '@apollo/client';
+import { onError } from '@apollo/client/link/error';
+import { RouterProvider, createRouter } from '@tanstack/react-router';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App';
+import { routeTree } from './routeTree.gen';
 import './index.css';
 
-const client = new ApolloClient({
+const httpLink = new HttpLink({
   uri: '/graphql',
-  cache: new InMemoryCache(),
-  // For demo purposes, we'll add a fixed user ID
-  // In production, this would come from authentication
-  headers: {
-    authorization: 'Bearer 00000000-0000-0000-0000-000000000001',
+  headers: {},
+  fetch: (uri, options) => {
+    const token = localStorage.getItem('auth_token');
+    const headers = new Headers(options?.headers as HeadersInit | undefined);
+    if (token) {
+      headers.set('authorization', `Bearer ${token}`);
+    }
+    return fetch(uri as RequestInfo, { ...(options as RequestInit), headers });
   },
 });
+
+const errorLink = onError(({ graphQLErrors }) => {
+  const isUnauthenticated = graphQLErrors?.some((e) =>
+    e.message.includes('Not authenticated'),
+  );
+  if (isUnauthenticated) {
+    localStorage.removeItem('auth_token');
+    window.location.replace('/login');
+  }
+});
+
+const client = new ApolloClient({
+  link: from([errorLink, httpLink]),
+  cache: new InMemoryCache(),
+  defaultOptions: {
+    watchQuery: { fetchPolicy: 'cache-and-network' },
+  },
+});
+
+const router = createRouter({
+  routeTree,
+  defaultPreload: 'intent',
+  scrollRestoration: true,
+  defaultStructuralSharing: true,
+  defaultPreloadStaleTime: 0,
+  context: {
+    apolloClient: client,
+    preloadQuery: createQueryPreloader(client),
+  },
+});
+
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: typeof router;
+  }
+}
+
+export interface MyRouterContext {
+  apolloClient: ApolloClient;
+  preloadQuery: ReturnType<typeof createQueryPreloader>;
+}
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Root element not found');
@@ -20,7 +73,7 @@ if (!rootElement) throw new Error('Root element not found');
 createRoot(rootElement).render(
   <StrictMode>
     <ApolloProvider client={client}>
-      <App />
+      <RouterProvider router={router} />
     </ApolloProvider>
   </StrictMode>,
 );

@@ -13,6 +13,7 @@ export const timeBlocks = pgTable('time_blocks', {
   daysOfWeek: integer('days_of_week').array().notNull(),
   startTime: text('start_time').notNull(),
   endTime: text('end_time').notNull(),
+  priority: integer('priority').notNull().default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

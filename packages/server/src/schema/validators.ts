@@ -33,7 +33,9 @@ export const UpdateTodoInput = z.object({
   priority: z.number().int().min(0).max(100).optional(),
   estimatedLength: z.number().int().min(1).max(1440).optional(),
   activityTypeId: z.string().uuid().nullable().optional(),
-  scheduledAt: z.string().datetime().optional(),
+  scheduledAt: z.string().optional(),
+  manuallyScheduled: z.boolean().optional(),
+  completedAt: z.string().nullable().optional(),
 });
 
 export const CreateHabitInput = z.object({
@@ -67,6 +69,7 @@ export const CreateTimeBlockInput = z
       }),
     startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
     endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
+    priority: z.number().int().min(0).max(100).default(0),
   })
   .refine((data) => data.endTime > data.startTime, {
     message: 'End time must be after start time',
