@@ -16,6 +16,19 @@ If you're unsure what to work on, these three are the highest-leverage next step
 
 ## P0 — Core correctness / blocking
 
+### #19 — Completion datetime dialog + calendar move-on-completion
+**Problem:** Marking a todo or habit complete sets `completedAt = now` with no way to record when it actually happened. Completed items also don't move on the calendar to reflect their real completion time, and freeing future slots doesn't trigger rescheduling.  
+**Spec:** See `specifications.md` → "Completion Behavior" section.  
+**Work:**
+- Add a "Complete" confirmation dialog (todos and habits) with a datetime picker defaulting to now
+- On confirm: set `completedAt`, update `scheduledAt` to match `completedAt`
+- If `completedAt < original scheduledAt` (completed early): clear the original future slot, run scheduler to backfill
+- Calendar: render completed items at `completedAt` with a checkmark overlay; keep them interactive
+- Uncomplete (todos): clear `completedAt` + `scheduledAt`, return to unscheduled pool, run scheduler
+- Uncomplete (habits): delete the `habit_completions` row, run scheduler
+
+**Acceptance:** Completing a todo early moves it on the calendar and immediately schedules something else in the freed slot. Uncompleting returns it to the queue.
+
 ### #1 — Real authentication (magic link + JWT)
 **Problem:** The app currently hard-codes a demo user ID sent as a Bearer token. There is no real login or user isolation.  
 **Work:**
