@@ -119,10 +119,15 @@ The app should track the number of completed todo's by activity type.
 ### Manual scheduling override
 - Users can manually drag a todo or habit onto any calendar slot, including slots outside
   any defined time block. The dragged position sets `scheduledAt` directly.
-- Manually placed items with no `isPinnedSchedule` flag may be evicted by the scheduler
-  when a higher-priority item needs the slot.
-- **`isPinnedSchedule` is removed** — there is no pin mechanic. All manual placements are
-  treated the same as scheduler-assigned ones and subject to priority bumping.
+- A manually placed item is treated as **higher priority than any scheduler-assigned item**
+  for the purpose of slot ownership — the scheduler will not evict it to place an
+  auto-scheduled item there. However, a **higher-priority item** (by the item's own priority
+  field) can still bump it.
+- **`isPinnedSchedule` is removed** — the manual-vs-auto distinction is tracked implicitly
+  (a dragged item sets a `manuallyScheduled` flag or similar); it does not affect priority
+  bumping logic beyond the rule above.
+- Delete triggers: when a todo or habit is deleted, its slot is immediately freed and the
+  scheduler runs in the background to backfill it.
 
 ### Activity type requirement
 - Activity type is **required** on todos and habits. Without one the scheduler cannot
@@ -144,6 +149,13 @@ The app should track the number of completed todo's by activity type.
   partial failure — no catch-up scheduling into the next period.
 - The scheduler will not cram remaining occurrences into the final days of a period; it
   schedules evenly across available slots and accepts whatever completes naturally.
+- Users may log **more completions than the target frequency** in a period. The UI does not
+  block over-completion; extras are recorded and counted in analytics.
+
+### Habit scheduler horizon
+- The scheduler pre-creates tentative `habit_completions` rows (with `scheduledAt` set,
+  `completedAt` null) for the full **2-month** lookahead window.
+- For a daily habit this may produce ~60 rows; this is intentional and correct.
 
 ---
 

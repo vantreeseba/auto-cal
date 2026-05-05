@@ -20,7 +20,7 @@ If you're unsure what to work on, these three are the highest-leverage next step
 **Problem:** `isPinnedSchedule` adds complexity with no defined behavior. Activity type is currently optional, making items unschedulable by default. There is no way to manually place an item on the calendar.
 **Spec:** See `specifications.md` → "Scheduler" section.
 **Work:**
-- Drop `isPinnedSchedule` column from `todos` table + migration; remove from all resolvers, forms, and GraphQL SDL
+- Replace `isPinnedSchedule` with `manuallyScheduled` boolean on `todos` (and equivalent on `habit_completions`): set true when user drags the item, false when scheduler places it; manually scheduled items resist eviction by lower-priority auto-scheduler runs but can still be bumped by a higher-priority item
 - Make `activityTypeId` non-nullable on `todos` and `habits` tables + migration
 - Enforce activity type selection in `TodoForm` and `HabitForm` (required field, block save without it)
 - Implement drag-to-schedule on `CalendarView` (react-big-calendar DnD addon); on drop call `myUpdateTodo`/`myUpdateHabit` with the new `scheduledAt`; dragged items outside time blocks are allowed
