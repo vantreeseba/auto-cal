@@ -16,6 +16,32 @@ If you're unsure what to work on, these three are the highest-leverage next step
 
 ## P0 — Core correctness / blocking
 
+### #21 — Remove isPinnedSchedule, make activity type required, add drag-to-schedule
+**Problem:** `isPinnedSchedule` adds complexity with no defined behavior. Activity type is currently optional, making items unschedulable by default. There is no way to manually place an item on the calendar.
+**Spec:** See `specifications.md` → "Scheduler" section.
+**Work:**
+- Drop `isPinnedSchedule` column from `todos` table + migration; remove from all resolvers, forms, and GraphQL SDL
+- Make `activityTypeId` non-nullable on `todos` and `habits` tables + migration
+- Enforce activity type selection in `TodoForm` and `HabitForm` (required field, block save without it)
+- Implement drag-to-schedule on `CalendarView` (react-big-calendar DnD addon); on drop call `myUpdateTodo`/`myUpdateHabit` with the new `scheduledAt`; dragged items outside time blocks are allowed
+
+**Acceptance:** Saving a todo without an activity type is blocked. Dragging a todo to any calendar slot updates its scheduled time. `isPinnedSchedule` is gone everywhere.
+
+---
+
+### #22 — Background scheduler write-back on every mutation
+**Problem:** The scheduler is currently read-only and recomputes on every `mySchedule` query. It never writes `scheduledAt` back to the DB, so the schedule is lost on reload and mutations don't trigger rescheduling.
+**Spec:** See `specifications.md` → "Scheduler / Write-back triggers" section.
+**Work:**
+- After each of these mutations, call the scheduler and write results back: `myCreateTodo`, `myUpdateTodo`, `myDeleteTodo`, `myCreateHabit`, `myUpdateHabit`, `myDeleteHabit`, `myCreateTimeBlock`, `myUpdateTimeBlock`, `myDeleteTimeBlock`, `myCompleteTodo`, `myCompleteHabit`
+- Run scheduler fire-and-forget (do not block mutation response)
+- Scheduler writes `scheduledAt` to `todos`, and creates/updates tentative `habit_completions` rows (with `scheduledAt` set, `completedAt` null) for the 2-month horizon
+- Mark items with no available slot as unschedulable (a field on the todo/habit or a derived status)
+
+**Acceptance:** Creating a todo with a matching time block causes `scheduledAt` to be set within seconds without a page reload. Deleting a time block causes affected todos to be rescheduled or marked unschedulable.
+
+---
+
 ### #20 — Time block priority field
 **Problem:** Time blocks can overlap. Currently there is no way to express which block should be preferred when two cover the same slot, so scheduler behavior is undefined for overlapping blocks.
 **Spec:** See `specifications.md` → "Time Blocks" section.

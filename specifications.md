@@ -105,14 +105,37 @@ The app should track the number of completed todo's by activity type.
 - When a higher-priority item needs a slot occupied by a lower-priority item, the
   lower-priority item is bumped to its next available slot.
 - If no future slot exists within the 2-month horizon, the bumped item is marked
-  **unschedulable** until a slot opens or its priority/length changes.
+  **unschedulable** and shown with the same amber warning triangle used for items
+  with no matching time block.
 - Users are not prompted to resolve conflicts manually — the scheduler handles it.
+
+### Write-back triggers
+- The scheduler runs **after every mutation that could affect the schedule**: create/update/
+  delete of a todo, habit, time block, or completion record.
+- It runs **in the background** (fire-and-forget) — the mutation response is not blocked.
+- In the future, a GraphQL subscription may be added so the client receives the updated
+  schedule automatically without polling.
+
+### Manual scheduling override
+- Users can manually drag a todo or habit onto any calendar slot, including slots outside
+  any defined time block. The dragged position sets `scheduledAt` directly.
+- Manually placed items with no `isPinnedSchedule` flag may be evicted by the scheduler
+  when a higher-priority item needs the slot.
+- **`isPinnedSchedule` is removed** — there is no pin mechanic. All manual placements are
+  treated the same as scheduler-assigned ones and subject to priority bumping.
+
+### Activity type requirement
+- Activity type is **required** on todos and habits. Without one the scheduler cannot
+  match the item to a time block.
+- Users may still manually drag an item to a calendar slot regardless of activity type,
+  but it will not be auto-scheduled.
+- The UI should enforce activity type selection before a todo or habit can be saved.
 
 ### No time blocks — onboarding gate
 - If a user has no time blocks, the scheduler cannot place any items.
-- The app surfaces a **blocking empty state** directing the user to create a time block
-  before anything will be scheduled. Todos and habits can still be created, but the
-  dashboard/schedule will show nothing until at least one time block exists.
+- The **Dashboard and Schedule views** show a blocking empty state directing the user to
+  create a time block. All other pages (Todos, Habits, Activity Types) remain fully usable.
+- Once at least one time block exists the gate disappears and the scheduler runs normally.
 
 ### Habit period boundaries
 - A "week" runs **Sunday → Saturday**.
