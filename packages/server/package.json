@@ -12,7 +12,7 @@
     "@auto-cal/db": "*",
     "cors": "^2.8.5",
     "dataloader": "^2.2.3",
-    "drizzle-graphql": "file://home/vantreeseba/code/vantreeseba/apps/drizzle-graphql",
+    "@vantreeseba/drizzle-graphql": "latest",
     "drizzle-orm": "~1.0.0-beta",
     "express": "^4.21.2",
     "graphql": "^16.9.0",

@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { db } from '@auto-cal/db';
-import { buildSchema } from 'drizzle-graphql';
+import { buildSchema } from '@vantreeseba/drizzle-graphql';
 import { type GraphQLObjectType, type GraphQLSchema, printSchema } from 'graphql';
 import { applyCustomResolvers } from './resolvers.ts';
 
