@@ -469,7 +469,7 @@ input CreateTodoInput {
 
   """DateTime"""
   completedAt: DateTime
-  isPinnedSchedule: Boolean
+  manuallyScheduled: Boolean
 
   """DateTime"""
   createdAt: DateTime
@@ -492,7 +492,7 @@ input UpdateTodoInput {
 
   """DateTime"""
   completedAt: DateTime
-  isPinnedSchedule: Boolean
+  manuallyScheduled: Boolean
 
   """DateTime"""
   createdAt: DateTime
@@ -511,7 +511,7 @@ input TodoFilters {
   activityTypeId: IdFilter
   scheduledAt: DateTimeFilter
   completedAt: DateTimeFilter
-  isPinnedSchedule: BooleanFilter
+  manuallyScheduled: BooleanFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
   OR: [TodoFiltersOr!]
@@ -570,7 +570,7 @@ input TodoFiltersOr {
   activityTypeId: IdFilter
   scheduledAt: DateTimeFilter
   completedAt: DateTimeFilter
-  isPinnedSchedule: BooleanFilter
+  manuallyScheduled: BooleanFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
 }
@@ -585,7 +585,7 @@ input TodoOrderBy {
   activityTypeId: InnerOrder
   scheduledAt: InnerOrder
   completedAt: InnerOrder
-  isPinnedSchedule: InnerOrder
+  manuallyScheduled: InnerOrder
   createdAt: InnerOrder
   updatedAt: InnerOrder
 }
@@ -716,7 +716,7 @@ type Todo {
 
   """DateTime"""
   completedAt: DateTime
-  isPinnedSchedule: Boolean!
+  manuallyScheduled: Boolean!
 
   """DateTime"""
   createdAt: DateTime!
@@ -891,7 +891,7 @@ input UpdateTodoArgs {
   estimatedLength: Int
   activityTypeId: ID
   scheduledAt: String
-  isPinnedSchedule: Boolean
+  manuallyScheduled: Boolean
   completedAt: String
 }
 

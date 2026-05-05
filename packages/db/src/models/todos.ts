@@ -16,7 +16,7 @@ export const todos = pgTable('todos', {
   }),
   scheduledAt: timestamp('scheduled_at'),
   completedAt: timestamp('completed_at'),
-  isPinnedSchedule: boolean('is_pinned_schedule').notNull().default(false),
+  manuallyScheduled: boolean('manually_scheduled').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

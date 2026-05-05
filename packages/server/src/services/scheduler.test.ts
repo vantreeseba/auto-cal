@@ -57,7 +57,7 @@ function makeTodo(overrides: Partial<Todo> = {}): Todo {
     activityTypeId: WORK.id,
     scheduledAt: null,
     completedAt: null,
-    isPinnedSchedule: false,
+    manuallyScheduled: false,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,

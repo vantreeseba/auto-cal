@@ -20,7 +20,7 @@ type Documents = {
     "\n  fragment ActivityType_ActivityTypeList on ActivityType {\n    id\n    name\n    color\n  }\n": typeof types.ActivityType_ActivityTypeListFragmentDoc,
     "\n  query GetActivityTypesForSelect {\n    myActivityTypes {\n      id\n      name\n      color\n    }\n  }\n": typeof types.GetActivityTypesForSelectDocument,
     "\n  fragment TimeBlock_CalendarView on TimeBlock {\n    id\n    daysOfWeek\n    startTime\n    endTime\n    activityType {\n      id\n      name\n      color\n    }\n  }\n\n  fragment ScheduledItem_CalendarView on ScheduledItem {\n    kind\n    id\n    title\n    isScheduled\n    isOverdue\n    scheduledStart\n    scheduledEnd\n    completedAt\n    activityType {\n      id\n      name\n      color\n    }\n  }\n": typeof types.TimeBlock_CalendarViewFragmentDoc,
-    "\n  mutation PinTodo($input: UpdateTodoArgs!) {\n    myUpdateTodo(input: $input) { id scheduledAt isPinnedSchedule }\n  }\n": typeof types.PinTodoDocument,
+    "\n  mutation PinTodo($input: UpdateTodoArgs!) {\n    myUpdateTodo(input: $input) { id scheduledAt manuallyScheduled }\n  }\n": typeof types.PinTodoDocument,
     "\n  mutation CompleteHabitFromCalendar($input: CompleteHabitArgs!) {\n    myCompleteHabit(input: $input) { id }\n  }\n": typeof types.CompleteHabitFromCalendarDocument,
     "\n  fragment ScheduledItem_ScheduleView on ScheduledItem {\n    kind\n    id\n    title\n    priority\n    estimatedLength\n    isScheduled\n    scheduledStart\n    scheduledEnd\n    activityType {\n      id\n      name\n      color\n    }\n  }\n": typeof types.ScheduledItem_ScheduleViewFragmentDoc,
     "\n  mutation CompleteHabitFromSchedule($input: CompleteHabitArgs!) {\n    myCompleteHabit(input: $input) {\n      id\n    }\n  }\n": typeof types.CompleteHabitFromScheduleDocument,
@@ -55,7 +55,7 @@ const documents: Documents = {
     "\n  fragment ActivityType_ActivityTypeList on ActivityType {\n    id\n    name\n    color\n  }\n": types.ActivityType_ActivityTypeListFragmentDoc,
     "\n  query GetActivityTypesForSelect {\n    myActivityTypes {\n      id\n      name\n      color\n    }\n  }\n": types.GetActivityTypesForSelectDocument,
     "\n  fragment TimeBlock_CalendarView on TimeBlock {\n    id\n    daysOfWeek\n    startTime\n    endTime\n    activityType {\n      id\n      name\n      color\n    }\n  }\n\n  fragment ScheduledItem_CalendarView on ScheduledItem {\n    kind\n    id\n    title\n    isScheduled\n    isOverdue\n    scheduledStart\n    scheduledEnd\n    completedAt\n    activityType {\n      id\n      name\n      color\n    }\n  }\n": types.TimeBlock_CalendarViewFragmentDoc,
-    "\n  mutation PinTodo($input: UpdateTodoArgs!) {\n    myUpdateTodo(input: $input) { id scheduledAt isPinnedSchedule }\n  }\n": types.PinTodoDocument,
+    "\n  mutation PinTodo($input: UpdateTodoArgs!) {\n    myUpdateTodo(input: $input) { id scheduledAt manuallyScheduled }\n  }\n": types.PinTodoDocument,
     "\n  mutation CompleteHabitFromCalendar($input: CompleteHabitArgs!) {\n    myCompleteHabit(input: $input) { id }\n  }\n": types.CompleteHabitFromCalendarDocument,
     "\n  fragment ScheduledItem_ScheduleView on ScheduledItem {\n    kind\n    id\n    title\n    priority\n    estimatedLength\n    isScheduled\n    scheduledStart\n    scheduledEnd\n    activityType {\n      id\n      name\n      color\n    }\n  }\n": types.ScheduledItem_ScheduleViewFragmentDoc,
     "\n  mutation CompleteHabitFromSchedule($input: CompleteHabitArgs!) {\n    myCompleteHabit(input: $input) {\n      id\n    }\n  }\n": types.CompleteHabitFromScheduleDocument,
@@ -125,7 +125,7 @@ export function graphql(source: "\n  fragment TimeBlock_CalendarView on TimeBloc
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  mutation PinTodo($input: UpdateTodoArgs!) {\n    myUpdateTodo(input: $input) { id scheduledAt isPinnedSchedule }\n  }\n"): (typeof documents)["\n  mutation PinTodo($input: UpdateTodoArgs!) {\n    myUpdateTodo(input: $input) { id scheduledAt isPinnedSchedule }\n  }\n"];
+export function graphql(source: "\n  mutation PinTodo($input: UpdateTodoArgs!) {\n    myUpdateTodo(input: $input) { id scheduledAt manuallyScheduled }\n  }\n"): (typeof documents)["\n  mutation PinTodo($input: UpdateTodoArgs!) {\n    myUpdateTodo(input: $input) { id scheduledAt manuallyScheduled }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

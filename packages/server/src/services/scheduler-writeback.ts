@@ -52,8 +52,8 @@ export async function runSchedulerWriteback(
         isNotNull(todos.activityTypeId),
         // Include all non-pinned todos plus any pinned todos whose time has passed
         or(
-          ne(todos.isPinnedSchedule, true),
-          and(eq(todos.isPinnedSchedule, true), lt(todos.scheduledAt, now)),
+          ne(todos.manuallyScheduled, true),
+          and(eq(todos.manuallyScheduled, true), lt(todos.scheduledAt, now)),
         ),
       ),
     }),
@@ -70,19 +70,19 @@ export async function runSchedulerWriteback(
 
   // Unpin todos whose scheduled time has passed — they re-enter the scheduler
   const overduePinnedIds = allIncompleteTodos
-    .filter((t) => t.isPinnedSchedule && t.scheduledAt && t.scheduledAt < now)
+    .filter((t) => t.manuallyScheduled && t.scheduledAt && t.scheduledAt < now)
     .map((t) => t.id);
 
   if (overduePinnedIds.length > 0) {
     await db
       .update(todos)
-      .set({ isPinnedSchedule: false, scheduledAt: null, updatedAt: now })
+      .set({ manuallyScheduled: false, scheduledAt: null, updatedAt: now })
       .where(inArray(todos.id, overduePinnedIds));
   }
 
   const userTodos = allIncompleteTodos.map((t) =>
     overduePinnedIds.includes(t.id)
-      ? { ...t, isPinnedSchedule: false, scheduledAt: null }
+      ? { ...t, manuallyScheduled: false, scheduledAt: null }
       : t,
   );
 

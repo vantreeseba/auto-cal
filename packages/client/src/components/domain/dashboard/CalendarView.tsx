@@ -69,7 +69,7 @@ graphql(`
 
 const PIN_TODO = gql`
   mutation PinTodo($input: UpdateTodoArgs!) {
-    myUpdateTodo(input: $input) { id scheduledAt isPinnedSchedule }
+    myUpdateTodo(input: $input) { id scheduledAt manuallyScheduled }
   }
 `;
 
@@ -328,7 +328,7 @@ export function CalendarView({ timeBlocks, schedule, date, view }: CalendarViewP
         input: {
           id: todoId,
           scheduledAt: format(newStart, "yyyy-MM-dd'T'HH:mm:ss"),
-          isPinnedSchedule: true,
+          manuallyScheduled: true,
         },
       },
     }).catch(console.error);

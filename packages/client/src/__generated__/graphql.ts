@@ -203,7 +203,7 @@ export type CreateTodoInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   estimatedLength: Scalars['Int']['input'];
   id?: InputMaybe<Scalars['String']['input']>;
-  isPinnedSchedule?: InputMaybe<Scalars['Boolean']['input']>;
+  manuallyScheduled?: InputMaybe<Scalars['Boolean']['input']>;
   priority?: InputMaybe<Scalars['Int']['input']>;
   /** DateTime */
   scheduledAt?: InputMaybe<Scalars['DateTime']['input']>;
@@ -1034,7 +1034,7 @@ export type Todo = {
   description?: Maybe<Scalars['String']['output']>;
   estimatedLength: Scalars['Int']['output'];
   id: Scalars['String']['output'];
-  isPinnedSchedule: Scalars['Boolean']['output'];
+  manuallyScheduled: Scalars['Boolean']['output'];
   priority: Scalars['Int']['output'];
   /** DateTime */
   scheduledAt?: Maybe<Scalars['DateTime']['output']>;
@@ -1052,7 +1052,7 @@ export type TodoFilters = {
   description?: InputMaybe<StringFilter>;
   estimatedLength?: InputMaybe<StringFilter>;
   id?: InputMaybe<IdFilter>;
-  isPinnedSchedule?: InputMaybe<BooleanFilter>;
+  manuallyScheduled?: InputMaybe<BooleanFilter>;
   priority?: InputMaybe<StringFilter>;
   scheduledAt?: InputMaybe<DateTimeFilter>;
   title?: InputMaybe<StringFilter>;
@@ -1067,7 +1067,7 @@ export type TodoFiltersOr = {
   description?: InputMaybe<StringFilter>;
   estimatedLength?: InputMaybe<StringFilter>;
   id?: InputMaybe<IdFilter>;
-  isPinnedSchedule?: InputMaybe<BooleanFilter>;
+  manuallyScheduled?: InputMaybe<BooleanFilter>;
   priority?: InputMaybe<StringFilter>;
   scheduledAt?: InputMaybe<DateTimeFilter>;
   title?: InputMaybe<StringFilter>;
@@ -1082,7 +1082,7 @@ export type TodoOrderBy = {
   description?: InputMaybe<InnerOrder>;
   estimatedLength?: InputMaybe<InnerOrder>;
   id?: InputMaybe<InnerOrder>;
-  isPinnedSchedule?: InputMaybe<InnerOrder>;
+  manuallyScheduled?: InputMaybe<InnerOrder>;
   priority?: InputMaybe<InnerOrder>;
   scheduledAt?: InputMaybe<InnerOrder>;
   title?: InputMaybe<InnerOrder>;
@@ -1173,7 +1173,7 @@ export type UpdateTodoArgs = {
   description?: InputMaybe<Scalars['String']['input']>;
   estimatedLength?: InputMaybe<Scalars['Int']['input']>;
   id: Scalars['ID']['input'];
-  isPinnedSchedule?: InputMaybe<Scalars['Boolean']['input']>;
+  manuallyScheduled?: InputMaybe<Scalars['Boolean']['input']>;
   priority?: InputMaybe<Scalars['Int']['input']>;
   scheduledAt?: InputMaybe<Scalars['String']['input']>;
   title?: InputMaybe<Scalars['String']['input']>;
@@ -1188,7 +1188,7 @@ export type UpdateTodoInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   estimatedLength?: InputMaybe<Scalars['Int']['input']>;
   id?: InputMaybe<Scalars['String']['input']>;
-  isPinnedSchedule?: InputMaybe<Scalars['Boolean']['input']>;
+  manuallyScheduled?: InputMaybe<Scalars['Boolean']['input']>;
   priority?: InputMaybe<Scalars['Int']['input']>;
   /** DateTime */
   scheduledAt?: InputMaybe<Scalars['DateTime']['input']>;
@@ -1287,7 +1287,7 @@ export type PinTodoMutationVariables = Exact<{
 }>;
 
 
-export type PinTodoMutation = { __typename?: 'Mutation', myUpdateTodo: { __typename?: 'Todo', id: string, scheduledAt?: any | null, isPinnedSchedule: boolean } };
+export type PinTodoMutation = { __typename?: 'Mutation', myUpdateTodo: { __typename?: 'Todo', id: string, scheduledAt?: any | null, manuallyScheduled: boolean } };
 
 export type CompleteHabitFromCalendarMutationVariables = Exact<{
   input: CompleteHabitArgs;
@@ -1454,7 +1454,7 @@ export const CreateActivityTypeDocument = {"kind":"Document","definitions":[{"ki
 export const UpdateActivityTypeDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UpdateActivityType"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"UpdateActivityTypeArgs"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"myUpdateActivityType"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"color"}}]}}]}}]} as unknown as DocumentNode<UpdateActivityTypeMutation, UpdateActivityTypeMutationVariables>;
 export const DeleteActivityTypeDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"DeleteActivityType"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"myDeleteActivityType"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}}]}]}}]} as unknown as DocumentNode<DeleteActivityTypeMutation, DeleteActivityTypeMutationVariables>;
 export const GetActivityTypesForSelectDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetActivityTypesForSelect"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"myActivityTypes"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"color"}}]}}]}}]} as unknown as DocumentNode<GetActivityTypesForSelectQuery, GetActivityTypesForSelectQueryVariables>;
-export const PinTodoDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"PinTodo"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"UpdateTodoArgs"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"myUpdateTodo"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"scheduledAt"}},{"kind":"Field","name":{"kind":"Name","value":"isPinnedSchedule"}}]}}]}}]} as unknown as DocumentNode<PinTodoMutation, PinTodoMutationVariables>;
+export const PinTodoDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"PinTodo"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"UpdateTodoArgs"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"myUpdateTodo"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"scheduledAt"}},{"kind":"Field","name":{"kind":"Name","value":"manuallyScheduled"}}]}}]}}]} as unknown as DocumentNode<PinTodoMutation, PinTodoMutationVariables>;
 export const CompleteHabitFromCalendarDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CompleteHabitFromCalendar"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"CompleteHabitArgs"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"myCompleteHabit"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]} as unknown as DocumentNode<CompleteHabitFromCalendarMutation, CompleteHabitFromCalendarMutationVariables>;
 export const CompleteHabitFromScheduleDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CompleteHabitFromSchedule"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"CompleteHabitArgs"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"myCompleteHabit"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]} as unknown as DocumentNode<CompleteHabitFromScheduleMutation, CompleteHabitFromScheduleMutationVariables>;
 export const GetHabitDetailDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetHabitDetail"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"habitId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"periods"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"myHabitDetail"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"habitId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"habitId"}}},{"kind":"Argument","name":{"kind":"Name","value":"periods"},"value":{"kind":"Variable","name":{"kind":"Name","value":"periods"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"habitId"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"priority"}},{"kind":"Field","name":{"kind":"Name","value":"estimatedLength"}},{"kind":"Field","name":{"kind":"Name","value":"frequencyCount"}},{"kind":"Field","name":{"kind":"Name","value":"frequencyUnit"}},{"kind":"Field","name":{"kind":"Name","value":"totalCompletions"}},{"kind":"Field","name":{"kind":"Name","value":"allTimeRate"}},{"kind":"Field","name":{"kind":"Name","value":"activityType"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"color"}}]}},{"kind":"Field","name":{"kind":"Name","value":"periods"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"label"}},{"kind":"Field","name":{"kind":"Name","value":"periodStart"}},{"kind":"Field","name":{"kind":"Name","value":"periodEnd"}},{"kind":"Field","name":{"kind":"Name","value":"completions"}},{"kind":"Field","name":{"kind":"Name","value":"target"}},{"kind":"Field","name":{"kind":"Name","value":"rate"}}]}}]}}]}}]} as unknown as DocumentNode<GetHabitDetailQuery, GetHabitDetailQueryVariables>;

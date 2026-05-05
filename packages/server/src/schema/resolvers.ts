@@ -75,7 +75,7 @@ const UpdateTodoInput = z.object({
   estimatedLength: z.number().int().min(1).max(1440).optional(),
   activityTypeId: z.string().uuid().nullable().optional(),
   scheduledAt: z.string().optional(), // naive local-time ISO — no Z suffix
-  isPinnedSchedule: z.boolean().optional(),
+  manuallyScheduled: z.boolean().optional(),
   completedAt: z.string().nullable().optional(),
 });
 
@@ -241,7 +241,7 @@ const extensionSDL = `
     estimatedLength: Int
     activityTypeId: ID
     scheduledAt: String
-    isPinnedSchedule: Boolean
+    manuallyScheduled: Boolean
     completedAt: String
   }
 
@@ -748,22 +748,22 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     // Overdue pinned todos (past scheduledAt, not completed) lose their pin and re-enter the
     // scheduler so they get placed at the next available future slot.
     const overduePinnedIds = allIncompleteTodos
-      .filter((t) => t.isPinnedSchedule && t.scheduledAt && t.scheduledAt < now)
+      .filter((t) => t.manuallyScheduled && t.scheduledAt && t.scheduledAt < now)
       .map((t) => t.id);
 
     if (overduePinnedIds.length > 0) {
       context.db
         .update(todos)
-        .set({ isPinnedSchedule: false, scheduledAt: null, updatedAt: now })
+        .set({ manuallyScheduled: false, scheduledAt: null, updatedAt: now })
         .where(inArray(todos.id, overduePinnedIds))
         .catch(console.error);
     }
 
     const pinnedTodos = allIncompleteTodos.filter(
-      (t) => t.isPinnedSchedule && t.scheduledAt && !overduePinnedIds.includes(t.id),
+      (t) => t.manuallyScheduled && t.scheduledAt && !overduePinnedIds.includes(t.id),
     );
     const userTodos = allIncompleteTodos.filter(
-      (t) => !t.isPinnedSchedule || overduePinnedIds.includes(t.id),
+      (t) => !t.manuallyScheduled || overduePinnedIds.includes(t.id),
     );
 
     // habit_completions has no userId — scope by the user's own habit IDs
@@ -996,8 +996,8 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
         ...(input.scheduledAt !== undefined && {
           scheduledAt: new Date(input.scheduledAt),
         }),
-        ...(input.isPinnedSchedule !== undefined && {
-          isPinnedSchedule: input.isPinnedSchedule,
+        ...(input.manuallyScheduled !== undefined && {
+          manuallyScheduled: input.manuallyScheduled,
         }),
         ...('completedAt' in input && {
           completedAt: input.completedAt === null ? null : new Date(input.completedAt as string),
