@@ -934,6 +934,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     if (!existing) throw new Error(`ActivityType ${args.id} not found`);
     if (existing.userId !== context.userId) throw new Error('Forbidden');
     await context.db.delete(activityTypes).where(eq(activityTypes.id, args.id));
+    runSchedulerWriteback(context.db, context.userId).catch(console.error);
     return true;
   };
 
@@ -1190,6 +1191,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
       })
       .returning();
     if (!completion) throw new Error('Failed to record habit completion');
+    runSchedulerWriteback(context.db, context.userId).catch(console.error);
     return completion;
   };
 
