@@ -457,21 +457,15 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   ) => {
     if (!context.userId) throw new Error('Not authenticated');
 
-    const todoConditions = [
-      eq(todos.userId, context.userId),
-      isNotNull(todos.activityTypeId),
-    ];
-    if (args.startDate)
-      todoConditions.push(gte(todos.createdAt, new Date(args.startDate)));
-    if (args.endDate)
-      todoConditions.push(lte(todos.createdAt, new Date(args.endDate)));
+    const start = args.startDate ? new Date(args.startDate) : null;
+    const end = args.endDate ? new Date(args.endDate) : null;
 
     const [userActivityTypes, allTodos, allHabits] = await Promise.all([
       context.db._query.activityTypes.findMany({
         where: eq(activityTypes.userId, context.userId),
       }),
       context.db._query.todos.findMany({
-        where: and(...todoConditions),
+        where: and(eq(todos.userId, context.userId), isNotNull(todos.activityTypeId)),
       }),
       context.db._query.habits.findMany({
         where: and(eq(habits.userId, context.userId), isNotNull(habits.activityTypeId)),
@@ -494,11 +488,24 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
 
     return userActivityTypes.map((at) => {
       const typeTodos = todosByType.get(at.id) ?? [];
+      // totalTodos: created within the date range (or all-time if no filter)
+      const totalTodos = typeTodos.filter((t) => {
+        if (start && t.createdAt < start) return false;
+        if (end && t.createdAt > end) return false;
+        return true;
+      }).length;
+      // completedTodos: completedAt within the date range (or all completed if no filter)
+      const completedTodos = typeTodos.filter((t) => {
+        if (!t.completedAt) return false;
+        if (start && t.completedAt < start) return false;
+        if (end && t.completedAt > end) return false;
+        return true;
+      }).length;
       return {
         activityTypeId: at.id,
         activityTypeName: at.name,
-        totalTodos: typeTodos.length,
-        completedTodos: typeTodos.filter((t) => t.completedAt !== null).length,
+        totalTodos,
+        completedTodos,
         totalHabits: habitsByType.get(at.id) ?? 0,
       };
     });
