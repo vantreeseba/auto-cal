@@ -1,6 +1,11 @@
 import type { ScheduledItem_ScheduleViewFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { priorityLabel } from '@/lib/utils';
 import { Link } from '@tanstack/react-router';
 import { addDays, format, parseISO, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
@@ -206,13 +211,19 @@ function ScheduleCard({
           </p>
           <div className="flex flex-shrink-0 items-center gap-1">
             {!item.isScheduled && (
-              <Link
-                to="/time-blocks"
-                title={unschedulableReason(item)}
-                className="text-amber-500 hover:text-amber-600"
-              >
-                <AlertTriangle className="h-4 w-4" />
-              </Link>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link
+                    to="/time-blocks"
+                    className="text-amber-500 hover:text-amber-600"
+                  >
+                    <AlertTriangle className="h-4 w-4" />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {unschedulableReason(item)}
+                </TooltipContent>
+              </Tooltip>
             )}
             {timeRange && (
               <span className="text-xs text-muted-foreground">{timeRange}</span>

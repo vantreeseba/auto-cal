@@ -35,7 +35,7 @@ function LoginPage() {
 
   if (submitted && magicLink) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center max-w-sm p-8">
           <h1 className="text-2xl font-bold mb-2">Your magic link</h1>
           <p className="text-muted-foreground mb-4">
@@ -57,7 +57,7 @@ function LoginPage() {
 
   if (submitted && !magicLink) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center max-w-sm p-8">
           <h1 className="text-2xl font-bold mb-2">Check your email</h1>
           <p className="text-muted-foreground mb-4">
@@ -76,8 +76,8 @@ function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="w-full max-w-sm rounded-lg border bg-white p-8 shadow-sm">
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="w-full max-w-sm rounded-lg border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-bold mb-1">Sign in to Auto Cal</h1>
         <p className="text-sm text-muted-foreground mb-6">
           Enter your email and we'll send you a magic link.

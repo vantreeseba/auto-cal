@@ -76,6 +76,7 @@ const UpdateTodoInput = z.object({
   activityTypeId: z.string().uuid().nullable().optional(),
   scheduledAt: z.string().optional(), // naive local-time ISO — no Z suffix
   isPinnedSchedule: z.boolean().optional(),
+  completedAt: z.string().nullable().optional(),
 });
 
 const CreateHabitInput = z.object({
@@ -239,6 +240,7 @@ const extensionSDL = `
     activityTypeId: ID
     scheduledAt: String
     isPinnedSchedule: Boolean
+    completedAt: String
   }
 
   input CreateHabitArgs {
@@ -985,6 +987,9 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
         }),
         ...(input.isPinnedSchedule !== undefined && {
           isPinnedSchedule: input.isPinnedSchedule,
+        }),
+        ...('completedAt' in input && {
+          completedAt: input.completedAt === null ? null : new Date(input.completedAt as string),
         }),
         updatedAt: new Date(),
       })

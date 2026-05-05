@@ -254,7 +254,6 @@ export function TimeBlockForm({
                       );
                     })}
                   </div>
-                  </div>
                   {field.state.meta.errors.length > 0 && (
                     <p className="text-sm text-destructive">
                       {(() => {

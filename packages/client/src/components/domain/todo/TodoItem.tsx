@@ -9,10 +9,15 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { InlineLengthEdit } from '@/components/ui/inline-length-edit';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { gql, useMutation } from '@apollo/client';
 import { priorityLabel } from '@/lib/utils';
 import { Link } from '@tanstack/react-router';
-import { AlertTriangle, Check, Pencil } from 'lucide-react';
+import { AlertTriangle, Check, Pencil, Undo2 } from 'lucide-react';
 
 const COMPLETE_TODO = graphql(`
   mutation CompleteTodo($id: ID!) {
@@ -32,6 +37,15 @@ const UPDATE_TODO_LENGTH = gql`
   }
 `;
 
+const UNCOMPLETE_TODO = graphql(`
+  mutation UncompleteTodo($id: ID!) {
+    myUpdateTodo(input: { id: $id, completedAt: null }) {
+      id
+      completedAt
+    }
+  }
+`);
+
 type Todo = Todo_TodoListFragment;
 
 type TodoItemProps = {
@@ -43,6 +57,10 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
   const isCompleted = todo.completedAt !== null;
 
   const [completeTodo, { loading: completing }] = useMutation(COMPLETE_TODO, {
+    refetchQueries: ['GetMyTodos'],
+  });
+
+  const [uncompleteTodo, { loading: uncompleting }] = useMutation(UNCOMPLETE_TODO, {
     refetchQueries: ['GetMyTodos'],
   });
 
@@ -82,14 +100,20 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
               />
               {' • '}Priority: {priorityLabel(todo.priority)}
               {!isCompleted && todo.activityType && !todo.scheduledAt && (
-                <Link
-                  to="/time-blocks"
-                  className="ml-2 inline-flex items-center gap-1 text-amber-600 hover:text-amber-700 hover:underline"
-                  title="No available slot — click to add a matching time block or reduce estimated length"
-                >
-                  <AlertTriangle className="h-3.5 w-3.5" />
-                  Unschedulable
-                </Link>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link
+                      to="/time-blocks"
+                      className="ml-2 inline-flex items-center gap-1 text-amber-600 hover:text-amber-700 hover:underline"
+                    >
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      Unschedulable
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    No available time slot — add a matching time block or reduce estimated length
+                  </TooltipContent>
+                </Tooltip>
               )}
               {isCompleted && (
                 <span className="ml-2 text-green-600 font-medium">✓ Done</span>
@@ -97,7 +121,7 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
             </CardDescription>
           </div>
           <div className="flex items-center gap-1">
-            {!isCompleted && (
+            {!isCompleted ? (
               <Button
                 size="icon"
                 variant="ghost"
@@ -108,6 +132,22 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
               >
                 <Check className="h-4 w-4" />
               </Button>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    disabled={uncompleting}
+                    onClick={() => uncompleteTodo({ variables: { id: todo.id } })}
+                    aria-label={`Mark ${todo.title} as incomplete`}
+                    className="text-muted-foreground hover:text-amber-600"
+                  >
+                    <Undo2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Mark as incomplete</TooltipContent>
+              </Tooltip>
             )}
             <Button
               size="icon"
