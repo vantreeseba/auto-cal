@@ -2,7 +2,7 @@ import type { GetMyStatsQuery } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RouteError } from '@/components/ui/route-error';
-import { useQuery } from '@apollo/client';
+import { useQuery } from '@apollo/client/react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 
@@ -37,7 +37,11 @@ const GET_MY_STATS = graphql(`
 
 type DateRangeKey = 'week' | 'two_weeks' | 'month' | 'three_months' | 'all';
 
-const DATE_RANGES: Array<{ key: DateRangeKey; label: string; days: number | null }> = [
+const DATE_RANGES: Array<{
+  key: DateRangeKey;
+  label: string;
+  days: number | null;
+}> = [
   { key: 'week', label: 'Last Week', days: 7 },
   { key: 'two_weeks', label: 'Last 2 Weeks', days: 14 },
   { key: 'month', label: 'Last Month', days: 30 },
@@ -45,9 +49,13 @@ const DATE_RANGES: Array<{ key: DateRangeKey; label: string; days: number | null
   { key: 'all', label: 'All Time', days: null },
 ];
 
-function getDateRange(key: DateRangeKey): { startDate?: string; endDate: string } {
+function getDateRange(key: DateRangeKey): {
+  startDate?: string;
+  endDate: string;
+} {
   const now = new Date();
   const endDate = now.toISOString();
+  // biome-ignore lint/style/noNonNullAssertion: key always comes from DATE_RANGES so find always succeeds
   const range = DATE_RANGES.find((r) => r.key === key)!;
   if (range.days === null) return { endDate };
   const start = new Date(now.getTime() - range.days * 24 * 60 * 60 * 1000);
@@ -56,7 +64,9 @@ function getDateRange(key: DateRangeKey): { startDate?: string; endDate: string 
 
 export const Route = createFileRoute('/stats')({
   component: StatsPage,
-  errorComponent: ({ error, reset }) => <RouteError error={error} reset={reset} />,
+  errorComponent: ({ error, reset }) => (
+    <RouteError error={error} reset={reset} />
+  ),
 });
 
 type StatsData = NonNullable<GetMyStatsQuery['myStats']>;
@@ -70,8 +80,17 @@ function ScoreRing({ score }: { score: number | null | undefined }) {
   if (score == null) {
     return (
       <div className="relative inline-flex items-center justify-center">
+        {/* biome-ignore lint/a11y/noSvgWithoutTitle: decorative ring, aria-hidden hides from screen readers */}
         <svg width="128" height="128" className="-rotate-90" aria-hidden>
-          <circle cx="64" cy="64" r={radius} fill="none" stroke="currentColor" strokeWidth="10" className="text-muted" />
+          <circle
+            cx="64"
+            cy="64"
+            r={radius}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="10"
+            className="text-muted"
+          />
         </svg>
         <span className="absolute text-sm text-muted-foreground">No data</span>
       </div>
@@ -84,15 +103,24 @@ function ScoreRing({ score }: { score: number | null | undefined }) {
 
   return (
     <div className="relative inline-flex items-center justify-center">
+      {/* biome-ignore lint/a11y/noSvgWithoutTitle: decorative ring, aria-hidden hides from screen readers */}
       <svg width="128" height="128" className="-rotate-90" aria-hidden>
         <circle
-          cx="64" cy="64" r={radius}
-          fill="none" stroke="currentColor" strokeWidth="10"
+          cx="64"
+          cy="64"
+          r={radius}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="10"
           className="text-muted"
         />
         <circle
-          cx="64" cy="64" r={radius}
-          fill="none" stroke={color} strokeWidth="10"
+          cx="64"
+          cy="64"
+          r={radius}
+          fill="none"
+          stroke={color}
+          strokeWidth="10"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           strokeLinecap="round"
@@ -104,7 +132,10 @@ function ScoreRing({ score }: { score: number | null | undefined }) {
   );
 }
 
-function HabitsSection({ habits, habitScore }: { habits: HabitRow[]; habitScore: number | null | undefined }) {
+function HabitsSection({
+  habits,
+  habitScore,
+}: { habits: HabitRow[]; habitScore: number | null | undefined }) {
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -129,7 +160,13 @@ function HabitsSection({ habits, habitScore }: { habits: HabitRow[]; habitScore:
                 <div key={h.habitId} className="space-y-1">
                   <div className="flex justify-between text-sm">
                     <span className="font-medium">{h.title}</span>
-                    <span className={met ? 'text-green-600 font-medium' : 'text-muted-foreground'}>
+                    <span
+                      className={
+                        met
+                          ? 'text-green-600 font-medium'
+                          : 'text-muted-foreground'
+                      }
+                    >
                       {pct}%
                     </span>
                   </div>
@@ -145,7 +182,8 @@ function HabitsSection({ habits, habitScore }: { habits: HabitRow[]; habitScore:
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {h.completions} completions · target: {h.frequencyCount}× per {h.frequencyUnit}
+                    {h.completions} completions · target: {h.frequencyCount}×
+                    per {h.frequencyUnit}
                   </p>
                 </div>
               );
@@ -157,7 +195,10 @@ function HabitsSection({ habits, habitScore }: { habits: HabitRow[]; habitScore:
   );
 }
 
-function TodosSection({ todos, todoScore }: { todos: TodoRow; todoScore: number | null | undefined }) {
+function TodosSection({
+  todos,
+  todoScore,
+}: { todos: TodoRow; todoScore: number | null | undefined }) {
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -172,7 +213,9 @@ function TodosSection({ todos, todoScore }: { todos: TodoRow; todoScore: number 
       </CardHeader>
       <CardContent>
         {todos.total === 0 ? (
-          <p className="text-sm text-muted-foreground">No todos due in this period.</p>
+          <p className="text-sm text-muted-foreground">
+            No todos due in this period.
+          </p>
         ) : (
           <div className="space-y-4">
             <div className="flex gap-8">
@@ -187,7 +230,9 @@ function TodosSection({ todos, todoScore }: { todos: TodoRow; todoScore: number 
               </div>
               {todos.overdue > 0 && (
                 <div>
-                  <p className="text-2xl font-bold text-destructive">{todos.overdue}</p>
+                  <p className="text-2xl font-bold text-destructive">
+                    {todos.overdue}
+                  </p>
                   <p className="text-xs text-muted-foreground">overdue</p>
                 </div>
               )}
@@ -234,8 +279,12 @@ function StatsPage() {
         ))}
       </div>
 
-      {loading && <p className="text-muted-foreground text-sm">Loading stats…</p>}
-      {error && <p className="text-destructive text-sm">Error: {error.message}</p>}
+      {loading && (
+        <p className="text-muted-foreground text-sm">Loading stats…</p>
+      )}
+      {error && (
+        <p className="text-destructive text-sm">Error: {error.message}</p>
+      )}
 
       {stats && (
         <>
@@ -243,18 +292,24 @@ function StatsPage() {
             <CardContent className="pt-6 flex flex-col items-center gap-6 sm:flex-row sm:justify-around">
               <div className="flex flex-col items-center gap-2">
                 <ScoreRing score={stats.weightedScore} />
-                <p className="text-sm font-medium text-muted-foreground">Overall Score</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Overall Score
+                </p>
               </div>
               <div className="flex gap-10 sm:flex-col sm:gap-4">
                 <div className="text-center">
                   <p className="text-2xl font-bold">
-                    {stats.habitScore != null ? `${Math.round(stats.habitScore * 100)}%` : '—'}
+                    {stats.habitScore != null
+                      ? `${Math.round(stats.habitScore * 100)}%`
+                      : '—'}
                   </p>
                   <p className="text-xs text-muted-foreground">Habits (50%)</p>
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold">
-                    {stats.todoScore != null ? `${Math.round(stats.todoScore * 100)}%` : '—'}
+                    {stats.todoScore != null
+                      ? `${Math.round(stats.todoScore * 100)}%`
+                      : '—'}
                   </p>
                   <p className="text-xs text-muted-foreground">Todos (50%)</p>
                 </div>

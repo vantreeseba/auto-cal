@@ -1,6 +1,11 @@
-import { gql, useMutation } from '@apollo/client';
+import { gql } from '@apollo/client';
+import { useMutation } from '@apollo/client/react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useEffect } from 'react';
+
+interface VerifyMagicLinkResult {
+  verifyMagicLink: { token: string; userId: string };
+}
 
 const VERIFY_MAGIC_LINK = gql`
   mutation VerifyMagicLink($token: String!) {
@@ -18,12 +23,15 @@ export const Route = createFileRoute('/auth/verify')({
 function VerifyPage() {
   const navigate = useNavigate();
 
-  const [verify, { error }] = useMutation(VERIFY_MAGIC_LINK, {
-    onCompleted(data) {
-      localStorage.setItem('auth_token', data.verifyMagicLink.token);
-      navigate({ to: '/dashboard' });
+  const [verify, { error }] = useMutation<VerifyMagicLinkResult>(
+    VERIFY_MAGIC_LINK,
+    {
+      onCompleted(data) {
+        localStorage.setItem('auth_token', data.verifyMagicLink.token);
+        navigate({ to: '/dashboard' });
+      },
     },
-  });
+  );
 
   useEffect(() => {
     const token = new URLSearchParams(window.location.search).get('token');

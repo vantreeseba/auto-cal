@@ -1,7 +1,7 @@
 import { graphql } from '@/__generated__/index.js';
 import { TimeBlockList } from '@/components/domain/time-block/TimeBlockList';
 import { RouteError } from '@/components/ui/route-error';
-import { useReadQuery } from '@apollo/client';
+import { useReadQuery } from '@apollo/client/react';
 import { createFileRoute } from '@tanstack/react-router';
 
 const GET_MY_TIME_BLOCKS = graphql(`
@@ -14,7 +14,9 @@ const GET_MY_TIME_BLOCKS = graphql(`
 
 export const Route = createFileRoute('/time-blocks')({
   component: TimeBlocksPage,
-  errorComponent: ({ error, reset }) => <RouteError error={error} reset={reset} />,
+  errorComponent: ({ error, reset }) => (
+    <RouteError error={error} reset={reset} />
+  ),
   loader: ({ context }) => ({
     GET_MY_TIME_BLOCKS: context.preloadQuery(GET_MY_TIME_BLOCKS),
   }),

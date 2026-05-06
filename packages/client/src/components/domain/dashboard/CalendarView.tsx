@@ -3,8 +3,8 @@ import type {
   TimeBlock_CalendarViewFragment,
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
-import { gql, useMutation } from '@apollo/client';
-import { Check, Loader2 } from 'lucide-react';
+import { gql } from '@apollo/client';
+import { useMutation } from '@apollo/client/react';
 import {
   addDays,
   format,
@@ -16,6 +16,7 @@ import {
   startOfWeek,
 } from 'date-fns';
 import { enUS } from 'date-fns/locale/en-US';
+import { Check, Loader2 } from 'lucide-react';
 import { useMemo } from 'react';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
@@ -33,6 +34,7 @@ const localizer = dateFnsLocalizer({
 });
 
 // Create DnD-enabled Calendar
+// biome-ignore lint/suspicious/noExplicitAny: react-big-calendar DnD wrapper lacks proper generic types
 const DnDCalendar = withDragAndDrop(Calendar as any) as any;
 
 // ─── GraphQL ────────────────────────────────────────────────────────────────
@@ -248,14 +250,18 @@ type CalendarViewProps = {
   view: CalendarViewMode;
 };
 
-export function CalendarView({ timeBlocks, schedule, date, view }: CalendarViewProps) {
-  const now = new Date();
-
+export function CalendarView({
+  timeBlocks,
+  schedule,
+  date,
+  view,
+}: CalendarViewProps) {
   const [pinTodo] = useMutation(PIN_TODO, {
     refetchQueries: ['MySchedule'],
   });
 
   const backgroundEvents = useMemo<CalendarEvent[]>(() => {
+    const now = new Date();
     // Skip background time-block shading in month view — too noisy on a grid
     if (view === 'month') return [];
     return timeBlocks.flatMap((block) =>
@@ -267,9 +273,11 @@ export function CalendarView({ timeBlocks, schedule, date, view }: CalendarViewP
   }, [timeBlocks, date, view]);
 
   const scheduledEvents = useMemo<CalendarEvent[]>(() => {
+    const now = new Date();
     return schedule
       .filter((item) => {
-        if (!item.isScheduled || !item.scheduledStart || !item.scheduledEnd) return false;
+        if (!item.isScheduled || !item.scheduledStart || !item.scheduledEnd)
+          return false;
         // Don't show incomplete events that have already ended
         return new Date(item.scheduledEnd) > now;
       })
@@ -315,7 +323,10 @@ export function CalendarView({ timeBlocks, schedule, date, view }: CalendarViewP
       });
   }, [schedule]);
 
-  function onEventDrop({ event, start }: { event: CalendarEvent; start: Date | string }) {
+  function onEventDrop({
+    event,
+    start,
+  }: { event: CalendarEvent; start: Date | string }) {
     if (!event.isTask || event.kind !== 'todo') return;
     // event.id format: "scheduled-todo-{id}"
     const match = event.id.match(/^scheduled-todo-(.+)$/);

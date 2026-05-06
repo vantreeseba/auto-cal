@@ -6,7 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useQuery } from '@apollo/client';
+import { useQuery } from '@apollo/client/react';
 
 const GET_ACTIVITY_TYPES = graphql(`
   query GetActivityTypesForSelect {

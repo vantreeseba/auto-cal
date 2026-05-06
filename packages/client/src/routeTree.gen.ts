@@ -21,11 +21,6 @@ import { Route as HabitsIndexRouteImport } from './routes/habits.index'
 import { Route as HabitsHabitIdRouteImport } from './routes/habits.$habitId'
 import { Route as AuthVerifyRouteImport } from './routes/auth.verify'
 
-const StatsRoute = StatsRouteImport.update({
-  id: '/stats',
-  path: '/stats',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TodosRoute = TodosRouteImport.update({
   id: '/todos',
   path: '/todos',
@@ -34,6 +29,11 @@ const TodosRoute = TodosRouteImport.update({
 const TimeBlocksRoute = TimeBlocksRouteImport.update({
   id: '/time-blocks',
   path: '/time-blocks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StatsRoute = StatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -178,18 +178,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TodosRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/stats': {
-      id: '/stats'
-      path: '/stats'
-      fullPath: '/stats'
-      preLoaderRoute: typeof StatsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/time-blocks': {
       id: '/time-blocks'
       path: '/time-blocks'
       fullPath: '/time-blocks'
       preLoaderRoute: typeof TimeBlocksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stats': {
+      id: '/stats'
+      path: '/stats'
+      fullPath: '/stats'
+      preLoaderRoute: typeof StatsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {

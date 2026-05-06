@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ActivityType, Habit, TimeBlock, Todo } from '@auto-cal/db';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   computeSchedule,
   startOfISOWeek,
@@ -93,24 +93,34 @@ const WEEK = '2026-05-04';
 
 describe('startOfISOWeekStr', () => {
   it('returns the same Monday when given a Monday', () => {
-    expect(startOfISOWeekStr(new Date('2026-05-04T00:00:00'))).toBe('2026-05-04');
+    expect(startOfISOWeekStr(new Date('2026-05-04T00:00:00'))).toBe(
+      '2026-05-04',
+    );
   });
 
   it('returns the previous Monday for a Wednesday', () => {
-    expect(startOfISOWeekStr(new Date('2026-05-06T00:00:00'))).toBe('2026-05-04');
+    expect(startOfISOWeekStr(new Date('2026-05-06T00:00:00'))).toBe(
+      '2026-05-04',
+    );
   });
 
   it('returns the previous Monday for a Sunday', () => {
-    expect(startOfISOWeekStr(new Date('2026-05-10T00:00:00'))).toBe('2026-05-04');
+    expect(startOfISOWeekStr(new Date('2026-05-10T00:00:00'))).toBe(
+      '2026-05-04',
+    );
   });
 
   it('returns the previous Monday for a Saturday', () => {
-    expect(startOfISOWeekStr(new Date('2026-05-09T00:00:00'))).toBe('2026-05-04');
+    expect(startOfISOWeekStr(new Date('2026-05-09T00:00:00'))).toBe(
+      '2026-05-04',
+    );
   });
 
   it('handles year boundaries correctly', () => {
     // Jan 1 2026 is a Thursday — ISO week Monday is Dec 29 2025
-    expect(startOfISOWeekStr(new Date('2026-01-01T00:00:00'))).toBe('2025-12-29');
+    expect(startOfISOWeekStr(new Date('2026-01-01T00:00:00'))).toBe(
+      '2025-12-29',
+    );
   });
 });
 
@@ -207,7 +217,11 @@ describe('computeSchedule', () => {
   });
 
   it('schedules higher-priority todos before lower-priority ones', () => {
-    const high = makeTodo({ id: 'todo-high', priority: 10, estimatedLength: 60 });
+    const high = makeTodo({
+      id: 'todo-high',
+      priority: 10,
+      estimatedLength: 60,
+    });
     const low = makeTodo({ id: 'todo-low', priority: 1, estimatedLength: 60 });
     // One 60-min slot on Monday — only one todo can fit
     const result = computeSchedule(
@@ -228,16 +242,30 @@ describe('computeSchedule', () => {
     const result = computeSchedule(
       WEEK,
       [
-        makeBlock({ id: 'tb-mon', daysOfWeek: [1], startTime: '09:00', endTime: '10:00' }),
-        makeBlock({ id: 'tb-tue', daysOfWeek: [2], startTime: '09:00', endTime: '10:00' }),
+        makeBlock({
+          id: 'tb-mon',
+          daysOfWeek: [1],
+          startTime: '09:00',
+          endTime: '10:00',
+        }),
+        makeBlock({
+          id: 'tb-tue',
+          daysOfWeek: [2],
+          startTime: '09:00',
+          endTime: '10:00',
+        }),
       ],
       [t1, t2],
       [],
       AT_MAP,
     );
     expect(result.every((r) => r.isScheduled)).toBe(true);
-    expect(result.find((r) => r.id === 'todo-1')?.scheduledStart).toBe('2026-05-04T09:00:00');
-    expect(result.find((r) => r.id === 'todo-2')?.scheduledStart).toBe('2026-05-05T09:00:00');
+    expect(result.find((r) => r.id === 'todo-1')?.scheduledStart).toBe(
+      '2026-05-04T09:00:00',
+    );
+    expect(result.find((r) => r.id === 'todo-2')?.scheduledStart).toBe(
+      '2026-05-05T09:00:00',
+    );
   });
 
   it('packs two todos back-to-back within the same slot', () => {
@@ -251,15 +279,24 @@ describe('computeSchedule', () => {
       AT_MAP,
     );
     expect(result.every((r) => r.isScheduled)).toBe(true);
-    expect(result.find((r) => r.id === 'todo-1')?.scheduledStart).toBe('2026-05-04T09:00:00');
-    expect(result.find((r) => r.id === 'todo-2')?.scheduledStart).toBe('2026-05-04T10:00:00');
+    expect(result.find((r) => r.id === 'todo-1')?.scheduledStart).toBe(
+      '2026-05-04T09:00:00',
+    );
+    expect(result.find((r) => r.id === 'todo-2')?.scheduledStart).toBe(
+      '2026-05-04T10:00:00',
+    );
   });
 
   it('marks a todo with past scheduledAt as overdue', () => {
     const [result] = computeSchedule(
       WEEK,
       [makeBlock()],
-      [makeTodo({ scheduledAt: new Date('2026-04-01T09:00:00'), completedAt: null })],
+      [
+        makeTodo({
+          scheduledAt: new Date('2026-04-01T09:00:00'),
+          completedAt: null,
+        }),
+      ],
       [],
       AT_MAP,
     );
@@ -299,7 +336,14 @@ describe('computeSchedule', () => {
   it('schedules a habit into a matching time block', () => {
     const [result] = computeSchedule(
       WEEK,
-      [makeBlock({ activityTypeId: EXERCISE.id, daysOfWeek: [1], startTime: '07:00', endTime: '08:00' })],
+      [
+        makeBlock({
+          activityTypeId: EXERCISE.id,
+          daysOfWeek: [1],
+          startTime: '07:00',
+          endTime: '08:00',
+        }),
+      ],
       [],
       [makeHabit({ estimatedLength: 30 })],
       AT_MAP,
@@ -316,7 +360,14 @@ describe('computeSchedule', () => {
     ];
     const result = computeSchedule(
       WEEK,
-      [makeBlock({ activityTypeId: EXERCISE.id, daysOfWeek: [1, 2, 3], startTime: '07:00', endTime: '08:00' })],
+      [
+        makeBlock({
+          activityTypeId: EXERCISE.id,
+          daysOfWeek: [1, 2, 3],
+          startTime: '07:00',
+          endTime: '08:00',
+        }),
+      ],
       [],
       instances,
       AT_MAP,
@@ -331,8 +382,19 @@ describe('computeSchedule', () => {
     const result = computeSchedule(
       WEEK,
       [
-        makeBlock({ activityTypeId: WORK.id, daysOfWeek: [1], startTime: '09:00', endTime: '10:00' }),
-        makeBlock({ id: 'tb-ex', activityTypeId: EXERCISE.id, daysOfWeek: [1], startTime: '07:00', endTime: '08:00' }),
+        makeBlock({
+          activityTypeId: WORK.id,
+          daysOfWeek: [1],
+          startTime: '09:00',
+          endTime: '10:00',
+        }),
+        makeBlock({
+          id: 'tb-ex',
+          activityTypeId: EXERCISE.id,
+          daysOfWeek: [1],
+          startTime: '07:00',
+          endTime: '08:00',
+        }),
       ],
       [makeTodo({ activityTypeId: WORK.id, estimatedLength: 60 })],
       [makeHabit({ activityTypeId: EXERCISE.id, estimatedLength: 30 })],

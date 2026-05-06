@@ -47,7 +47,9 @@ export function createAuthRouter(db: DB): Router {
     const email = payload.email;
 
     // Find or create user
-    let user = await db._query.users.findFirst({ where: eq(users.email, email) });
+    let user = await db._query.users.findFirst({
+      where: eq(users.email, email),
+    });
     if (!user) {
       const [created] = await db.insert(users).values({ email }).returning();
       if (!created) {

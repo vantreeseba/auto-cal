@@ -1,5 +1,12 @@
 import { eq } from 'drizzle-orm';
-import { db, users, activityTypes, todos, habits, timeBlocks } from './index.ts';
+import {
+  activityTypes,
+  db,
+  habits,
+  timeBlocks,
+  todos,
+  users,
+} from './index.ts';
 
 export const DEMO_USER_ID = '00000000-0000-0000-0000-000000000001';
 export const DEMO_USER_EMAIL = 'demo@auto-cal.app';
@@ -38,14 +45,14 @@ export async function seedDemoData(): Promise<void> {
   }
 
   // Activity types
-  const insertedTypes = await db
+  const insertedTypes = (await db
     .insert(activityTypes)
     .values([
       { userId: DEMO_USER_ID, name: 'Work', color: '#6366f1' },
       { userId: DEMO_USER_ID, name: 'Exercise', color: '#22c55e' },
       { userId: DEMO_USER_ID, name: 'Learning', color: '#f59e0b' },
     ])
-    .returning();
+    .returning()) as Array<{ id: string; name: string; color: string }>;
 
   const work = insertedTypes.find((t) => t.name === 'Work');
   const exercise = insertedTypes.find((t) => t.name === 'Exercise');
@@ -111,7 +118,8 @@ export async function seedDemoData(): Promise<void> {
       userId: DEMO_USER_ID,
       activityTypeId: work.id,
       title: 'Write Q2 project proposal',
-      description: 'Outline goals, timeline, and resource requirements for the Q2 roadmap.',
+      description:
+        'Outline goals, timeline, and resource requirements for the Q2 roadmap.',
       priority: 80,
       estimatedLength: 90,
     },
@@ -134,7 +142,8 @@ export async function seedDemoData(): Promise<void> {
       userId: DEMO_USER_ID,
       activityTypeId: learning.id,
       title: 'Complete TypeScript generics chapter',
-      description: 'Finish reading and take notes on generics from the TS handbook.',
+      description:
+        'Finish reading and take notes on generics from the TS handbook.',
       priority: 60,
       estimatedLength: 60,
     },
@@ -142,7 +151,8 @@ export async function seedDemoData(): Promise<void> {
       userId: DEMO_USER_ID,
       activityTypeId: exercise.id,
       title: 'Sign up for 5K run',
-      description: 'Register for the local spring 5K and add it to the calendar.',
+      description:
+        'Register for the local spring 5K and add it to the calendar.',
       priority: 30,
       estimatedLength: 15,
     },
@@ -176,7 +186,8 @@ export async function seedDemoData(): Promise<void> {
       userId: DEMO_USER_ID,
       activityTypeId: work.id,
       title: 'Daily standup prep',
-      description: "Review yesterday's work and plan today's tasks before standup.",
+      description:
+        "Review yesterday's work and plan today's tasks before standup.",
       priority: 90,
       estimatedLength: 10,
       frequencyCount: 5,

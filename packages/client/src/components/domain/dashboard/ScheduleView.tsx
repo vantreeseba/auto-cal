@@ -7,11 +7,20 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { priorityLabel } from '@/lib/utils';
+import { gql } from '@apollo/client';
+import { useMutation } from '@apollo/client/react';
 import { Link } from '@tanstack/react-router';
-import { addDays, format, parseISO, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
+import {
+  addDays,
+  endOfDay,
+  endOfMonth,
+  format,
+  parseISO,
+  startOfDay,
+  startOfMonth,
+} from 'date-fns';
 import { AlertTriangle, Check } from 'lucide-react';
 import { useMemo } from 'react';
-import { gql, useMutation } from '@apollo/client';
 
 graphql(`
   fragment ScheduledItem_ScheduleView on ScheduledItem {
@@ -38,7 +47,6 @@ const COMPLETE_HABIT = gql`
     }
   }
 `;
-
 
 function groupByDay(
   items: ScheduledItem_ScheduleViewFragment[],
@@ -70,13 +78,15 @@ type ScheduleViewProps = {
   date: Date;
 };
 
-function viewWindow(view: CalendarViewMode, date: Date): { start: Date; end: Date } {
+function viewWindow(
+  view: CalendarViewMode,
+  date: Date,
+): { start: Date; end: Date } {
   switch (view) {
     case 'day':
       return { start: startOfDay(date), end: endOfDay(date) };
     case 'month':
       return { start: startOfMonth(date), end: endOfMonth(date) };
-    case 'week':
     default: {
       // week starts on Monday
       const d = new Date(date);
@@ -220,9 +230,7 @@ function ScheduleCard({
                     <AlertTriangle className="h-4 w-4" />
                   </Link>
                 </TooltipTrigger>
-                <TooltipContent>
-                  {unschedulableReason(item)}
-                </TooltipContent>
+                <TooltipContent>{unschedulableReason(item)}</TooltipContent>
               </Tooltip>
             )}
             {timeRange && (

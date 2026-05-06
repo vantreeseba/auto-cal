@@ -94,10 +94,16 @@ function RootLayout() {
                 <button
                   type="button"
                   onClick={() => setDark((d) => !d)}
-                  aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+                  aria-label={
+                    dark ? 'Switch to light mode' : 'Switch to dark mode'
+                  }
                   className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                 >
-                  {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                  {dark ? (
+                    <Sun className="h-4 w-4" />
+                  ) : (
+                    <Moon className="h-4 w-4" />
+                  )}
                 </button>
                 <LogoutButton />
               </nav>
@@ -113,7 +119,10 @@ function RootLayout() {
   );
 }
 
-function RootErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
+function RootErrorComponent({
+  error,
+  reset,
+}: { error: unknown; reset: () => void }) {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
       <header className="flex-shrink-0 border-b bg-card">

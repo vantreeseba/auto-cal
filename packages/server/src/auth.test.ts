@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { signMagicToken, signSessionToken, verifyToken } from './auth.ts';
 
 describe('signMagicToken / verifyToken', () => {

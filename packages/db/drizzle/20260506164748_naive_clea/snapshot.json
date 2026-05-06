@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "1ae26358-5715-4750-b1bf-3eebdc4d6229",
+  "id": "8bc67fc0-4e62-47ac-bca7-efdefa56793d",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -9,6 +9,12 @@
     {
       "isRlsEnabled": false,
       "name": "users",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "activity_types",
       "entityType": "tables",
       "schema": "public"
     },
@@ -63,6 +69,19 @@
       "table": "users"
     },
     {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'UTC'",
+      "generated": null,
+      "identity": null,
+      "name": "timezone",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "users"
+    },
+    {
       "type": "timestamp",
       "typeSchema": null,
       "notNull": true,
@@ -87,6 +106,84 @@
       "entityType": "columns",
       "schema": "public",
       "table": "users"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "activity_types"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "activity_types"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "name",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "activity_types"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'#6366f1'",
+      "generated": null,
+      "identity": null,
+      "name": "color",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "activity_types"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "activity_types"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "activity_types"
     },
     {
       "type": "uuid",
@@ -167,14 +264,14 @@
       "table": "todos"
     },
     {
-      "type": "text",
+      "type": "uuid",
       "typeSchema": null,
-      "notNull": true,
+      "notNull": false,
       "dimensions": 0,
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "activity_type",
+      "name": "activity_type_id",
       "entityType": "columns",
       "schema": "public",
       "table": "todos"
@@ -206,6 +303,19 @@
       "table": "todos"
     },
     {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "manually_scheduled",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "todos"
+    },
+    {
       "type": "timestamp",
       "typeSchema": null,
       "notNull": true,
@@ -310,14 +420,14 @@
       "table": "habits"
     },
     {
-      "type": "text",
+      "type": "uuid",
       "typeSchema": null,
-      "notNull": true,
+      "notNull": false,
       "dimensions": 0,
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "activity_type",
+      "name": "activity_type_id",
       "entityType": "columns",
       "schema": "public",
       "table": "habits"
@@ -401,14 +511,14 @@
       "table": "time_blocks"
     },
     {
-      "type": "text",
+      "type": "uuid",
       "typeSchema": null,
-      "notNull": true,
+      "notNull": false,
       "dimensions": 0,
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "activity_type",
+      "name": "activity_type_id",
       "entityType": "columns",
       "schema": "public",
       "table": "time_blocks"
@@ -448,6 +558,19 @@
       "generated": null,
       "identity": null,
       "name": "end_time",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "time_blocks"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "name": "priority",
       "entityType": "columns",
       "schema": "public",
       "table": "time_blocks"
@@ -520,9 +643,9 @@
     {
       "type": "timestamp",
       "typeSchema": null,
-      "notNull": true,
+      "notNull": false,
       "dimensions": 0,
-      "default": "now()",
+      "default": null,
       "generated": null,
       "identity": null,
       "name": "completed_at",
@@ -555,7 +678,41 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
+      "name": "activity_types_user_id_users_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "activity_types"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "user_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "users",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
       "name": "todos_user_id_users_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "todos"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "activity_type_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "activity_types",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "name": "todos_activity_type_id_activity_types_id_fkey",
       "entityType": "fks",
       "schema": "public",
       "table": "todos"
@@ -580,6 +737,23 @@
     {
       "nameExplicit": false,
       "columns": [
+        "activity_type_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "activity_types",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "name": "habits_activity_type_id_activity_types_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "habits"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
         "user_id"
       ],
       "schemaTo": "public",
@@ -590,6 +764,23 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "time_blocks_user_id_users_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "time_blocks"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "activity_type_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "activity_types",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "name": "time_blocks_activity_type_id_activity_types_id_fkey",
       "entityType": "fks",
       "schema": "public",
       "table": "time_blocks"
@@ -619,6 +810,16 @@
       "name": "users_pkey",
       "schema": "public",
       "table": "users",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "activity_types_pkey",
+      "schema": "public",
+      "table": "activity_types",
       "entityType": "pks"
     },
     {

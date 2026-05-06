@@ -2,11 +2,6 @@ import { GraphQLResolveInfo, GraphQLScalarType, GraphQLScalarTypeConfig } from '
 import { Context } from '../context.ts';
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = T | undefined;
-export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
-export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
-export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
-export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> = { [_ in K]?: never };
-export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 export type RequireFields<T, K extends keyof T> = Omit<T, K> & { [P in K]-?: NonNullable<T[P]> };
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
@@ -16,7 +11,7 @@ export type Scalars = {
   Int: { input: number; output: number; }
   Float: { input: number; output: number; }
   /** A date-time string at UTC, such as 2007-12-03T10:15:30Z, compliant with the `date-time` format outlined in section 5.6 of the RFC 3339 profile of the ISO 8601 standard for representation of dates and times using the Gregorian calendar. */
-  DateTime: { input: any; output: any; }
+  DateTime: { input: unknown; output: unknown; }
 };
 
 export type ActivityType = {
@@ -438,6 +433,18 @@ export type HabitPeriod = {
   target: Scalars['Int']['output'];
 };
 
+export type HabitStatSummary = {
+  __typename?: 'HabitStatSummary';
+  activityType: Maybe<ActivityType>;
+  completionRate: Scalars['Float']['output'];
+  completions: Scalars['Int']['output'];
+  frequencyCount: Scalars['Int']['output'];
+  frequencyUnit: Scalars['String']['output'];
+  habitId: Scalars['ID']['output'];
+  target: Scalars['Float']['output'];
+  title: Scalars['String']['output'];
+};
+
 export type HabitStats = {
   __typename?: 'HabitStats';
   completionRate: Scalars['Float']['output'];
@@ -516,7 +523,7 @@ export type Mutation = {
   myReschedule: Scalars['Boolean']['output'];
   myUpdateActivityType: ActivityType;
   myUpdateHabit: Habit;
-  myUpdateProfile: UserProfile;
+  myUpdateProfile: Scalars['Boolean']['output'];
   myUpdateTimeBlock: TimeBlock;
   myUpdateTodo: Todo;
   requestMagicLink: RequestMagicLinkResult;
@@ -768,6 +775,7 @@ export type Query = {
   myHabits: Array<Habit>;
   myProfile: Maybe<UserProfile>;
   mySchedule: Array<ScheduledItem>;
+  myStats: StatsOverview;
   myTimeBlocks: Array<TimeBlock>;
   myTodos: Array<Todo>;
   timeBlock: Maybe<TimeBlock>;
@@ -854,6 +862,12 @@ export type QueryMyScheduleArgs = {
 };
 
 
+export type QueryMyStatsArgs = {
+  endDate?: InputMaybe<Scalars['String']['input']>;
+  startDate?: InputMaybe<Scalars['String']['input']>;
+};
+
+
 export type QueryMyTimeBlocksArgs = {
   activityTypeId?: InputMaybe<Scalars['ID']['input']>;
   containsDay?: InputMaybe<Scalars['Int']['input']>;
@@ -936,6 +950,15 @@ export enum ScheduledItemKind {
   Habit = 'habit',
   Todo = 'todo'
 }
+
+export type StatsOverview = {
+  __typename?: 'StatsOverview';
+  habitScore: Maybe<Scalars['Float']['output']>;
+  habits: Array<HabitStatSummary>;
+  todoScore: Maybe<Scalars['Float']['output']>;
+  todos: TodoStatSummary;
+  weightedScore: Maybe<Scalars['Float']['output']>;
+};
 
 export type StringFilter = {
   OR?: InputMaybe<Array<StringFilterOr>>;
@@ -1094,6 +1117,14 @@ export type TodoOrderBy = {
   title?: InputMaybe<InnerOrder>;
   updatedAt?: InputMaybe<InnerOrder>;
   userId?: InputMaybe<InnerOrder>;
+};
+
+export type TodoStatSummary = {
+  __typename?: 'TodoStatSummary';
+  completed: Scalars['Int']['output'];
+  completionRate: Scalars['Float']['output'];
+  overdue: Scalars['Int']['output'];
+  total: Scalars['Int']['output'];
 };
 
 export type UpdateActivityTypeArgs = {
@@ -1372,6 +1403,7 @@ export type ResolversTypes = {
   HabitFiltersOr: HabitFiltersOr;
   HabitOrderBy: HabitOrderBy;
   HabitPeriod: ResolverTypeWrapper<HabitPeriod>;
+  HabitStatSummary: ResolverTypeWrapper<HabitStatSummary>;
   HabitStats: ResolverTypeWrapper<HabitStats>;
   ID: ResolverTypeWrapper<Scalars['ID']['output']>;
   IdFilter: IdFilter;
@@ -1384,6 +1416,7 @@ export type ResolversTypes = {
   RequestMagicLinkResult: ResolverTypeWrapper<RequestMagicLinkResult>;
   ScheduledItem: ResolverTypeWrapper<ScheduledItem>;
   ScheduledItemKind: ScheduledItemKind;
+  StatsOverview: ResolverTypeWrapper<StatsOverview>;
   String: ResolverTypeWrapper<Scalars['String']['output']>;
   StringFilter: StringFilter;
   StringFilterOr: StringFilterOr;
@@ -1395,6 +1428,7 @@ export type ResolversTypes = {
   TodoFilters: TodoFilters;
   TodoFiltersOr: TodoFiltersOr;
   TodoOrderBy: TodoOrderBy;
+  TodoStatSummary: ResolverTypeWrapper<TodoStatSummary>;
   UpdateActivityTypeArgs: UpdateActivityTypeArgs;
   UpdateActivityTypeInput: UpdateActivityTypeInput;
   UpdateHabitArgs: UpdateHabitArgs;
@@ -1450,6 +1484,7 @@ export type ResolversParentTypes = {
   HabitFiltersOr: HabitFiltersOr;
   HabitOrderBy: HabitOrderBy;
   HabitPeriod: HabitPeriod;
+  HabitStatSummary: HabitStatSummary;
   HabitStats: HabitStats;
   ID: Scalars['ID']['output'];
   IdFilter: IdFilter;
@@ -1460,6 +1495,7 @@ export type ResolversParentTypes = {
   Query: Record<PropertyKey, never>;
   RequestMagicLinkResult: RequestMagicLinkResult;
   ScheduledItem: ScheduledItem;
+  StatsOverview: StatsOverview;
   String: Scalars['String']['output'];
   StringFilter: StringFilter;
   StringFilterOr: StringFilterOr;
@@ -1471,6 +1507,7 @@ export type ResolversParentTypes = {
   TodoFilters: TodoFilters;
   TodoFiltersOr: TodoFiltersOr;
   TodoOrderBy: TodoOrderBy;
+  TodoStatSummary: TodoStatSummary;
   UpdateActivityTypeArgs: UpdateActivityTypeArgs;
   UpdateActivityTypeInput: UpdateActivityTypeInput;
   UpdateHabitArgs: UpdateHabitArgs;
@@ -1556,6 +1593,17 @@ export type HabitPeriodResolvers<ContextType = Context, ParentType extends Resol
   target?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
 };
 
+export type HabitStatSummaryResolvers<ContextType = Context, ParentType extends ResolversParentTypes['HabitStatSummary'] = ResolversParentTypes['HabitStatSummary']> = {
+  activityType?: Resolver<Maybe<ResolversTypes['ActivityType']>, ParentType, ContextType>;
+  completionRate?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  completions?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  frequencyCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  frequencyUnit?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  habitId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  target?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
 export type HabitStatsResolvers<ContextType = Context, ParentType extends ResolversParentTypes['HabitStats'] = ResolversParentTypes['HabitStats']> = {
   completionRate?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   habitId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -1595,7 +1643,7 @@ export type MutationResolvers<ContextType = Context, ParentType extends Resolver
   myReschedule?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, Partial<MutationMyRescheduleArgs>>;
   myUpdateActivityType?: Resolver<ResolversTypes['ActivityType'], ParentType, ContextType, RequireFields<MutationMyUpdateActivityTypeArgs, 'input'>>;
   myUpdateHabit?: Resolver<ResolversTypes['Habit'], ParentType, ContextType, RequireFields<MutationMyUpdateHabitArgs, 'input'>>;
-  myUpdateProfile?: Resolver<ResolversTypes['UserProfile'], ParentType, ContextType, RequireFields<MutationMyUpdateProfileArgs, 'timezone'>>;
+  myUpdateProfile?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationMyUpdateProfileArgs, 'timezone'>>;
   myUpdateTimeBlock?: Resolver<ResolversTypes['TimeBlock'], ParentType, ContextType, RequireFields<MutationMyUpdateTimeBlockArgs, 'input'>>;
   myUpdateTodo?: Resolver<ResolversTypes['Todo'], ParentType, ContextType, RequireFields<MutationMyUpdateTodoArgs, 'input'>>;
   requestMagicLink?: Resolver<ResolversTypes['RequestMagicLinkResult'], ParentType, ContextType, RequireFields<MutationRequestMagicLinkArgs, 'email'>>;
@@ -1622,6 +1670,7 @@ export type QueryResolvers<ContextType = Context, ParentType extends ResolversPa
   myHabits?: Resolver<Array<ResolversTypes['Habit']>, ParentType, ContextType, Partial<QueryMyHabitsArgs>>;
   myProfile?: Resolver<Maybe<ResolversTypes['UserProfile']>, ParentType, ContextType>;
   mySchedule?: Resolver<Array<ResolversTypes['ScheduledItem']>, ParentType, ContextType, Partial<QueryMyScheduleArgs>>;
+  myStats?: Resolver<ResolversTypes['StatsOverview'], ParentType, ContextType, Partial<QueryMyStatsArgs>>;
   myTimeBlocks?: Resolver<Array<ResolversTypes['TimeBlock']>, ParentType, ContextType, Partial<QueryMyTimeBlocksArgs>>;
   myTodos?: Resolver<Array<ResolversTypes['Todo']>, ParentType, ContextType, Partial<QueryMyTodosArgs>>;
   timeBlock?: Resolver<Maybe<ResolversTypes['TimeBlock']>, ParentType, ContextType, Partial<QueryTimeBlockArgs>>;
@@ -1649,6 +1698,14 @@ export type ScheduledItemResolvers<ContextType = Context, ParentType extends Res
   scheduledEnd?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   scheduledStart?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   title?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
+export type StatsOverviewResolvers<ContextType = Context, ParentType extends ResolversParentTypes['StatsOverview'] = ResolversParentTypes['StatsOverview']> = {
+  habitScore?: Resolver<Maybe<ResolversTypes['Float']>, ParentType, ContextType>;
+  habits?: Resolver<Array<ResolversTypes['HabitStatSummary']>, ParentType, ContextType>;
+  todoScore?: Resolver<Maybe<ResolversTypes['Float']>, ParentType, ContextType>;
+  todos?: Resolver<ResolversTypes['TodoStatSummary'], ParentType, ContextType>;
+  weightedScore?: Resolver<Maybe<ResolversTypes['Float']>, ParentType, ContextType>;
 };
 
 export type TimeBlockResolvers<ContextType = Context, ParentType extends ResolversParentTypes['TimeBlock'] = ResolversParentTypes['TimeBlock']> = {
@@ -1680,6 +1737,13 @@ export type TodoResolvers<ContextType = Context, ParentType extends ResolversPar
   userId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 };
 
+export type TodoStatSummaryResolvers<ContextType = Context, ParentType extends ResolversParentTypes['TodoStatSummary'] = ResolversParentTypes['TodoStatSummary']> = {
+  completed?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  completionRate?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  overdue?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  total?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+};
+
 export type UserResolvers<ContextType = Context, ParentType extends ResolversParentTypes['User'] = ResolversParentTypes['User']> = {
   createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   email?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -1707,13 +1771,16 @@ export type Resolvers<ContextType = Context> = {
   HabitCompletion?: HabitCompletionResolvers<ContextType>;
   HabitDetail?: HabitDetailResolvers<ContextType>;
   HabitPeriod?: HabitPeriodResolvers<ContextType>;
+  HabitStatSummary?: HabitStatSummaryResolvers<ContextType>;
   HabitStats?: HabitStatsResolvers<ContextType>;
   Mutation?: MutationResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
   RequestMagicLinkResult?: RequestMagicLinkResultResolvers<ContextType>;
   ScheduledItem?: ScheduledItemResolvers<ContextType>;
+  StatsOverview?: StatsOverviewResolvers<ContextType>;
   TimeBlock?: TimeBlockResolvers<ContextType>;
   Todo?: TodoResolvers<ContextType>;
+  TodoStatSummary?: TodoStatSummaryResolvers<ContextType>;
   User?: UserResolvers<ContextType>;
   UserProfile?: UserProfileResolvers<ContextType>;
   VerifyMagicLinkResult?: VerifyMagicLinkResultResolvers<ContextType>;

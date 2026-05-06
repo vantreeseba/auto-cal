@@ -1,4 +1,11 @@
-import type { DB } from '@auto-cal/db';
+import type {
+  ActivityType,
+  DB,
+  Habit,
+  HabitCompletion,
+  TimeBlock,
+  Todo,
+} from '@auto-cal/db';
 import {
   activityTypes,
   habitCompletions,
@@ -10,7 +17,6 @@ import { and, eq, inArray, isNotNull, isNull, lt, ne, or } from 'drizzle-orm';
 import {
   computeSchedule,
   startOfISOWeek,
-  startOfISOWeekStr,
   startOfLocalMonth,
 } from './scheduler.ts';
 
@@ -23,7 +29,11 @@ function dateToWeekStr(d: Date): string {
 
 /** Count habit completions by habitId within [start, end) using the given timestamp field */
 function countByPeriod(
-  completions: Array<{ habitId: string; completedAt: Date | null; scheduledAt: Date | null }>,
+  completions: Array<{
+    habitId: string;
+    completedAt: Date | null;
+    scheduledAt: Date | null;
+  }>,
   field: 'completedAt' | 'scheduledAt',
   start: Date,
   end: Date,
@@ -40,7 +50,10 @@ function countByPeriod(
 }
 
 /** Merge two count maps (add values for same key) */
-function addCounts(a: Map<string, number>, b: Map<string, number>): Map<string, number> {
+function addCounts(
+  a: Map<string, number>,
+  b: Map<string, number>,
+): Map<string, number> {
   const result = new Map(a);
   for (const [k, v] of b) {
     result.set(k, (result.get(k) ?? 0) + v);
@@ -57,35 +70,46 @@ export async function runSchedulerWriteback(
   horizonEnd.setMonth(horizonEnd.getMonth() + HORIZON_MONTHS);
 
   // ── Fetch all user data in one round-trip ──────────────────────────────────
-  const [userTimeBlocks, allIncompleteTodos, userHabits, userActivityTypes, allActualCompletions] =
-    await Promise.all([
-      db._query.timeBlocks.findMany({ where: eq(timeBlocks.userId, userId) }),
-      db._query.todos.findMany({
-        where: and(
-          eq(todos.userId, userId),
-          isNull(todos.completedAt),
-          isNotNull(todos.activityTypeId),
-          or(
-            ne(todos.manuallyScheduled, true),
-            and(eq(todos.manuallyScheduled, true), lt(todos.scheduledAt, now)),
-          ),
+  const [
+    userTimeBlocks,
+    allIncompleteTodos,
+    userHabits,
+    userActivityTypes,
+    allActualCompletions,
+  ] = (await Promise.all([
+    db._query.timeBlocks.findMany({ where: eq(timeBlocks.userId, userId) }),
+    db._query.todos.findMany({
+      where: and(
+        eq(todos.userId, userId),
+        isNull(todos.completedAt),
+        isNotNull(todos.activityTypeId),
+        or(
+          ne(todos.manuallyScheduled, true),
+          and(eq(todos.manuallyScheduled, true), lt(todos.scheduledAt, now)),
         ),
-      }),
-      db._query.habits.findMany({
-        where: and(eq(habits.userId, userId), isNotNull(habits.activityTypeId)),
-      }),
-      db._query.activityTypes.findMany({ where: eq(activityTypes.userId, userId) }),
-      db._query.habitCompletions.findMany({
-        where: and(
-          inArray(
-            habitCompletions.habitId,
-            // avoid inArray([]) which is invalid SQL
-            (await db._query.habits.findMany({ where: eq(habits.userId, userId) })).map((h) => h.id),
-          ),
-          isNotNull(habitCompletions.completedAt),
+      ),
+    }),
+    db._query.habits.findMany({
+      where: and(eq(habits.userId, userId), isNotNull(habits.activityTypeId)),
+    }),
+    db._query.activityTypes.findMany({
+      where: eq(activityTypes.userId, userId),
+    }),
+    db._query.habitCompletions.findMany({
+      where: and(
+        inArray(
+          habitCompletions.habitId,
+          // avoid inArray([]) which is invalid SQL
+          (
+            (await db._query.habits.findMany({
+              where: eq(habits.userId, userId),
+            })) as Habit[]
+          ).map((h) => h.id),
         ),
-      }),
-    ]);
+        isNotNull(habitCompletions.completedAt),
+      ),
+    }),
+  ])) as [TimeBlock[], Todo[], Habit[], ActivityType[], HabitCompletion[]];
 
   // ── Reset overdue manually-scheduled todos ─────────────────────────────────
   const overduePinnedIds = allIncompleteTodos
@@ -100,10 +124,14 @@ export async function runSchedulerWriteback(
   }
 
   const userTodos = allIncompleteTodos.map((t) =>
-    overduePinnedIds.includes(t.id) ? { ...t, manuallyScheduled: false, scheduledAt: null } : t,
+    overduePinnedIds.includes(t.id)
+      ? { ...t, manuallyScheduled: false, scheduledAt: null }
+      : t,
   );
 
-  const activityTypeMap = new Map(userActivityTypes.map((at) => [at.id, at]));
+  const activityTypeMap = new Map<string, ActivityType>(
+    userActivityTypes.map((at) => [at.id, at]),
+  );
 
   // ── Iterate week-by-week over the 2-month horizon ─────────────────────────
   // Todos are placed once; they're removed from the pool after being scheduled.
@@ -123,21 +151,55 @@ export async function runSchedulerWriteback(
     weekEnd.setDate(weekEnd.getDate() + 7);
 
     const monthStart = startOfLocalMonth(weekCursor);
-    const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1);
+    const monthEnd = new Date(
+      monthStart.getFullYear(),
+      monthStart.getMonth() + 1,
+      1,
+    );
 
     // Actual completions this period
-    const actualWeek = countByPeriod(allActualCompletions as Array<{ habitId: string; completedAt: Date | null; scheduledAt: Date | null }>, 'completedAt', weekCursor, weekEnd);
-    const actualMonth = countByPeriod(allActualCompletions as Array<{ habitId: string; completedAt: Date | null; scheduledAt: Date | null }>, 'completedAt', monthStart, monthEnd);
+    const actualWeek = countByPeriod(
+      allActualCompletions as Array<{
+        habitId: string;
+        completedAt: Date | null;
+        scheduledAt: Date | null;
+      }>,
+      'completedAt',
+      weekCursor,
+      weekEnd,
+    );
+    const actualMonth = countByPeriod(
+      allActualCompletions as Array<{
+        habitId: string;
+        completedAt: Date | null;
+        scheduledAt: Date | null;
+      }>,
+      'completedAt',
+      monthStart,
+      monthEnd,
+    );
 
     // Tentative (already-placed) completions this period
-    const tentativeWeek = countByPeriod(newTentativeCompletions, 'scheduledAt', weekCursor, weekEnd);
-    const tentativeMonth = countByPeriod(newTentativeCompletions, 'scheduledAt', monthStart, monthEnd);
+    const tentativeWeek = countByPeriod(
+      newTentativeCompletions,
+      'scheduledAt',
+      weekCursor,
+      weekEnd,
+    );
+    const tentativeMonth = countByPeriod(
+      newTentativeCompletions,
+      'scheduledAt',
+      monthStart,
+      monthEnd,
+    );
 
     const weekCounts = addCounts(actualWeek, tentativeWeek);
     const monthCounts = addCounts(actualMonth, tentativeMonth);
 
     // Build habit instances for this week's deficit
-    const habitInstances: Array<(typeof userHabits)[number] & { instanceIndex: number }> = [];
+    const habitInstances: Array<
+      (typeof userHabits)[number] & { instanceIndex: number }
+    > = [];
     for (const h of userHabits) {
       if (!h.activityTypeId) continue;
       const counts = h.frequencyUnit === 'week' ? weekCounts : monthCounts;
@@ -149,7 +211,13 @@ export async function runSchedulerWriteback(
     }
 
     // Run the scheduler for this week
-    const items = computeSchedule(weekStartStr, userTimeBlocks, todoPool, habitInstances, activityTypeMap);
+    const items = computeSchedule(
+      weekStartStr,
+      userTimeBlocks,
+      todoPool,
+      habitInstances,
+      activityTypeMap,
+    );
 
     // Consume placed todos from the pool
     const placedTodoIds = new Set(
@@ -160,7 +228,10 @@ export async function runSchedulerWriteback(
     // Record todo schedules (both placed and unscheduled-this-week)
     for (const item of items) {
       if (item.kind === 'todo') {
-        todoSchedules.set(item.id, item.scheduledStart ? new Date(item.scheduledStart) : null);
+        todoSchedules.set(
+          item.id,
+          item.scheduledStart ? new Date(item.scheduledStart) : null,
+        );
       }
     }
 
@@ -201,7 +272,10 @@ export async function runSchedulerWriteback(
     await db
       .delete(habitCompletions)
       .where(
-        and(inArray(habitCompletions.habitId, userHabitIds), isNull(habitCompletions.completedAt)),
+        and(
+          inArray(habitCompletions.habitId, userHabitIds),
+          isNull(habitCompletions.completedAt),
+        ),
       );
   }
 

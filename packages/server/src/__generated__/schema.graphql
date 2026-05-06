@@ -655,6 +655,10 @@ type ActivityType {
 
   """DateTime"""
   updatedAt: DateTime!
+  user(where: UserFilters): User
+  todos(where: TodoFilters, orderBy: TodoOrderBy, offset: Int, limit: Int): [Todo!]!
+  habits(where: HabitFilters, orderBy: HabitOrderBy, offset: Int, limit: Int): [Habit!]!
+  timeBlocks(where: TimeBlockFilters, orderBy: TimeBlockOrderBy, offset: Int, limit: Int): [TimeBlock!]!
 }
 
 type HabitCompletion {
@@ -669,6 +673,7 @@ type HabitCompletion {
 
   """DateTime"""
   createdAt: DateTime!
+  habit(where: HabitFilters): Habit
 }
 
 type Habit {
@@ -687,7 +692,9 @@ type Habit {
 
   """DateTime"""
   updatedAt: DateTime!
-  activityType: ActivityType
+  user(where: UserFilters): User
+  activityType(where: ActivityTypeFilters): ActivityType
+  completions(where: HabitCompletionFilters, orderBy: HabitCompletionOrderBy, offset: Int, limit: Int): [HabitCompletion!]!
 }
 
 type TimeBlock {
@@ -704,7 +711,8 @@ type TimeBlock {
 
   """DateTime"""
   updatedAt: DateTime!
-  activityType: ActivityType
+  user(where: UserFilters): User
+  activityType(where: ActivityTypeFilters): ActivityType
 }
 
 type Todo {
@@ -728,7 +736,8 @@ type Todo {
 
   """DateTime"""
   updatedAt: DateTime!
-  activityType: ActivityType
+  user(where: UserFilters): User
+  activityType(where: ActivityTypeFilters): ActivityType
 }
 
 type User {
@@ -741,6 +750,10 @@ type User {
 
   """DateTime"""
   updatedAt: DateTime!
+  activityTypes(where: ActivityTypeFilters, orderBy: ActivityTypeOrderBy, offset: Int, limit: Int): [ActivityType!]!
+  todos(where: TodoFilters, orderBy: TodoOrderBy, offset: Int, limit: Int): [Todo!]!
+  habits(where: HabitFilters, orderBy: HabitOrderBy, offset: Int, limit: Int): [Habit!]!
+  timeBlocks(where: TimeBlockFilters, orderBy: TimeBlockOrderBy, offset: Int, limit: Int): [TimeBlock!]!
 }
 
 type Query {
@@ -819,31 +832,6 @@ type UserProfile {
   timezone: String!
 }
 
-type HabitStatSummary {
-  habitId: ID!
-  title: String!
-  completionRate: Float!
-  completions: Int!
-  target: Float!
-  frequencyUnit: String!
-  frequencyCount: Int!
-}
-
-type TodoStatSummary {
-  total: Int!
-  completed: Int!
-  overdue: Int!
-  completionRate: Float!
-}
-
-type StatsOverview {
-  weightedScore: Float
-  habitScore: Float
-  todoScore: Float
-  habits: [HabitStatSummary!]!
-  todos: TodoStatSummary!
-}
-
 type ActivityTypeStats {
   activityTypeId: String!
   activityTypeName: String!
@@ -880,6 +868,32 @@ type HabitDetail {
   totalCompletions: Int!
   allTimeRate: Float!
   periods: [HabitPeriod!]!
+}
+
+type HabitStatSummary {
+  habitId: ID!
+  title: String!
+  completionRate: Float!
+  completions: Int!
+  target: Float!
+  frequencyUnit: String!
+  frequencyCount: Int!
+  activityType: ActivityType
+}
+
+type TodoStatSummary {
+  total: Int!
+  completed: Int!
+  overdue: Int!
+  completionRate: Float!
+}
+
+type StatsOverview {
+  weightedScore: Float
+  habitScore: Float
+  todoScore: Float
+  habits: [HabitStatSummary!]!
+  todos: TodoStatSummary!
 }
 
 enum ScheduledItemKind {

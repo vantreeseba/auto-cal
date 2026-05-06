@@ -6,7 +6,11 @@ type InlineLengthEditProps = {
   onSave: (value: number) => void;
 };
 
-export function InlineLengthEdit({ value, saving, onSave }: InlineLengthEditProps) {
+export function InlineLengthEdit({
+  value,
+  saving,
+  onSave,
+}: InlineLengthEditProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
 
@@ -23,12 +27,16 @@ export function InlineLengthEdit({ value, saving, onSave }: InlineLengthEditProp
         min={1}
         max={1440}
         value={draft}
+        // biome-ignore lint/a11y/noAutofocus: intentional focus when user activates inline edit
         autoFocus
         className="w-16 rounded border border-input bg-background px-1 py-0 text-xs font-medium tabular-nums focus:outline-none focus:ring-1 focus:ring-ring"
         onChange={(e) => setDraft(Number(e.target.value))}
         onBlur={commit}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') { e.preventDefault(); commit(); }
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            commit();
+          }
           if (e.key === 'Escape') setEditing(false);
         }}
         onClick={(e) => e.stopPropagation()}

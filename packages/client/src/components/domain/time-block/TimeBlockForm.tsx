@@ -1,7 +1,7 @@
 import type {
   CreateTimeBlockMutation,
   CreateTimeBlockMutationVariables,
-  TimeBlockListFieldsFragment,
+  TimeBlock_TimeBlockListFragment,
   UpdateTimeBlockMutation,
   UpdateTimeBlockMutationVariables,
 } from '@/__generated__/graphql.js';
@@ -26,7 +26,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useAppForm } from '@/hooks/form-hook';
 import { cn } from '@/lib/utils';
-import { useMutation } from '@apollo/client';
+import { useMutation } from '@apollo/client/react';
 import { z } from 'zod';
 
 // ─── GraphQL Operations ────────────────────────────────────────────────────
@@ -74,7 +74,7 @@ const WEEKEND = [0, 6];
 
 const timeBlockSchema = z
   .object({
-    activityTypeId: z.string().uuid().optional(),
+    activityTypeId: z.string().uuid().or(z.undefined()),
     daysOfWeek: z
       .array(z.number().int().min(0).max(6))
       .min(1, 'Select at least one day')
@@ -96,7 +96,7 @@ type TimeBlockFormValues = z.infer<typeof timeBlockSchema>;
 // ─── Props ─────────────────────────────────────────────────────────────────
 
 type TimeBlockFormProps = {
-  timeBlock?: TimeBlockListFieldsFragment;
+  timeBlock?: TimeBlock_TimeBlockListFragment;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
@@ -221,7 +221,9 @@ export function TimeBlockForm({
                     >
                       Weekend
                     </button>
-                    <span className="self-center text-muted-foreground text-xs">·</span>
+                    <span className="self-center text-muted-foreground text-xs">
+                      ·
+                    </span>
                   </div>
                   <div className="flex gap-1 flex-wrap">
                     {DAY_NAMES.map((day, index) => {
@@ -324,7 +326,9 @@ export function TimeBlockForm({
                       max={100}
                       value={field.state.value}
                       onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(Number(e.target.value))}
+                      onChange={(e) =>
+                        field.handleChange(Number(e.target.value))
+                      }
                     />
                   </FieldControl>
                   <FieldError />

@@ -14,8 +14,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { gql, useMutation } from '@apollo/client';
 import { priorityLabel } from '@/lib/utils';
+import { gql } from '@apollo/client';
+import { useMutation } from '@apollo/client/react';
 import { Link } from '@tanstack/react-router';
 import { AlertTriangle, Check, Pencil, Undo2 } from 'lucide-react';
 
@@ -60,13 +61,19 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
     refetchQueries: ['GetMyTodos'],
   });
 
-  const [uncompleteTodo, { loading: uncompleting }] = useMutation(UNCOMPLETE_TODO, {
-    refetchQueries: ['GetMyTodos'],
-  });
+  const [uncompleteTodo, { loading: uncompleting }] = useMutation(
+    UNCOMPLETE_TODO,
+    {
+      refetchQueries: ['GetMyTodos'],
+    },
+  );
 
-  const [updateTodo, { loading: updatingLength }] = useMutation(UPDATE_TODO_LENGTH, {
-    refetchQueries: ['GetMyTodos'],
-  });
+  const [updateTodo, { loading: updatingLength }] = useMutation(
+    UPDATE_TODO_LENGTH,
+    {
+      refetchQueries: ['GetMyTodos'],
+    },
+  );
 
   function handleSaveLength(estimatedLength: number) {
     updateTodo({ variables: { input: { id: todo.id, estimatedLength } } });
@@ -111,7 +118,8 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
                     </Link>
                   </TooltipTrigger>
                   <TooltipContent>
-                    No available time slot — add a matching time block or reduce estimated length
+                    No available time slot — add a matching time block or reduce
+                    estimated length
                   </TooltipContent>
                 </Tooltip>
               )}
@@ -139,7 +147,9 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
                     size="icon"
                     variant="ghost"
                     disabled={uncompleting}
-                    onClick={() => uncompleteTodo({ variables: { id: todo.id } })}
+                    onClick={() =>
+                      uncompleteTodo({ variables: { id: todo.id } })
+                    }
                     aria-label={`Mark ${todo.title} as incomplete`}
                     className="text-muted-foreground hover:text-amber-600"
                   >

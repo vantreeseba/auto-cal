@@ -1,5 +1,7 @@
-import { OrderDirection } from '@/__generated__/graphql.js';
-import type { Todo_TodoListFragment, TodoOrderBy } from '@/__generated__/graphql.js';
+import type {
+  TodoOrderBy,
+  Todo_TodoListFragment,
+} from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,38 +25,45 @@ import { TodoItem } from './TodoItem';
 
 export type { TodoOrderBy };
 
-const D = OrderDirection;
-
 const SORT_OPTIONS: { value: string; label: string; orderBy: TodoOrderBy }[] = [
   {
     value: 'priority_desc',
     label: 'Priority: High → Low',
-    orderBy: { priority: { direction: D.Desc, priority: 1 }, createdAt: { direction: D.Desc, priority: 2 } },
+    orderBy: {
+      priority: { direction: 'desc', priority: 1 },
+      createdAt: { direction: 'desc', priority: 2 },
+    },
   },
   {
     value: 'priority_asc',
     label: 'Priority: Low → High',
-    orderBy: { priority: { direction: D.Asc, priority: 1 }, createdAt: { direction: D.Desc, priority: 2 } },
+    orderBy: {
+      priority: { direction: 'asc', priority: 1 },
+      createdAt: { direction: 'desc', priority: 2 },
+    },
   },
   {
     value: 'scheduled_asc',
     label: 'Scheduled time',
-    orderBy: { scheduledAt: { direction: D.Asc, priority: 1 }, priority: { direction: D.Desc, priority: 2 } },
+    orderBy: {
+      scheduledAt: { direction: 'asc', priority: 1 },
+      priority: { direction: 'desc', priority: 2 },
+    },
   },
   {
     value: 'created_desc',
     label: 'Newest first',
-    orderBy: { createdAt: { direction: D.Desc, priority: 1 } },
+    orderBy: { createdAt: { direction: 'desc', priority: 1 } },
   },
   {
     value: 'created_asc',
     label: 'Oldest first',
-    orderBy: { createdAt: { direction: D.Asc, priority: 1 } },
+    orderBy: { createdAt: { direction: 'asc', priority: 1 } },
   },
   {
     value: 'title_asc',
     label: 'Title A → Z',
-    orderBy: { title: { direction: D.Asc, priority: 1 } },
+    orderBy: { title: { direction: 'asc', priority: 1 } },
   },
 ];
 
@@ -86,7 +95,13 @@ type TodoListProps = {
   onSortChange?: (key: string, orderBy: TodoOrderBy) => void;
 };
 
-export function TodoList({ items, loading, error, sortKey = 'priority_desc', onSortChange }: TodoListProps) {
+export function TodoList({
+  items,
+  loading,
+  error,
+  sortKey = 'priority_desc',
+  onSortChange,
+}: TodoListProps) {
   const [formOpen, setFormOpen] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -137,7 +152,11 @@ export function TodoList({ items, loading, error, sortKey = 'priority_desc', onS
                   </SelectTrigger>
                   <SelectContent>
                     {SORT_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                      <SelectItem
+                        key={opt.value}
+                        value={opt.value}
+                        className="text-xs"
+                      >
                         {opt.label}
                       </SelectItem>
                     ))}
@@ -170,8 +189,9 @@ export function TodoList({ items, loading, error, sortKey = 'priority_desc', onS
               Error loading todos: {error.message}
             </p>
           )}
-          {!loading && visibleItems.length === 0 && (
-            items.length > 0 ? (
+          {!loading &&
+            visibleItems.length === 0 &&
+            (items.length > 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">
                 All todos completed! 🎉
               </p>
@@ -182,15 +202,16 @@ export function TodoList({ items, loading, error, sortKey = 'priority_desc', onS
                 </div>
                 <div>
                   <p className="font-medium text-sm">No todos yet</p>
-                  <p className="text-sm text-muted-foreground">Add your first todo to get started</p>
+                  <p className="text-sm text-muted-foreground">
+                    Add your first todo to get started
+                  </p>
                 </div>
                 <Button size="sm" onClick={openCreate}>
                   <Plus className="mr-2 h-4 w-4" />
                   Create todo
                 </Button>
               </div>
-            )
-          )}
+            ))}
           <div className="space-y-2">
             {visibleItems.map((todo) => (
               <TodoItem key={todo.id} todo={todo} onEdit={openEdit} />

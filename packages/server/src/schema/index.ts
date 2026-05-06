@@ -3,12 +3,18 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { db } from '@auto-cal/db';
 import { buildSchema } from '@vantreeseba/drizzle-graphql';
-import { type GraphQLObjectType, type GraphQLSchema, printSchema } from 'graphql';
+import {
+  type GraphQLObjectType,
+  type GraphQLSchema,
+  printSchema,
+} from 'graphql';
 import { applyCustomResolvers } from './resolvers.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const generatedDir = join(__dirname, '../__generated__');
 mkdirSync(generatedDir, { recursive: true });
+
+console.log(Object.keys(db._.relations));
 
 const { schema: drizzleSchema, entities } = buildSchema(db, {
   prefixes: { insert: 'create', update: 'update', delete: 'delete' },
@@ -29,7 +35,9 @@ function blockUnscopedResolvers(schema: GraphQLSchema): void {
         fieldName.startsWith('my') || PUBLIC_MUTATIONS.has(fieldName);
       if (!isAllowed) {
         field.resolve = () => {
-          throw new Error(`Field "${fieldName}" is not available. Use the user-scoped resolvers instead.`);
+          throw new Error(
+            `Field "${fieldName}" is not available. Use the user-scoped resolvers instead.`,
+          );
         };
       }
     }

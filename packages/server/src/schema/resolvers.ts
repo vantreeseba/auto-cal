@@ -1,15 +1,15 @@
 import {
+  type ActivityType,
+  type Habit,
+  type HabitCompletion,
+  type TimeBlock,
+  type Todo,
   activityTypes,
   habitCompletions,
   habits,
   timeBlocks,
   todos,
   users,
-  type ActivityType,
-  type Habit,
-  type HabitCompletion,
-  type TimeBlock,
-  type Todo,
 } from '@auto-cal/db/schema';
 import {
   and,
@@ -30,20 +30,16 @@ import {
   parse,
 } from 'graphql';
 import { z } from 'zod';
-import type { Context } from '../context.ts';
 import type { InnerOrder, TodoOrderBy } from '../__generated__/resolvers.ts';
-import {
-  signMagicToken,
-  signSessionToken,
-  verifyToken,
-} from '../auth.ts';
+import { signMagicToken, signSessionToken, verifyToken } from '../auth.ts';
+import type { Context } from '../context.ts';
+import { runSchedulerWriteback } from '../services/scheduler-writeback.ts';
 import {
   computeSchedule,
   startOfISOWeek,
   startOfISOWeekStr,
   startOfLocalMonth,
 } from '../services/scheduler.ts';
-import { runSchedulerWriteback } from '../services/scheduler-writeback.ts';
 import {
   CompleteHabitInput,
   CreateActivityTypeInput,
@@ -261,18 +257,6 @@ const extensionSDL = `
     scheduledAt: String
   }
 
-  extend type Todo {
-    activityType: ActivityType
-  }
-
-  extend type Habit {
-    activityType: ActivityType
-  }
-
-  extend type TimeBlock {
-    activityType: ActivityType
-  }
-
   extend type Query {
     myProfile: UserProfile
     myActivityTypes: [ActivityType!]!
@@ -369,7 +353,8 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     const entries = Object.entries(orderBy)
       .filter((e): e is [string, InnerOrder] => e[1] != null)
       .sort(([, a], [, b]) => a.priority - b.priority);
-    if (entries.length === 0) return [desc(todos.priority), desc(todos.createdAt)];
+    if (entries.length === 0)
+      return [desc(todos.priority), desc(todos.createdAt)];
     return entries.map(([field, inner]) => {
       const col = TODO_COLUMN_MAP[field as keyof typeof TODO_COLUMN_MAP];
       return inner.direction === 'asc' ? asc(col) : desc(col);
@@ -379,7 +364,11 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
   queryFields.myTodos!.resolve = async (
     _parent,
-    args: { activityTypeId?: string; completed?: boolean; orderBy?: TodoOrderBy },
+    args: {
+      activityTypeId?: string;
+      completed?: boolean;
+      orderBy?: TodoOrderBy;
+    },
     context: Context,
   ) => {
     if (!context.userId) throw new Error('Not authenticated');
@@ -449,18 +438,27 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     const start = args.startDate ? new Date(args.startDate) : null;
     const end = args.endDate ? new Date(args.endDate) : null;
 
-    const [userActivityTypes, allTodos, allHabits]: [ActivityType[], Todo[], Habit[]] =
-      await Promise.all([
-        context.db._query.activityTypes.findMany({
-          where: eq(activityTypes.userId, context.userId),
-        }),
-        context.db._query.todos.findMany({
-          where: and(eq(todos.userId, context.userId), isNotNull(todos.activityTypeId)),
-        }),
-        context.db._query.habits.findMany({
-          where: and(eq(habits.userId, context.userId), isNotNull(habits.activityTypeId)),
-        }),
-      ]);
+    const [userActivityTypes, allTodos, allHabits]: [
+      ActivityType[],
+      Todo[],
+      Habit[],
+    ] = await Promise.all([
+      context.db._query.activityTypes.findMany({
+        where: eq(activityTypes.userId, context.userId),
+      }),
+      context.db._query.todos.findMany({
+        where: and(
+          eq(todos.userId, context.userId),
+          isNotNull(todos.activityTypeId),
+        ),
+      }),
+      context.db._query.habits.findMany({
+        where: and(
+          eq(habits.userId, context.userId),
+          isNotNull(habits.activityTypeId),
+        ),
+      }),
+    ]);
 
     const todosByType = new Map<string, typeof allTodos>();
     for (const todo of allTodos) {
@@ -473,7 +471,10 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     const habitsByType = new Map<string, number>();
     for (const habit of allHabits) {
       if (!habit.activityTypeId) continue;
-      habitsByType.set(habit.activityTypeId, (habitsByType.get(habit.activityTypeId) ?? 0) + 1);
+      habitsByType.set(
+        habit.activityTypeId,
+        (habitsByType.get(habit.activityTypeId) ?? 0) + 1,
+      );
     }
 
     return userActivityTypes.map((at) => {
@@ -520,21 +521,32 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     if (userHabits.length === 0) return [];
 
     const completionConditions = [
-      inArray(habitCompletions.habitId, userHabits.map((h) => h.id)),
+      inArray(
+        habitCompletions.habitId,
+        userHabits.map((h) => h.id),
+      ),
       isNotNull(habitCompletions.completedAt),
     ];
     if (args.startDate)
-      completionConditions.push(gte(habitCompletions.completedAt, new Date(args.startDate)));
+      completionConditions.push(
+        gte(habitCompletions.completedAt, new Date(args.startDate)),
+      );
     if (args.endDate)
-      completionConditions.push(lte(habitCompletions.completedAt, new Date(args.endDate)));
+      completionConditions.push(
+        lte(habitCompletions.completedAt, new Date(args.endDate)),
+      );
 
-    const allCompletions: HabitCompletion[] = await context.db._query.habitCompletions.findMany({
-      where: and(...completionConditions),
-    });
+    const allCompletions: HabitCompletion[] =
+      await context.db._query.habitCompletions.findMany({
+        where: and(...completionConditions),
+      });
 
     const completionsByHabit = new Map<string, number>();
     for (const c of allCompletions) {
-      completionsByHabit.set(c.habitId, (completionsByHabit.get(c.habitId) ?? 0) + 1);
+      completionsByHabit.set(
+        c.habitId,
+        (completionsByHabit.get(c.habitId) ?? 0) + 1,
+      );
     }
 
     return userHabits.map((habit) => {
@@ -570,18 +582,21 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     if (start) todoConditions.push(gte(todos.scheduledAt, start));
 
     // Fetch habits, todos, and activity types in parallel; completions depend on habit IDs
-    const [userHabits, todosInRange, userActivityTypes]: [Habit[], Todo[], ActivityType[]] =
-      await Promise.all([
-        context.db._query.habits.findMany({
-          where: eq(habits.userId, context.userId),
-        }),
-        context.db._query.todos.findMany({
-          where: and(...todoConditions),
-        }),
-        context.db._query.activityTypes.findMany({
-          where: eq(activityTypes.userId, context.userId),
-        }),
-      ]);
+    const [userHabits, todosInRange, userActivityTypes]: [
+      Habit[],
+      Todo[],
+      ActivityType[],
+    ] = await Promise.all([
+      context.db._query.habits.findMany({
+        where: eq(habits.userId, context.userId),
+      }),
+      context.db._query.todos.findMany({
+        where: and(...todoConditions),
+      }),
+      context.db._query.activityTypes.findMany({
+        where: eq(activityTypes.userId, context.userId),
+      }),
+    ]);
 
     const activityTypeMap = new Map<string, ActivityType>(
       userActivityTypes.map((at) => [at.id, at]),
@@ -590,7 +605,10 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     const completionsByHabit = new Map<string, number>();
     if (userHabits.length > 0) {
       const conditions = [
-        inArray(habitCompletions.habitId, userHabits.map((h) => h.id)),
+        inArray(
+          habitCompletions.habitId,
+          userHabits.map((h) => h.id),
+        ),
         isNotNull(habitCompletions.completedAt),
         lte(habitCompletions.completedAt, end),
       ];
@@ -600,7 +618,10 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
           where: and(...conditions),
         });
       for (const c of allHabitCompletions) {
-        completionsByHabit.set(c.habitId, (completionsByHabit.get(c.habitId) ?? 0) + 1);
+        completionsByHabit.set(
+          c.habitId,
+          (completionsByHabit.get(c.habitId) ?? 0) + 1,
+        );
       }
     }
 
@@ -622,26 +643,32 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
         target,
         frequencyUnit: habit.frequencyUnit,
         frequencyCount: habit.frequencyCount,
-        activityType: habit.activityTypeId ? (activityTypeMap.get(habit.activityTypeId) ?? null) : null,
+        activityType: habit.activityTypeId
+          ? (activityTypeMap.get(habit.activityTypeId) ?? null)
+          : null,
       };
     });
 
     const habitScore =
       habitSummaries.length > 0
-        ? habitSummaries.reduce((sum, h) => sum + h.completionRate, 0) / habitSummaries.length
+        ? habitSummaries.reduce((sum, h) => sum + h.completionRate, 0) /
+          habitSummaries.length
         : null;
 
     const totalTodos = todosInRange.length;
-    const completedTodos = todosInRange.filter((t) => t.completedAt !== null).length;
+    const completedTodos = todosInRange.filter(
+      (t) => t.completedAt !== null,
+    ).length;
     const overdueTodos = todosInRange.filter(
-      (t) => t.completedAt === null && t.scheduledAt! < now,
+      (t) =>
+        t.completedAt === null && t.scheduledAt !== null && t.scheduledAt < now,
     ).length;
     const todoScore = totalTodos > 0 ? completedTodos / totalTodos : null;
 
     const weightedScore =
       habitScore !== null && todoScore !== null
         ? (habitScore + todoScore) / 2
-        : habitScore ?? todoScore ?? null;
+        : (habitScore ?? todoScore ?? null);
 
     return {
       weightedScore,
@@ -716,12 +743,13 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
       return { start, end, label };
     }
 
-    const allCompletions: HabitCompletion[] = await context.db._query.habitCompletions.findMany({
-      where: and(
-        eq(habitCompletions.habitId, args.habitId),
-        isNotNull(habitCompletions.completedAt),
-      ),
-    });
+    const allCompletions: HabitCompletion[] =
+      await context.db._query.habitCompletions.findMany({
+        where: and(
+          eq(habitCompletions.habitId, args.habitId),
+          isNotNull(habitCompletions.completedAt),
+        ),
+      });
 
     const totalCompletions = allCompletions.length;
     const allTimeRate = totalCompletions / habit.frequencyCount;
@@ -784,7 +812,8 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
             .regex(/^\d{4}-\d{2}-\d{2}$/, 'weekStart must be YYYY-MM-DD')
             .parse(args.weekStart);
           const parsed = new Date(`${dateStr}T00:00:00`);
-          if (Number.isNaN(parsed.getTime())) throw new Error('Invalid weekStart date');
+          if (Number.isNaN(parsed.getTime()))
+            throw new Error('Invalid weekStart date');
           return startOfISOWeekStr(parsed);
         })()
       : startOfISOWeekStr(new Date());
@@ -807,35 +836,36 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
       userCompletedTodos,
       userHabits,
       userActivityTypes,
-    ]: [TimeBlock[], Todo[], Todo[], Habit[], ActivityType[]] = await Promise.all([
-      context.db._query.timeBlocks.findMany({
-        where: eq(timeBlocks.userId, context.userId),
-      }),
-      context.db._query.todos.findMany({
-        where: and(
-          eq(todos.userId, context.userId),
-          isNull(todos.completedAt),
-          isNotNull(todos.activityTypeId),
-        ),
-        orderBy: [desc(todos.priority)],
-      }),
-      context.db._query.todos.findMany({
-        where: and(
-          eq(todos.userId, context.userId),
-          isNotNull(todos.completedAt),
-          isNotNull(todos.activityTypeId),
-        ),
-      }),
-      context.db._query.habits.findMany({
-        where: and(
-          eq(habits.userId, context.userId),
-          isNotNull(habits.activityTypeId),
-        ),
-      }),
-      context.db._query.activityTypes.findMany({
-        where: eq(activityTypes.userId, context.userId),
-      }),
-    ]);
+    ]: [TimeBlock[], Todo[], Todo[], Habit[], ActivityType[]] =
+      await Promise.all([
+        context.db._query.timeBlocks.findMany({
+          where: eq(timeBlocks.userId, context.userId),
+        }),
+        context.db._query.todos.findMany({
+          where: and(
+            eq(todos.userId, context.userId),
+            isNull(todos.completedAt),
+            isNotNull(todos.activityTypeId),
+          ),
+          orderBy: [desc(todos.priority)],
+        }),
+        context.db._query.todos.findMany({
+          where: and(
+            eq(todos.userId, context.userId),
+            isNotNull(todos.completedAt),
+            isNotNull(todos.activityTypeId),
+          ),
+        }),
+        context.db._query.habits.findMany({
+          where: and(
+            eq(habits.userId, context.userId),
+            isNotNull(habits.activityTypeId),
+          ),
+        }),
+        context.db._query.activityTypes.findMany({
+          where: eq(activityTypes.userId, context.userId),
+        }),
+      ]);
 
     const now = new Date();
 
@@ -843,7 +873,9 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     // Overdue pinned todos (past scheduledAt, not completed) lose their pin and re-enter the
     // scheduler so they get placed at the next available future slot.
     const overduePinnedIds = allIncompleteTodos
-      .filter((t) => t.manuallyScheduled && t.scheduledAt && t.scheduledAt < now)
+      .filter(
+        (t) => t.manuallyScheduled && t.scheduledAt && t.scheduledAt < now,
+      )
       .map((t) => t.id);
 
     if (overduePinnedIds.length > 0) {
@@ -855,7 +887,10 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     }
 
     const pinnedTodos = allIncompleteTodos.filter(
-      (t) => t.manuallyScheduled && t.scheduledAt && !overduePinnedIds.includes(t.id),
+      (t) =>
+        t.manuallyScheduled &&
+        t.scheduledAt &&
+        !overduePinnedIds.includes(t.id),
     );
     const userTodos = allIncompleteTodos.filter(
       (t) => !t.manuallyScheduled || overduePinnedIds.includes(t.id),
@@ -865,7 +900,10 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     const userHabitIds = userHabits.map((h) => h.id);
 
     // Guard: if user has no habits, skip completion queries entirely
-    const [weekCompletions, monthCompletions]: [HabitCompletion[], HabitCompletion[]] =
+    const [weekCompletions, monthCompletions]: [
+      HabitCompletion[],
+      HabitCompletion[],
+    ] =
       userHabitIds.length === 0
         ? [[], []]
         : await Promise.all([
@@ -888,7 +926,9 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
           ]);
 
     // Build activity type lookup map
-    const activityTypeMap = new Map<string, ActivityType>(userActivityTypes.map((at) => [at.id, at]));
+    const activityTypeMap = new Map<string, ActivityType>(
+      userActivityTypes.map((at) => [at.id, at]),
+    );
 
     // Build completion count maps
     const weekCompletionCounts = new Map<string, number>();
@@ -942,12 +982,14 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
       ...item,
       completedAt:
         item.kind === 'todo'
-          ? (todoCompletedAtMap.get(item.id)?.toISOString().replace('Z', '') ?? null)
+          ? (todoCompletedAtMap.get(item.id)?.toISOString().replace('Z', '') ??
+            null)
           : null,
     }));
 
     // Pinned todos bypass the algorithm — appear at their stored scheduledAt
     const pinnedItems = pinnedTodos.map((t) => {
+      // biome-ignore lint/style/noNonNullAssertion: pinnedTodos is filtered by t.scheduledAt truthy above
       const start = t.scheduledAt!;
       const end = new Date(start.getTime() + t.estimatedLength * 60_000);
       return {
@@ -956,7 +998,9 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
         title: t.title,
         priority: t.priority,
         estimatedLength: t.estimatedLength,
-        activityType: t.activityTypeId ? (activityTypeMap.get(t.activityTypeId) ?? null) : null,
+        activityType: t.activityTypeId
+          ? (activityTypeMap.get(t.activityTypeId) ?? null)
+          : null,
         scheduledStart: start.toISOString().replace('Z', ''),
         scheduledEnd: end.toISOString().replace('Z', ''),
         isScheduled: true,
@@ -1115,7 +1159,10 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
           manuallyScheduled: input.manuallyScheduled,
         }),
         ...('completedAt' in input && {
-          completedAt: input.completedAt === null ? null : new Date(input.completedAt as string),
+          completedAt:
+            input.completedAt === null
+              ? null
+              : new Date(input.completedAt as string),
         }),
         updatedAt: new Date(),
       })
@@ -1355,7 +1402,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
   mutationFields.myReschedule!.resolve = async (
     _parent,
-    args: { weekStart?: string },
+    _args: { weekStart?: string },
     context: Context,
   ) => {
     if (!context.userId) throw new Error('Not authenticated');
@@ -1369,7 +1416,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   mutationFields.requestMagicLink!.resolve = async (
     _parent,
     args: { email: string },
-    context: Context,
+    _context: Context,
   ) => {
     const email = z.string().email().parse(args.email).toLowerCase();
     const token = await signMagicToken(email);
@@ -1415,7 +1462,11 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
 
   type RowWithActivityTypeId = { activityTypeId?: string | null };
 
-  function resolveActivityType(parent: RowWithActivityTypeId, _args: unknown, context: Context) {
+  function resolveActivityType(
+    parent: RowWithActivityTypeId,
+    _args: unknown,
+    context: Context,
+  ) {
     if (!parent.activityTypeId) return null;
     return context.loaders.activityType.load(parent.activityTypeId);
   }

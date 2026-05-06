@@ -3,7 +3,7 @@ import type {
   CreateActivityTypeMutationVariables,
   DeleteActivityTypeMutation,
   DeleteActivityTypeMutationVariables,
-  MyActivityTypesQuery,
+  GetMyActivityTypesQuery,
   UpdateActivityTypeMutation,
   UpdateActivityTypeMutationVariables,
 } from '@/__generated__/graphql.js';
@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useAppForm } from '@/hooks/form-hook';
-import { useMutation } from '@apollo/client';
+import { useMutation } from '@apollo/client/react';
 import { Trash2 } from 'lucide-react';
 import { z } from 'zod';
 
@@ -71,7 +71,7 @@ type ActivityTypeFormValues = z.infer<typeof activityTypeSchema>;
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-type ActivityTypeItem = MyActivityTypesQuery['myActivityTypes'][number];
+type ActivityTypeItem = GetMyActivityTypesQuery['myActivityTypes'][number];
 
 interface ActivityTypeFormProps {
   open: boolean;

@@ -82,7 +82,9 @@ export function HabitList({ items, onSelect }: HabitListProps) {
               </div>
               <div>
                 <p className="font-medium text-sm">No habits yet</p>
-                <p className="text-sm text-muted-foreground">Build consistency with recurring tasks</p>
+                <p className="text-sm text-muted-foreground">
+                  Build consistency with recurring tasks
+                </p>
               </div>
               <Button size="sm" onClick={openCreate}>
                 <Plus className="mr-2 h-4 w-4" />
