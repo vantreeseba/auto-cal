@@ -1,0 +1,269 @@
+import {
+  type GraphQLObjectType,
+  type GraphQLSchema,
+  extendSchema,
+  parse,
+} from 'graphql';
+import type { Context } from '../../context.ts';
+import { applyActivityTypeResolvers } from './activity-types.ts';
+import { applyAuthResolvers } from './auth.ts';
+import { applyHabitResolvers } from './habits.ts';
+import { applyProfileResolvers } from './profile.ts';
+import { applyScheduleResolvers } from './schedule.ts';
+import { applyStatsResolvers } from './stats.ts';
+import { applyTimeBlockResolvers } from './time-blocks.ts';
+import { applyTodoResolvers } from './todos.ts';
+
+const extensionSDL = `
+  type UserProfile {
+    id: ID!
+    email: String!
+    timezone: String!
+  }
+
+  type ActivityTypeStats {
+    activityTypeId: String!
+    activityTypeName: String!
+    totalTodos: Int!
+    completedTodos: Int!
+    totalHabits: Int!
+  }
+
+  type HabitStats {
+    habitId: String!
+    title: String!
+    completionRate: Float!
+    totalCompletions: Int!
+  }
+
+  type HabitPeriod {
+    label: String!
+    periodStart: String!
+    periodEnd: String!
+    completions: Int!
+    target: Int!
+    rate: Float!
+  }
+
+  type HabitDetail {
+    habitId: ID!
+    title: String!
+    description: String
+    priority: Int!
+    estimatedLength: Int!
+    frequencyCount: Int!
+    frequencyUnit: String!
+    activityType: ActivityType
+    totalCompletions: Int!
+    allTimeRate: Float!
+    periods: [HabitPeriod!]!
+  }
+
+  type HabitStatSummary {
+    habitId: ID!
+    title: String!
+    completionRate: Float!
+    completions: Int!
+    target: Float!
+    frequencyUnit: String!
+    frequencyCount: Int!
+    activityType: ActivityType
+  }
+
+  type TodoStatSummary {
+    total: Int!
+    completed: Int!
+    overdue: Int!
+    completionRate: Float!
+  }
+
+  type StatsOverview {
+    weightedScore: Float
+    habitScore: Float
+    todoScore: Float
+    habits: [HabitStatSummary!]!
+    todos: TodoStatSummary!
+  }
+
+  enum ScheduledItemKind {
+    todo
+    habit
+  }
+
+  type ScheduledItem {
+    kind: ScheduledItemKind!
+    id: ID!
+    title: String!
+    priority: Int!
+    estimatedLength: Int!
+    activityType: ActivityType
+    scheduledStart: String
+    scheduledEnd: String
+    isScheduled: Boolean!
+    isOverdue: Boolean!
+    completedAt: String
+  }
+
+  input CreateActivityTypeArgs {
+    name: String!
+    color: String
+  }
+
+  input UpdateActivityTypeArgs {
+    id: ID!
+    name: String
+    color: String
+  }
+
+  input CreateTodoArgs {
+    title: String!
+    description: String
+    priority: Int
+    estimatedLength: Int
+    activityTypeId: ID
+    scheduledAt: String
+  }
+
+  input UpdateTodoArgs {
+    id: ID!
+    title: String
+    description: String
+    priority: Int
+    estimatedLength: Int
+    activityTypeId: ID
+    scheduledAt: String
+    manuallyScheduled: Boolean
+    completedAt: String
+  }
+
+  input CreateHabitArgs {
+    title: String!
+    description: String
+    priority: Int
+    estimatedLength: Int
+    activityTypeId: ID
+    frequencyCount: Int!
+    frequencyUnit: String!
+  }
+
+  input CreateTimeBlockArgs {
+    activityTypeId: ID
+    daysOfWeek: [Int!]!
+    startTime: String!
+    endTime: String!
+    priority: Int
+  }
+
+  input UpdateHabitArgs {
+    id: ID!
+    title: String
+    description: String
+    priority: Int
+    estimatedLength: Int
+    activityTypeId: ID
+    frequencyCount: Int
+    frequencyUnit: String
+  }
+
+  input UpdateTimeBlockArgs {
+    id: ID!
+    activityTypeId: ID
+    daysOfWeek: [Int!]
+    startTime: String
+    endTime: String
+    priority: Int
+  }
+
+  input CompleteHabitArgs {
+    habitId: ID!
+    scheduledAt: String
+  }
+
+  extend type Query {
+    myProfile: UserProfile
+    myActivityTypes: [ActivityType!]!
+    myTodos(activityTypeId: ID, completed: Boolean, orderBy: TodoOrderBy): [Todo!]!
+    myHabits(activityTypeId: ID): [Habit!]!
+    myTimeBlocks(activityTypeId: ID, containsDay: Int): [TimeBlock!]!
+    activityTypeStats(startDate: String, endDate: String): [ActivityTypeStats!]!
+    habitStats(habitId: ID, startDate: String, endDate: String): [HabitStats!]!
+    myHabitDetail(habitId: ID!, periods: Int): HabitDetail!
+    myStats(startDate: String, endDate: String): StatsOverview!
+    mySchedule(weekStart: String, timezone: String): [ScheduledItem!]!
+  }
+
+  extend type Mutation {
+    myUpdateProfile(timezone: String!): Boolean!
+    myCreateActivityType(input: CreateActivityTypeArgs!): ActivityType!
+    myUpdateActivityType(input: UpdateActivityTypeArgs!): ActivityType!
+    myDeleteActivityType(id: ID!): Boolean!
+    myCreateTodo(input: CreateTodoArgs!): Todo!
+    myUpdateTodo(input: UpdateTodoArgs!): Todo!
+    myCompleteTodo(id: ID!): Todo!
+    myDeleteTodo(id: ID!): Boolean!
+    myCreateHabit(input: CreateHabitArgs!): Habit!
+    myDeleteHabit(id: ID!): Boolean!
+    myUpdateHabit(input: UpdateHabitArgs!): Habit!
+    myUpdateTimeBlock(input: UpdateTimeBlockArgs!): TimeBlock!
+    myCompleteHabit(input: CompleteHabitArgs!): HabitCompletion!
+    myCreateTimeBlock(input: CreateTimeBlockArgs!): TimeBlock!
+    myDeleteTimeBlock(id: ID!): Boolean!
+    myReschedule(weekStart: String): Boolean!
+    requestMagicLink(email: String!): RequestMagicLinkResult!
+    verifyMagicLink(token: String!): VerifyMagicLinkResult!
+  }
+
+  type RequestMagicLinkResult {
+    ok: Boolean!
+    magicLink: String
+  }
+
+  type VerifyMagicLinkResult {
+    token: String!
+    userId: ID!
+  }
+`;
+
+export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
+  const extended = extendSchema(schema, parse(extensionSDL));
+
+  const queryType = extended.getType('Query') as GraphQLObjectType;
+  const mutationType = extended.getType('Mutation') as GraphQLObjectType;
+  const queryFields = queryType.getFields();
+  const mutationFields = mutationType.getFields();
+
+  applyProfileResolvers(queryFields, mutationFields);
+  applyActivityTypeResolvers(queryFields, mutationFields);
+  applyTodoResolvers(queryFields, mutationFields);
+  applyHabitResolvers(queryFields, mutationFields);
+  applyTimeBlockResolvers(queryFields, mutationFields);
+  applyStatsResolvers(queryFields);
+  applyScheduleResolvers(queryFields, mutationFields);
+  applyAuthResolvers(mutationFields);
+
+  // Field resolvers: activityType on Todo, Habit, TimeBlock
+  type RowWithActivityTypeId = { activityTypeId?: string | null };
+
+  function resolveActivityType(
+    parent: RowWithActivityTypeId,
+    _args: unknown,
+    context: Context,
+  ) {
+    if (!parent.activityTypeId) return null;
+    return context.loaders.activityType.load(parent.activityTypeId);
+  }
+
+  const todoType = extended.getType('Todo') as GraphQLObjectType;
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  todoType.getFields().activityType!.resolve = resolveActivityType;
+
+  const habitType = extended.getType('Habit') as GraphQLObjectType;
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  habitType.getFields().activityType!.resolve = resolveActivityType;
+
+  const timeBlockType = extended.getType('TimeBlock') as GraphQLObjectType;
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  timeBlockType.getFields().activityType!.resolve = resolveActivityType;
+
+  return extended;
+}

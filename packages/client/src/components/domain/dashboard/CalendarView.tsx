@@ -35,7 +35,8 @@ const localizer = dateFnsLocalizer({
 
 // Create DnD-enabled Calendar
 // biome-ignore lint/suspicious/noExplicitAny: react-big-calendar DnD wrapper lacks proper generic types
-const DnDCalendar = withDragAndDrop(Calendar as any) as any;
+const wdnd: any = (withDragAndDrop as any).default ?? withDragAndDrop;
+const DnDCalendar = wdnd(Calendar as any) as any;
 
 // ─── GraphQL ────────────────────────────────────────────────────────────────
 

@@ -199,7 +199,7 @@ function DashboardPage() {
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
         <CalendarView
-          timeBlocks={calendarViewData.myTimeBlocks}
+          timeBlocks={calendarViewData?.myTimeBlocks ?? []}
           schedule={scheduleData?.mySchedule ?? []}
           date={date}
           view={view}

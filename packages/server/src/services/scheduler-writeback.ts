@@ -7,13 +7,10 @@ import type {
   Todo,
 } from '@auto-cal/db';
 import {
-  activityTypes,
   habitCompletions,
-  habits,
-  timeBlocks,
   todos,
 } from '@auto-cal/db/schema';
-import { and, eq, inArray, isNotNull, isNull, lt, ne, or } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import {
   computeSchedule,
   startOfISOWeek,
@@ -77,37 +74,32 @@ export async function runSchedulerWriteback(
     userActivityTypes,
     allActualCompletions,
   ] = (await Promise.all([
-    db._query.timeBlocks.findMany({ where: eq(timeBlocks.userId, userId) }),
-    db._query.todos.findMany({
-      where: and(
-        eq(todos.userId, userId),
-        isNull(todos.completedAt),
-        isNotNull(todos.activityTypeId),
-        or(
-          ne(todos.manuallyScheduled, true),
-          and(eq(todos.manuallyScheduled, true), lt(todos.scheduledAt, now)),
-        ),
-      ),
+    db.query.timeBlocks.findMany({
+      where: { userId },
     }),
-    db._query.habits.findMany({
-      where: and(eq(habits.userId, userId), isNotNull(habits.activityTypeId)),
+    db.query.todos.findMany({
+      where: {
+        userId,
+        completedAt: { isNull: true },
+        activityTypeId: { isNotNull: true },
+        OR: [
+          { manuallyScheduled: { ne: true } },
+          { manuallyScheduled: true, scheduledAt: { lt: now } },
+        ],
+      },
     }),
-    db._query.activityTypes.findMany({
-      where: eq(activityTypes.userId, userId),
+    db.query.habits.findMany({
+      where: { userId, activityTypeId: { isNotNull: true } },
     }),
-    db._query.habitCompletions.findMany({
-      where: and(
-        inArray(
-          habitCompletions.habitId,
-          // avoid inArray([]) which is invalid SQL
-          (
-            (await db._query.habits.findMany({
-              where: eq(habits.userId, userId),
-            })) as Habit[]
-          ).map((h) => h.id),
-        ),
-        isNotNull(habitCompletions.completedAt),
-      ),
+    db.query.activityTypes.findMany({
+      where: { userId },
+    }),
+    // Filter through the habit relation to scope by userId — no separate query needed
+    db.query.habitCompletions.findMany({
+      where: {
+        habit: { userId },
+        completedAt: { isNotNull: true },
+      },
     }),
   ])) as [TimeBlock[], Todo[], Habit[], ActivityType[], HabitCompletion[]];
 
@@ -134,10 +126,8 @@ export async function runSchedulerWriteback(
   );
 
   // ── Iterate week-by-week over the 2-month horizon ─────────────────────────
-  // Todos are placed once; they're removed from the pool after being scheduled.
-  // Habit tentative completions accumulate and are counted for deficit calculation.
   let todoPool = [...userTodos];
-  const todoSchedules = new Map<string, Date | null>(); // id → scheduledAt
+  const todoSchedules = new Map<string, Date | null>();
   const newTentativeCompletions: Array<{
     habitId: string;
     scheduledAt: Date | null;
@@ -157,7 +147,6 @@ export async function runSchedulerWriteback(
       1,
     );
 
-    // Actual completions this period
     const actualWeek = countByPeriod(
       allActualCompletions as Array<{
         habitId: string;
@@ -179,7 +168,6 @@ export async function runSchedulerWriteback(
       monthEnd,
     );
 
-    // Tentative (already-placed) completions this period
     const tentativeWeek = countByPeriod(
       newTentativeCompletions,
       'scheduledAt',
@@ -196,7 +184,6 @@ export async function runSchedulerWriteback(
     const weekCounts = addCounts(actualWeek, tentativeWeek);
     const monthCounts = addCounts(actualMonth, tentativeMonth);
 
-    // Build habit instances for this week's deficit
     const habitInstances: Array<
       (typeof userHabits)[number] & { instanceIndex: number }
     > = [];
@@ -210,7 +197,6 @@ export async function runSchedulerWriteback(
       }
     }
 
-    // Run the scheduler for this week
     const items = computeSchedule(
       weekStartStr,
       userTimeBlocks,
@@ -219,13 +205,11 @@ export async function runSchedulerWriteback(
       activityTypeMap,
     );
 
-    // Consume placed todos from the pool
     const placedTodoIds = new Set(
       items.filter((i) => i.kind === 'todo' && i.isScheduled).map((i) => i.id),
     );
     todoPool = todoPool.filter((t) => !placedTodoIds.has(t.id));
 
-    // Record todo schedules (both placed and unscheduled-this-week)
     for (const item of items) {
       if (item.kind === 'todo') {
         todoSchedules.set(
@@ -235,7 +219,6 @@ export async function runSchedulerWriteback(
       }
     }
 
-    // Accumulate tentative habit completions
     for (const item of items) {
       if (item.kind === 'habit' && item.isScheduled && item.scheduledStart) {
         newTentativeCompletions.push({
@@ -249,7 +232,6 @@ export async function runSchedulerWriteback(
     weekCursor = weekEnd;
   }
 
-  // Todos still in pool after the full horizon have no available slot
   for (const todo of todoPool) {
     if (!todoSchedules.has(todo.id)) {
       todoSchedules.set(todo.id, null);

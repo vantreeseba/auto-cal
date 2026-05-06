@@ -8,7 +8,7 @@ import {
   type GraphQLSchema,
   printSchema,
 } from 'graphql';
-import { applyCustomResolvers } from './resolvers.ts';
+import { applyCustomResolvers } from './resolvers/index.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const generatedDir = join(__dirname, '../__generated__');

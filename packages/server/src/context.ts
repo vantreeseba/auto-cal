@@ -1,7 +1,5 @@
 import type { ActivityType, DB } from '@auto-cal/db';
-import { activityTypes } from '@auto-cal/db/schema';
 import DataLoader from 'dataloader';
-import { inArray } from 'drizzle-orm';
 
 export interface Context {
   db: DB;
@@ -12,8 +10,8 @@ export interface Context {
 export function createLoaders(db: DB) {
   return {
     activityType: new DataLoader<string, ActivityType | null>(async (ids) => {
-      const rows = (await db._query.activityTypes.findMany({
-        where: inArray(activityTypes.id, [...ids]),
+      const rows = (await db.query.activityTypes.findMany({
+        where: { id: { in: [...ids] } },
       })) as ActivityType[];
       const byId = new Map(rows.map((r) => [r.id, r]));
       return ids.map((id) => byId.get(id) ?? null);
