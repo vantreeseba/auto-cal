@@ -167,6 +167,37 @@ type TodoItemProps = {
 };
 ```
 
+## Form Constants
+
+Shared constants used across domain forms:
+
+```typescript
+const PRIORITY_OPTIONS = [
+  { label: 'Low',    value: '0'   },
+  { label: 'Medium', value: '25'  },
+  { label: 'High',   value: '50'  },
+  { label: 'Urgent', value: '100' },
+];
+
+const DURATION_OPTIONS = [
+  { label: '15 minutes', value: '15'  },
+  { label: '30 minutes', value: '30'  },
+  { label: '45 minutes', value: '45'  },
+  { label: '1 hour',     value: '60'  },
+  { label: '1.5 hours',  value: '90'  },
+  { label: '2 hours',    value: '120' },
+  { label: '3 hours',    value: '180' },
+  { label: '4+ hours',   value: '480' },
+];
+
+// Time blocks only
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']; // index = daysOfWeek value
+const WEEKDAYS = [1, 2, 3, 4, 5];
+const WEEKEND  = [0, 6];
+```
+
+Use these same constants in new forms. `InlineLengthEdit` allows free-form entry (1–1440 min) for quick edits on list items.
+
 ## Form Pattern (TanStack Form)
 
 `useAppForm` wraps TanStack Form with project-specific field components. Available fields:

@@ -2,6 +2,24 @@
 
 Express + Apollo Server, no build step (`--experimental-strip-types`). All imports **must** include `.ts` extension.
 
+## Startup Behaviour
+
+`seedDemoUser()` always runs on startup. `seedDemoData()` runs in non-production and is idempotent (skips if the demo user already has activity types). Demo seed creates 3 activity types (Work, Exercise, Learning), 6 time blocks, 5 todos, 3 habits.
+
+## Auth — UUID Bearer Fallback (Dev Only)
+
+The server context accepts a raw UUID as a Bearer token for backwards compatibility with the demo user (`DEMO_USER_ID`). **This fallback must be removed before production deployment** (guard with `NODE_ENV !== 'production'` or remove entirely once real auth replaces the demo user flow). See `packages/server/src/index.ts`.
+
+## mySchedule vs DB scheduledAt
+
+`mySchedule` re-computes the schedule fresh from scratch on every call using `computeSchedule` — it does **not** read `scheduledAt` from the DB for non-pinned todos. The DB `scheduledAt` is written by `runSchedulerWriteback` and used for:
+1. The pre-placement lock (writeback won't move a todo that already has a valid future slot)
+2. The "Unschedulable" indicator in `TodoItem` (`activityTypeId` set but `scheduledAt` null)
+
+Manually-pinned todos (`manuallyScheduled: true`) are the exception — they use their stored `scheduledAt` directly in `mySchedule`.
+
+`myReschedule` is the only mutation that **awaits** the writeback (it's user-triggered and the client expects confirmation). All other mutations fire-and-forget.
+
 ## Scheduler Writeback — Fire-and-Forget
 
 `runSchedulerWriteback` is called without `await` so mutations return immediately. Errors are swallowed with `.catch(console.error)` — the client never sees a scheduler failure:

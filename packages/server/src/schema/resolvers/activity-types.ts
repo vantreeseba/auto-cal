@@ -85,8 +85,10 @@ export function applyActivityTypeResolvers(
     return userActivityTypes.map((at) => {
       const typeTodos = todosByType.get(at.id) ?? [];
       const totalTodos = typeTodos.filter((t) => {
-        if (start && t.createdAt < start) return false;
-        if (end && t.createdAt > end) return false;
+        const ref = t.scheduledAt ?? t.completedAt;
+        if (!ref) return !start && !end;
+        if (start && ref < start) return false;
+        if (end && ref > end) return false;
         return true;
       }).length;
       const completedTodos = typeTodos.filter((t) => {
