@@ -1,8 +1,8 @@
 node_modules
 dist
-# Server-generated resolver types (derived from SDL, not needed in CI)
-packages/server/src/__generated__/resolvers.ts
+__generated__
 #drizzle
+routeTree.gen.ts
 pgdata
 .env
 .env.local
