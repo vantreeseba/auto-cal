@@ -48,9 +48,7 @@ const CREATE_ACTIVITY_TYPE = graphql(`
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
-  color: z
-    .string()
-    .regex(/^#[0-9a-fA-F]{6}$/, 'Must be a valid hex color'),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Must be a valid hex color'),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -68,7 +66,11 @@ export function StepActivityTypes({ onNext }: StepActivityTypesProps) {
     CreateActivityTypeMutation,
     CreateActivityTypeMutationVariables
   >(CREATE_ACTIVITY_TYPE, {
-    refetchQueries: ['GetActivityTypesForOnboarding', 'GetMyActivityTypes', 'GetActivityTypesForSelect'],
+    refetchQueries: [
+      'GetActivityTypesForOnboarding',
+      'GetMyActivityTypes',
+      'GetActivityTypesForSelect',
+    ],
   });
 
   const form = useAppForm({

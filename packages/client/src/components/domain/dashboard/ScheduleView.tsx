@@ -131,15 +131,21 @@ export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
   const byDay = useMemo(() => groupByDay(scheduled), [scheduled]);
   const dayKeys = useMemo(() => [...byDay.keys()].sort(), [byDay]);
 
-  const [completeHabit, { loading: completingHabit }] = useMutation(COMPLETE_HABIT, {
-    refetchQueries: ['MySchedule'],
-    onError: (err) => console.error('[completeHabit]', err.message),
-  });
+  const [completeHabit, { loading: completingHabit }] = useMutation(
+    COMPLETE_HABIT,
+    {
+      refetchQueries: ['MySchedule'],
+      onError: (err) => console.error('[completeHabit]', err.message),
+    },
+  );
 
-  const [completeTodo, { loading: completingTodo }] = useMutation(COMPLETE_TODO, {
-    refetchQueries: ['MySchedule'],
-    onError: (err) => console.error('[completeTodo]', err.message),
-  });
+  const [completeTodo, { loading: completingTodo }] = useMutation(
+    COMPLETE_TODO,
+    {
+      refetchQueries: ['MySchedule'],
+      onError: (err) => console.error('[completeTodo]', err.message),
+    },
+  );
 
   const completing = completingHabit || completingTodo;
 
@@ -147,9 +153,15 @@ export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
     const habitId = item.id.replace(/-\d+$/, '');
     const now = new Date().toISOString();
     completeHabit({
-      variables: { input: { habitId, scheduledAt: item.scheduledStart ?? undefined } },
+      variables: {
+        input: { habitId, scheduledAt: item.scheduledStart ?? undefined },
+      },
       optimisticResponse: {
-        myCompleteHabit: { __typename: 'HabitCompletion', id: `${item.id}-optimistic`, completedAt: now },
+        myCompleteHabit: {
+          __typename: 'HabitCompletion',
+          id: `${item.id}-optimistic`,
+          completedAt: now,
+        },
       },
     });
   }
@@ -168,11 +180,7 @@ export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
     <div className="flex flex-col gap-4 overflow-y-auto h-full">
       <TodoForm open={todoOpen} onOpenChange={setTodoOpen} />
 
-      <Button
-        size="sm"
-        className="w-full"
-        onClick={() => setTodoOpen(true)}
-      >
+      <Button size="sm" className="w-full" onClick={() => setTodoOpen(true)}>
         <Plus className="mr-1 h-4 w-4" />
         Add todo
       </Button>

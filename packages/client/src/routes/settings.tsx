@@ -50,8 +50,8 @@ function ICalCard({ userId }: { userId: string }) {
         </CardTitle>
         <CardDescription>
           Subscribe to your schedule in any calendar app (Google Calendar, Apple
-          Calendar, Home Assistant, etc.). The feed includes the current and next
-          week's scheduled todos and habits.
+          Calendar, Home Assistant, etc.). The feed includes the current and
+          next week's scheduled todos and habits.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">

@@ -1,8 +1,14 @@
 import { db } from '@auto-cal/db';
-import type { ActivityType, Habit, HabitCompletion, TimeBlock, Todo } from '@auto-cal/db';
+import type {
+  ActivityType,
+  Habit,
+  HabitCompletion,
+  TimeBlock,
+  Todo,
+} from '@auto-cal/db';
+import { fromZonedTime } from 'date-fns-tz';
 import type { Request, Response } from 'express';
 import ical from 'ical-generator';
-import { fromZonedTime } from 'date-fns-tz';
 import {
   computeSchedule,
   startOfISOWeek,
@@ -76,7 +82,10 @@ export async function icalHandler(req: Request, res: Response): Promise<void> {
       1,
     );
 
-    const [weekCompletions, monthCompletions]: [HabitCompletion[], HabitCompletion[]] =
+    const [weekCompletions, monthCompletions]: [
+      HabitCompletion[],
+      HabitCompletion[],
+    ] =
       habitIds.length === 0
         ? [[], []]
         : await Promise.all([

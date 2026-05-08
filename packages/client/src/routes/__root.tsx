@@ -112,7 +112,10 @@ function RootLayout() {
                   <Link
                     to="/settings"
                     activeProps={{ className: 'bg-muted text-foreground' }}
-                    inactiveProps={{ className: 'text-muted-foreground hover:bg-muted hover:text-foreground' }}
+                    inactiveProps={{
+                      className:
+                        'text-muted-foreground hover:bg-muted hover:text-foreground',
+                    }}
                     className="rounded-md p-1.5 transition-colors"
                     aria-label="Settings"
                   >
@@ -162,7 +165,12 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       throw redirect({ to: '/login' });
     }
 
-    if (token && !isPublic && !isOnboarding && !localStorage.getItem('onboarding_done')) {
+    if (
+      token &&
+      !isPublic &&
+      !isOnboarding &&
+      !localStorage.getItem('onboarding_done')
+    ) {
       throw redirect({ to: '/onboarding' });
     }
   },

@@ -6,10 +6,7 @@ import { StepTodos } from '@/components/domain/onboarding/StepTodos';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@apollo/client/react';
-import {
-  createFileRoute,
-  useNavigate,
-} from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { Check, X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { z } from 'zod';
@@ -120,11 +117,7 @@ function OnboardingPage() {
                         : 'bg-muted text-muted-foreground',
                   )}
                 >
-                  {i + 1 < step ? (
-                    <Check className="h-3.5 w-3.5" />
-                  ) : (
-                    i + 1
-                  )}
+                  {i + 1 < step ? <Check className="h-3.5 w-3.5" /> : i + 1}
                 </div>
                 <span
                   className={cn(
@@ -152,7 +145,10 @@ function OnboardingPage() {
         {/* Step content */}
         {step === 1 && <StepActivityTypes onNext={() => goToStep(2)} />}
         {step === 2 && (
-          <StepTimeBlocks onBack={() => goToStep(1)} onNext={() => goToStep(3)} />
+          <StepTimeBlocks
+            onBack={() => goToStep(1)}
+            onNext={() => goToStep(3)}
+          />
         )}
         {step === 3 && (
           <StepHabits

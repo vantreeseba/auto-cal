@@ -37,6 +37,7 @@ const localizer = dateFnsLocalizer({
 // Create DnD-enabled Calendar
 // biome-ignore lint/suspicious/noExplicitAny: react-big-calendar DnD wrapper lacks proper generic types
 const wdnd: any = (withDragAndDrop as any).default ?? withDragAndDrop;
+// biome-ignore lint/suspicious/noExplicitAny: react-big-calendar DnD wrapper lacks proper generic types
 const DnDCalendar = wdnd(Calendar as any) as any;
 
 // ─── GraphQL ────────────────────────────────────────────────────────────────
@@ -203,15 +204,21 @@ function eventStyleGetter(event: CalendarEvent) {
 // ─── Custom Event Component ──────────────────────────────────────────────────
 
 function CalendarEventComponent({ event }: { event: CalendarEvent }) {
-  const [completeHabit, { loading: completingHabit }] = useMutation(COMPLETE_HABIT, {
-    refetchQueries: ['MySchedule'],
-    onError: (err) => console.error('[completeHabit]', err.message),
-  });
+  const [completeHabit, { loading: completingHabit }] = useMutation(
+    COMPLETE_HABIT,
+    {
+      refetchQueries: ['MySchedule'],
+      onError: (err) => console.error('[completeHabit]', err.message),
+    },
+  );
 
-  const [completeTodo, { loading: completingTodo }] = useMutation(COMPLETE_TODO, {
-    refetchQueries: ['MySchedule'],
-    onError: (err) => console.error('[completeTodo]', err.message),
-  });
+  const [completeTodo, { loading: completingTodo }] = useMutation(
+    COMPLETE_TODO,
+    {
+      refetchQueries: ['MySchedule'],
+      onError: (err) => console.error('[completeTodo]', err.message),
+    },
+  );
 
   const completing = completingHabit || completingTodo;
   const isHabit = event.isTask && event.kind === 'habit';
@@ -225,10 +232,17 @@ function CalendarEventComponent({ event }: { event: CalendarEvent }) {
       const habitId = raw.replace(/-\d+$/, '');
       completeHabit({
         variables: {
-          input: { habitId, scheduledAt: format(event.start, "yyyy-MM-dd'T'HH:mm:ss") },
+          input: {
+            habitId,
+            scheduledAt: format(event.start, "yyyy-MM-dd'T'HH:mm:ss"),
+          },
         },
         optimisticResponse: {
-          myCompleteHabit: { __typename: 'HabitCompletion', id: `${event.id}-optimistic`, completedAt: now },
+          myCompleteHabit: {
+            __typename: 'HabitCompletion',
+            id: `${event.id}-optimistic`,
+            completedAt: now,
+          },
         },
       }).catch(console.error);
     } else if (isTodo) {

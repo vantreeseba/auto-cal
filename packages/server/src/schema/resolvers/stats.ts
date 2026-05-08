@@ -1,8 +1,8 @@
-import {
-  type ActivityType,
-  type Habit,
-  type HabitCompletion,
-  type Todo,
+import type {
+  ActivityType,
+  Habit,
+  HabitCompletion,
+  Todo,
 } from '@auto-cal/db/schema';
 import type { GraphQLObjectType } from 'graphql';
 import type { Context } from '../../context.ts';

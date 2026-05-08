@@ -6,10 +6,7 @@ import type {
   TimeBlock,
   Todo,
 } from '@auto-cal/db';
-import {
-  habitCompletions,
-  todos,
-} from '@auto-cal/db/schema';
+import { habitCompletions, todos } from '@auto-cal/db/schema';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 import {
   computeSchedule,

@@ -85,7 +85,11 @@ export function StepTimeBlocks({ onBack, onNext }: StepTimeBlocksProps) {
     CreateTimeBlockMutation,
     CreateTimeBlockMutationVariables
   >(CREATE_TIME_BLOCK, {
-    refetchQueries: ['GetMyTimeblocksForOnboarding', 'GetMyTimeBlocks', 'GetCalendarData'],
+    refetchQueries: [
+      'GetMyTimeblocksForOnboarding',
+      'GetMyTimeBlocks',
+      'GetCalendarData',
+    ],
   });
 
   const form = useAppForm({
@@ -160,7 +164,9 @@ export function StepTimeBlocks({ onBack, onNext }: StepTimeBlocksProps) {
                                 field.handleChange(
                                   selected
                                     ? field.state.value.filter((d) => d !== i)
-                                    : [...field.state.value, i].sort((a, b) => a - b),
+                                    : [...field.state.value, i].sort(
+                                        (a, b) => a - b,
+                                      ),
                                 )
                               }
                               className={cn(

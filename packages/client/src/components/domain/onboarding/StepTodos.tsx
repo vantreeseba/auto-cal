@@ -77,10 +77,10 @@ export function StepTodos({ onBack, onFinish, onSkip }: StepTodosProps) {
   const { data } = useQuery(GET_TODOS);
   const todos = data?.myTodos ?? [];
 
-  const [createTodo] = useMutation<CreateTodoMutation, CreateTodoMutationVariables>(
-    CREATE_TODO,
-    { refetchQueries: ['GetMyTodosForOnboarding', 'GetMyTodos'] },
-  );
+  const [createTodo] = useMutation<
+    CreateTodoMutation,
+    CreateTodoMutationVariables
+  >(CREATE_TODO, { refetchQueries: ['GetMyTodosForOnboarding', 'GetMyTodos'] });
 
   const form = useAppForm({
     defaultValues: {

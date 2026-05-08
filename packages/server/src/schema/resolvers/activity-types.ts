@@ -159,9 +159,7 @@ export function applyActivityTypeResolvers(
     });
     if (!existing) throw new Error(`ActivityType ${args.id} not found`);
     if (existing.userId !== context.userId) throw new Error('Forbidden');
-    await context.db
-      .delete(activityTypes)
-      .where(eq(activityTypes.id, args.id));
+    await context.db.delete(activityTypes).where(eq(activityTypes.id, args.id));
     runSchedulerWriteback(context.db, context.userId).catch(console.error);
     return true;
   };

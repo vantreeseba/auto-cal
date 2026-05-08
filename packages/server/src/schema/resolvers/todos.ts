@@ -8,7 +8,9 @@ import { CreateTodoInput, UpdateTodoInput } from '../validators.ts';
 
 type Fields = ReturnType<GraphQLObjectType['getFields']>;
 
-function buildTodoOrderBy(orderBy?: TodoOrderBy): Record<string, 'asc' | 'desc'> {
+function buildTodoOrderBy(
+  orderBy?: TodoOrderBy,
+): Record<string, 'asc' | 'desc'> {
   if (!orderBy) return { priority: 'desc', createdAt: 'desc' };
   const entries = Object.entries(orderBy)
     .filter((e): e is [string, InnerOrder] => e[1] != null)
@@ -61,7 +63,9 @@ export function applyTodoResolvers(
         priority: input.priority,
         estimatedLength: input.estimatedLength ?? 0,
         activityTypeId: input.activityTypeId ?? null,
-        scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : undefined,
+        scheduledAt: input.scheduledAt
+          ? new Date(input.scheduledAt)
+          : undefined,
       })
       .returning();
     if (!todo) throw new Error('Failed to create todo');
