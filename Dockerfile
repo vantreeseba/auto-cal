@@ -2,20 +2,24 @@
 # Build context: the auto-cal/ directory (default)
 #   docker build -t auto-cal .
 
-# ── Stage 1: Build the React client ──────────────────────────────────────────
+# ── Stage 1: Build the React client (codegen + vite) ─────────────────────────
 FROM node:22-alpine AS client-builder
 
 WORKDIR /app
 
 COPY package*.json ./
 COPY packages/client/package*.json ./packages/client/
+COPY packages/server/package*.json ./packages/server/
+COPY packages/db/package*.json ./packages/db/
 
 RUN npm install
 
 COPY biome.json ./
 COPY codegen.ts ./
-COPY packages/client ./packages/client
-WORKDIR /app/packages/client
+COPY codegen.server.ts ./
+COPY drizzle.config.ts ./
+COPY packages ./packages
+
 RUN npm run build
 
 # ── Stage 2: Install server production dependencies ───────────────────────────
@@ -39,13 +43,11 @@ FROM node:22-alpine
 WORKDIR /app
 
 COPY --from=server-builder /app/node_modules ./node_modules
-COPY --from=server-builder /app/packages ./packages
 COPY --from=server-builder /app/package.json ./
+COPY --from=server-builder /app/packages/server ./packages/server
+COPY --from=server-builder /app/packages/db ./packages/db
 
 COPY --from=client-builder /app/packages/client/dist ./packages/client/dist
-
-COPY drizzle.config.ts ./
-COPY biome.json ./
 
 RUN mkdir -p /app/pgdata
 
