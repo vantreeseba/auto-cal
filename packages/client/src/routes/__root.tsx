@@ -7,9 +7,10 @@ import {
   Outlet,
   createRootRouteWithContext,
   redirect,
+  useLocation,
   useNavigate,
 } from '@tanstack/react-router';
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Settings, Sun } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const NAV_LINKS = [
@@ -59,57 +60,70 @@ function LogoutButton() {
 
 function RootLayout() {
   const [dark, setDark] = useDarkMode();
+  const { pathname } = useLocation();
+  const isOnboarding = pathname.startsWith('/onboarding');
 
   return (
     <TooltipProvider>
       <div className="flex h-screen flex-col overflow-hidden bg-background">
-        <header className="flex-shrink-0 border-b bg-card">
-          <div className="container mx-auto px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold leading-none">Auto Cal</h1>
-                <p className="text-xs text-muted-foreground">
-                  Smart todo and habit scheduling
-                </p>
-              </div>
-              <nav className="flex items-center gap-1">
-                {NAV_LINKS.map(({ to, label }) => (
-                  <Link
-                    key={to}
-                    to={to}
-                    activeProps={{
-                      className: 'bg-primary text-primary-foreground',
-                    }}
-                    inactiveProps={{
-                      className:
-                        'text-muted-foreground hover:bg-muted hover:text-foreground',
-                    }}
-                    className={cn(
-                      'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-                    )}
+        {!isOnboarding && (
+          <header className="flex-shrink-0 border-b bg-card">
+            <div className="container mx-auto px-4 py-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold leading-none">Auto Cal</h1>
+                  <p className="text-xs text-muted-foreground">
+                    Smart todo and habit scheduling
+                  </p>
+                </div>
+                <nav className="flex items-center gap-1">
+                  {NAV_LINKS.map(({ to, label }) => (
+                    <Link
+                      key={to}
+                      to={to}
+                      activeProps={{
+                        className: 'bg-primary text-primary-foreground',
+                      }}
+                      inactiveProps={{
+                        className:
+                          'text-muted-foreground hover:bg-muted hover:text-foreground',
+                      }}
+                      className={cn(
+                        'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                      )}
+                    >
+                      {label}
+                    </Link>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setDark((d) => !d)}
+                    aria-label={
+                      dark ? 'Switch to light mode' : 'Switch to dark mode'
+                    }
+                    className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                   >
-                    {label}
+                    {dark ? (
+                      <Sun className="h-4 w-4" />
+                    ) : (
+                      <Moon className="h-4 w-4" />
+                    )}
+                  </button>
+                  <Link
+                    to="/settings"
+                    activeProps={{ className: 'bg-muted text-foreground' }}
+                    inactiveProps={{ className: 'text-muted-foreground hover:bg-muted hover:text-foreground' }}
+                    className="rounded-md p-1.5 transition-colors"
+                    aria-label="Settings"
+                  >
+                    <Settings className="h-4 w-4" />
                   </Link>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setDark((d) => !d)}
-                  aria-label={
-                    dark ? 'Switch to light mode' : 'Switch to dark mode'
-                  }
-                  className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                >
-                  {dark ? (
-                    <Sun className="h-4 w-4" />
-                  ) : (
-                    <Moon className="h-4 w-4" />
-                  )}
-                </button>
-                <LogoutButton />
-              </nav>
+                  <LogoutButton />
+                </nav>
+              </div>
             </div>
-          </div>
-        </header>
+          </header>
+        )}
 
         <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <Outlet />
@@ -141,8 +155,15 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
   beforeLoad: ({ location }) => {
     const publicPaths = ['/login', '/auth/verify'];
     const isPublic = publicPaths.some((p) => location.pathname.startsWith(p));
-    if (!isPublic && !localStorage.getItem('auth_token')) {
+    const isOnboarding = location.pathname.startsWith('/onboarding');
+    const token = localStorage.getItem('auth_token');
+
+    if (!isPublic && !token) {
       throw redirect({ to: '/login' });
+    }
+
+    if (token && !isPublic && !isOnboarding && !localStorage.getItem('onboarding_done')) {
+      throw redirect({ to: '/onboarding' });
     }
   },
   component: RootLayout,

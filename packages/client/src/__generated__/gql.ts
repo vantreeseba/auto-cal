@@ -21,14 +21,24 @@ type Documents = {
     "\n  query GetActivityTypesForSelect {\n    myActivityTypes {\n      id\n      name\n      color\n    }\n  }\n": typeof types.GetActivityTypesForSelectDocument,
     "\n  fragment TimeBlock_CalendarView on TimeBlock {\n    id\n    daysOfWeek\n    startTime\n    endTime\n    activityType {\n      id\n      name\n      color\n    }\n  }\n\n  fragment ScheduledItem_CalendarView on ScheduledItem {\n    kind\n    id\n    title\n    isScheduled\n    isOverdue\n    scheduledStart\n    scheduledEnd\n    completedAt\n    activityType {\n      id\n      name\n      color\n    }\n  }\n": typeof types.TimeBlock_CalendarViewFragmentDoc,
     "\n  mutation PinTodo($input: UpdateTodoArgs!) {\n    myUpdateTodo(input: $input) { id scheduledAt manuallyScheduled }\n  }\n": typeof types.PinTodoDocument,
-    "\n  mutation CompleteHabitFromCalendar($input: CompleteHabitArgs!) {\n    myCompleteHabit(input: $input) { id }\n  }\n": typeof types.CompleteHabitFromCalendarDocument,
+    "\n  mutation CompleteHabitFromCalendar($input: CompleteHabitArgs!) {\n    myCompleteHabit(input: $input) { id completedAt }\n  }\n": typeof types.CompleteHabitFromCalendarDocument,
+    "\n  mutation CompleteTodoFromCalendar($id: ID!) {\n    myCompleteTodo(id: $id) { id completedAt }\n  }\n": typeof types.CompleteTodoFromCalendarDocument,
     "\n  fragment ScheduledItem_ScheduleView on ScheduledItem {\n    kind\n    id\n    title\n    priority\n    estimatedLength\n    isScheduled\n    scheduledStart\n    scheduledEnd\n    activityType {\n      id\n      name\n      color\n    }\n  }\n": typeof types.ScheduledItem_ScheduleViewFragmentDoc,
-    "\n  mutation CompleteHabitFromSchedule($input: CompleteHabitArgs!) {\n    myCompleteHabit(input: $input) {\n      id\n    }\n  }\n": typeof types.CompleteHabitFromScheduleDocument,
+    "\n  mutation CompleteHabitFromSchedule($input: CompleteHabitArgs!) {\n    myCompleteHabit(input: $input) {\n      id\n      completedAt\n    }\n  }\n": typeof types.CompleteHabitFromScheduleDocument,
+    "\n  mutation CompleteTodoFromSchedule($id: ID!) {\n    myCompleteTodo(id: $id) {\n      id\n      completedAt\n    }\n  }\n": typeof types.CompleteTodoFromScheduleDocument,
     "\n  query GetHabitDetail($habitId: ID!, $periods: Int) {\n    myHabitDetail(habitId: $habitId, periods: $periods) {\n      habitId\n      title\n      description\n      priority\n      estimatedLength\n      frequencyCount\n      frequencyUnit\n      totalCompletions\n      allTimeRate\n      activityType {\n        id\n        name\n        color\n      }\n      periods {\n        label\n        periodStart\n        periodEnd\n        completions\n        target\n        rate\n      }\n    }\n  }\n": typeof types.GetHabitDetailDocument,
     "\n  mutation CreateHabit($input: CreateHabitArgs!) {\n    myCreateHabit(input: $input) {\n      id\n      title\n      description\n      activityType {\n        id\n        name\n        color\n      }\n      priority\n      estimatedLength\n      frequencyCount\n      frequencyUnit\n    }\n  }\n": typeof types.CreateHabitDocument,
     "\n  mutation UpdateHabit($input: UpdateHabitArgs!) {\n    myUpdateHabit(input: $input) {\n      id\n      title\n      description\n      activityType {\n        id\n        name\n        color\n      }\n      priority\n      estimatedLength\n      frequencyCount\n      frequencyUnit\n    }\n  }\n": typeof types.UpdateHabitDocument,
     "\n  mutation UpdateHabitEstimatedLength($input: UpdateHabitArgs!) {\n    myUpdateHabit(input: $input) {\n      id\n      estimatedLength\n    }\n  }\n": typeof types.UpdateHabitEstimatedLengthDocument,
     "\n  fragment Habit_HabitList on Habit {\n    id\n    title\n    description\n    priority\n    estimatedLength\n    activityType {\n      id\n      name\n      color\n    }\n    frequencyCount\n    frequencyUnit\n    createdAt\n  }\n": typeof types.Habit_HabitListFragmentDoc,
+    "\n  query GetActivityTypesForOnboarding {\n    myActivityTypes {\n      id\n      name\n      color\n    }\n  }\n": typeof types.GetActivityTypesForOnboardingDocument,
+    "\n  mutation CreateActivityTypeOnboarding($input: CreateActivityTypeArgs!) {\n    myCreateActivityType(input: $input) {\n      id\n      name\n      color\n    }\n  }\n": typeof types.CreateActivityTypeOnboardingDocument,
+    "\n  query GetMyHabitsForOnboarding {\n    myHabits {\n      id\n      title\n      frequencyCount\n      frequencyUnit\n      activityType { id name color }\n    }\n  }\n": typeof types.GetMyHabitsForOnboardingDocument,
+    "\n  mutation CreateHabitOnboarding($input: CreateHabitArgs!) {\n    myCreateHabit(input: $input) {\n      id\n      title\n    }\n  }\n": typeof types.CreateHabitOnboardingDocument,
+    "\n  query GetMyTimeblocksForOnboarding {\n    myTimeBlocks {\n      id\n      activityType { id name color }\n      daysOfWeek\n      startTime\n      endTime\n    }\n  }\n": typeof types.GetMyTimeblocksForOnboardingDocument,
+    "\n  mutation CreateTimeBlockOnboarding($input: CreateTimeBlockArgs!) {\n    myCreateTimeBlock(input: $input) {\n      id\n      daysOfWeek\n      startTime\n      endTime\n    }\n  }\n": typeof types.CreateTimeBlockOnboardingDocument,
+    "\n  query GetMyTodosForOnboarding {\n    myTodos {\n      id\n      title\n      priority\n      activityType { id name color }\n    }\n  }\n": typeof types.GetMyTodosForOnboardingDocument,
+    "\n  mutation CreateTodoOnboarding($input: CreateTodoArgs!) {\n    myCreateTodo(input: $input) {\n      id\n      title\n    }\n  }\n": typeof types.CreateTodoOnboardingDocument,
     "\n  mutation CreateTimeBlock($input: CreateTimeBlockArgs!) {\n    myCreateTimeBlock(input: $input) {\n      id\n      activityType {\n        id\n        name\n        color\n      }\n      daysOfWeek\n      startTime\n      endTime\n    }\n  }\n": typeof types.CreateTimeBlockDocument,
     "\n  mutation UpdateTimeBlock($input: UpdateTimeBlockArgs!) {\n    myUpdateTimeBlock(input: $input) {\n      id\n      activityType {\n        id\n        name\n        color\n      }\n      daysOfWeek\n      startTime\n      endTime\n    }\n  }\n": typeof types.UpdateTimeBlockDocument,
     "\n  fragment TimeBlock_TimeBlockList on TimeBlock {\n    id\n    activityType {\n      id\n      name\n      color\n    }\n    daysOfWeek\n    startTime\n    endTime\n    priority\n    createdAt\n  }\n": typeof types.TimeBlock_TimeBlockListFragmentDoc,
@@ -45,6 +55,8 @@ type Documents = {
     "\n  query MySchedule($weekStart: String, $timezone: String) {\n    mySchedule(weekStart: $weekStart, timezone: $timezone) {\n      id\n      ...ScheduledItem_CalendarView\n      ...ScheduledItem_ScheduleView\n    }\n  }\n": typeof types.MyScheduleDocument,
     "\n  mutation UpdateProfile($timezone: String!) {\n    myUpdateProfile(timezone: $timezone)\n  }\n": typeof types.UpdateProfileDocument,
     "\n  query GetMyHabits {\n    myHabits {\n      ...Habit_HabitList\n    }\n  }\n": typeof types.GetMyHabitsDocument,
+    "\n  query CheckOnboarded {\n    myActivityTypes {\n      id\n    }\n  }\n": typeof types.CheckOnboardedDocument,
+    "\n  query GetProfileForSettings {\n    myProfile {\n      id\n    }\n  }\n": typeof types.GetProfileForSettingsDocument,
     "\n  query GetMyStats($startDate: String, $endDate: String) {\n    myStats(startDate: $startDate, endDate: $endDate) {\n      weightedScore\n      habitScore\n      todoScore\n      habits {\n        habitId\n        title\n        completionRate\n        completions\n        target\n        frequencyUnit\n        frequencyCount\n        activityType {\n          id\n          color\n        }\n      }\n      todos {\n        total\n        completed\n        overdue\n        completionRate\n      }\n    }\n  }\n": typeof types.GetMyStatsDocument,
     "\n  query GetMyTimeBlocks {\n    myTimeBlocks {\n      ...TimeBlock_TimeBlockList\n    }\n  }\n": typeof types.GetMyTimeBlocksDocument,
     "\n  query GetMyTodos($orderBy: TodoOrderBy) {\n    myTodos(orderBy: $orderBy) {\n      ...Todo_TodoList\n    }\n  }\n": typeof types.GetMyTodosDocument,
@@ -57,14 +69,24 @@ const documents: Documents = {
     "\n  query GetActivityTypesForSelect {\n    myActivityTypes {\n      id\n      name\n      color\n    }\n  }\n": types.GetActivityTypesForSelectDocument,
     "\n  fragment TimeBlock_CalendarView on TimeBlock {\n    id\n    daysOfWeek\n    startTime\n    endTime\n    activityType {\n      id\n      name\n      color\n    }\n  }\n\n  fragment ScheduledItem_CalendarView on ScheduledItem {\n    kind\n    id\n    title\n    isScheduled\n    isOverdue\n    scheduledStart\n    scheduledEnd\n    completedAt\n    activityType {\n      id\n      name\n      color\n    }\n  }\n": types.TimeBlock_CalendarViewFragmentDoc,
     "\n  mutation PinTodo($input: UpdateTodoArgs!) {\n    myUpdateTodo(input: $input) { id scheduledAt manuallyScheduled }\n  }\n": types.PinTodoDocument,
-    "\n  mutation CompleteHabitFromCalendar($input: CompleteHabitArgs!) {\n    myCompleteHabit(input: $input) { id }\n  }\n": types.CompleteHabitFromCalendarDocument,
+    "\n  mutation CompleteHabitFromCalendar($input: CompleteHabitArgs!) {\n    myCompleteHabit(input: $input) { id completedAt }\n  }\n": types.CompleteHabitFromCalendarDocument,
+    "\n  mutation CompleteTodoFromCalendar($id: ID!) {\n    myCompleteTodo(id: $id) { id completedAt }\n  }\n": types.CompleteTodoFromCalendarDocument,
     "\n  fragment ScheduledItem_ScheduleView on ScheduledItem {\n    kind\n    id\n    title\n    priority\n    estimatedLength\n    isScheduled\n    scheduledStart\n    scheduledEnd\n    activityType {\n      id\n      name\n      color\n    }\n  }\n": types.ScheduledItem_ScheduleViewFragmentDoc,
-    "\n  mutation CompleteHabitFromSchedule($input: CompleteHabitArgs!) {\n    myCompleteHabit(input: $input) {\n      id\n    }\n  }\n": types.CompleteHabitFromScheduleDocument,
+    "\n  mutation CompleteHabitFromSchedule($input: CompleteHabitArgs!) {\n    myCompleteHabit(input: $input) {\n      id\n      completedAt\n    }\n  }\n": types.CompleteHabitFromScheduleDocument,
+    "\n  mutation CompleteTodoFromSchedule($id: ID!) {\n    myCompleteTodo(id: $id) {\n      id\n      completedAt\n    }\n  }\n": types.CompleteTodoFromScheduleDocument,
     "\n  query GetHabitDetail($habitId: ID!, $periods: Int) {\n    myHabitDetail(habitId: $habitId, periods: $periods) {\n      habitId\n      title\n      description\n      priority\n      estimatedLength\n      frequencyCount\n      frequencyUnit\n      totalCompletions\n      allTimeRate\n      activityType {\n        id\n        name\n        color\n      }\n      periods {\n        label\n        periodStart\n        periodEnd\n        completions\n        target\n        rate\n      }\n    }\n  }\n": types.GetHabitDetailDocument,
     "\n  mutation CreateHabit($input: CreateHabitArgs!) {\n    myCreateHabit(input: $input) {\n      id\n      title\n      description\n      activityType {\n        id\n        name\n        color\n      }\n      priority\n      estimatedLength\n      frequencyCount\n      frequencyUnit\n    }\n  }\n": types.CreateHabitDocument,
     "\n  mutation UpdateHabit($input: UpdateHabitArgs!) {\n    myUpdateHabit(input: $input) {\n      id\n      title\n      description\n      activityType {\n        id\n        name\n        color\n      }\n      priority\n      estimatedLength\n      frequencyCount\n      frequencyUnit\n    }\n  }\n": types.UpdateHabitDocument,
     "\n  mutation UpdateHabitEstimatedLength($input: UpdateHabitArgs!) {\n    myUpdateHabit(input: $input) {\n      id\n      estimatedLength\n    }\n  }\n": types.UpdateHabitEstimatedLengthDocument,
     "\n  fragment Habit_HabitList on Habit {\n    id\n    title\n    description\n    priority\n    estimatedLength\n    activityType {\n      id\n      name\n      color\n    }\n    frequencyCount\n    frequencyUnit\n    createdAt\n  }\n": types.Habit_HabitListFragmentDoc,
+    "\n  query GetActivityTypesForOnboarding {\n    myActivityTypes {\n      id\n      name\n      color\n    }\n  }\n": types.GetActivityTypesForOnboardingDocument,
+    "\n  mutation CreateActivityTypeOnboarding($input: CreateActivityTypeArgs!) {\n    myCreateActivityType(input: $input) {\n      id\n      name\n      color\n    }\n  }\n": types.CreateActivityTypeOnboardingDocument,
+    "\n  query GetMyHabitsForOnboarding {\n    myHabits {\n      id\n      title\n      frequencyCount\n      frequencyUnit\n      activityType { id name color }\n    }\n  }\n": types.GetMyHabitsForOnboardingDocument,
+    "\n  mutation CreateHabitOnboarding($input: CreateHabitArgs!) {\n    myCreateHabit(input: $input) {\n      id\n      title\n    }\n  }\n": types.CreateHabitOnboardingDocument,
+    "\n  query GetMyTimeblocksForOnboarding {\n    myTimeBlocks {\n      id\n      activityType { id name color }\n      daysOfWeek\n      startTime\n      endTime\n    }\n  }\n": types.GetMyTimeblocksForOnboardingDocument,
+    "\n  mutation CreateTimeBlockOnboarding($input: CreateTimeBlockArgs!) {\n    myCreateTimeBlock(input: $input) {\n      id\n      daysOfWeek\n      startTime\n      endTime\n    }\n  }\n": types.CreateTimeBlockOnboardingDocument,
+    "\n  query GetMyTodosForOnboarding {\n    myTodos {\n      id\n      title\n      priority\n      activityType { id name color }\n    }\n  }\n": types.GetMyTodosForOnboardingDocument,
+    "\n  mutation CreateTodoOnboarding($input: CreateTodoArgs!) {\n    myCreateTodo(input: $input) {\n      id\n      title\n    }\n  }\n": types.CreateTodoOnboardingDocument,
     "\n  mutation CreateTimeBlock($input: CreateTimeBlockArgs!) {\n    myCreateTimeBlock(input: $input) {\n      id\n      activityType {\n        id\n        name\n        color\n      }\n      daysOfWeek\n      startTime\n      endTime\n    }\n  }\n": types.CreateTimeBlockDocument,
     "\n  mutation UpdateTimeBlock($input: UpdateTimeBlockArgs!) {\n    myUpdateTimeBlock(input: $input) {\n      id\n      activityType {\n        id\n        name\n        color\n      }\n      daysOfWeek\n      startTime\n      endTime\n    }\n  }\n": types.UpdateTimeBlockDocument,
     "\n  fragment TimeBlock_TimeBlockList on TimeBlock {\n    id\n    activityType {\n      id\n      name\n      color\n    }\n    daysOfWeek\n    startTime\n    endTime\n    priority\n    createdAt\n  }\n": types.TimeBlock_TimeBlockListFragmentDoc,
@@ -81,6 +103,8 @@ const documents: Documents = {
     "\n  query MySchedule($weekStart: String, $timezone: String) {\n    mySchedule(weekStart: $weekStart, timezone: $timezone) {\n      id\n      ...ScheduledItem_CalendarView\n      ...ScheduledItem_ScheduleView\n    }\n  }\n": types.MyScheduleDocument,
     "\n  mutation UpdateProfile($timezone: String!) {\n    myUpdateProfile(timezone: $timezone)\n  }\n": types.UpdateProfileDocument,
     "\n  query GetMyHabits {\n    myHabits {\n      ...Habit_HabitList\n    }\n  }\n": types.GetMyHabitsDocument,
+    "\n  query CheckOnboarded {\n    myActivityTypes {\n      id\n    }\n  }\n": types.CheckOnboardedDocument,
+    "\n  query GetProfileForSettings {\n    myProfile {\n      id\n    }\n  }\n": types.GetProfileForSettingsDocument,
     "\n  query GetMyStats($startDate: String, $endDate: String) {\n    myStats(startDate: $startDate, endDate: $endDate) {\n      weightedScore\n      habitScore\n      todoScore\n      habits {\n        habitId\n        title\n        completionRate\n        completions\n        target\n        frequencyUnit\n        frequencyCount\n        activityType {\n          id\n          color\n        }\n      }\n      todos {\n        total\n        completed\n        overdue\n        completionRate\n      }\n    }\n  }\n": types.GetMyStatsDocument,
     "\n  query GetMyTimeBlocks {\n    myTimeBlocks {\n      ...TimeBlock_TimeBlockList\n    }\n  }\n": types.GetMyTimeBlocksDocument,
     "\n  query GetMyTodos($orderBy: TodoOrderBy) {\n    myTodos(orderBy: $orderBy) {\n      ...Todo_TodoList\n    }\n  }\n": types.GetMyTodosDocument,
@@ -131,7 +155,11 @@ export function graphql(source: "\n  mutation PinTodo($input: UpdateTodoArgs!) {
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  mutation CompleteHabitFromCalendar($input: CompleteHabitArgs!) {\n    myCompleteHabit(input: $input) { id }\n  }\n"): (typeof documents)["\n  mutation CompleteHabitFromCalendar($input: CompleteHabitArgs!) {\n    myCompleteHabit(input: $input) { id }\n  }\n"];
+export function graphql(source: "\n  mutation CompleteHabitFromCalendar($input: CompleteHabitArgs!) {\n    myCompleteHabit(input: $input) { id completedAt }\n  }\n"): (typeof documents)["\n  mutation CompleteHabitFromCalendar($input: CompleteHabitArgs!) {\n    myCompleteHabit(input: $input) { id completedAt }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation CompleteTodoFromCalendar($id: ID!) {\n    myCompleteTodo(id: $id) { id completedAt }\n  }\n"): (typeof documents)["\n  mutation CompleteTodoFromCalendar($id: ID!) {\n    myCompleteTodo(id: $id) { id completedAt }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
@@ -139,7 +167,11 @@ export function graphql(source: "\n  fragment ScheduledItem_ScheduleView on Sche
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  mutation CompleteHabitFromSchedule($input: CompleteHabitArgs!) {\n    myCompleteHabit(input: $input) {\n      id\n    }\n  }\n"): (typeof documents)["\n  mutation CompleteHabitFromSchedule($input: CompleteHabitArgs!) {\n    myCompleteHabit(input: $input) {\n      id\n    }\n  }\n"];
+export function graphql(source: "\n  mutation CompleteHabitFromSchedule($input: CompleteHabitArgs!) {\n    myCompleteHabit(input: $input) {\n      id\n      completedAt\n    }\n  }\n"): (typeof documents)["\n  mutation CompleteHabitFromSchedule($input: CompleteHabitArgs!) {\n    myCompleteHabit(input: $input) {\n      id\n      completedAt\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation CompleteTodoFromSchedule($id: ID!) {\n    myCompleteTodo(id: $id) {\n      id\n      completedAt\n    }\n  }\n"): (typeof documents)["\n  mutation CompleteTodoFromSchedule($id: ID!) {\n    myCompleteTodo(id: $id) {\n      id\n      completedAt\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
@@ -160,6 +192,38 @@ export function graphql(source: "\n  mutation UpdateHabitEstimatedLength($input:
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  fragment Habit_HabitList on Habit {\n    id\n    title\n    description\n    priority\n    estimatedLength\n    activityType {\n      id\n      name\n      color\n    }\n    frequencyCount\n    frequencyUnit\n    createdAt\n  }\n"): (typeof documents)["\n  fragment Habit_HabitList on Habit {\n    id\n    title\n    description\n    priority\n    estimatedLength\n    activityType {\n      id\n      name\n      color\n    }\n    frequencyCount\n    frequencyUnit\n    createdAt\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query GetActivityTypesForOnboarding {\n    myActivityTypes {\n      id\n      name\n      color\n    }\n  }\n"): (typeof documents)["\n  query GetActivityTypesForOnboarding {\n    myActivityTypes {\n      id\n      name\n      color\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation CreateActivityTypeOnboarding($input: CreateActivityTypeArgs!) {\n    myCreateActivityType(input: $input) {\n      id\n      name\n      color\n    }\n  }\n"): (typeof documents)["\n  mutation CreateActivityTypeOnboarding($input: CreateActivityTypeArgs!) {\n    myCreateActivityType(input: $input) {\n      id\n      name\n      color\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query GetMyHabitsForOnboarding {\n    myHabits {\n      id\n      title\n      frequencyCount\n      frequencyUnit\n      activityType { id name color }\n    }\n  }\n"): (typeof documents)["\n  query GetMyHabitsForOnboarding {\n    myHabits {\n      id\n      title\n      frequencyCount\n      frequencyUnit\n      activityType { id name color }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation CreateHabitOnboarding($input: CreateHabitArgs!) {\n    myCreateHabit(input: $input) {\n      id\n      title\n    }\n  }\n"): (typeof documents)["\n  mutation CreateHabitOnboarding($input: CreateHabitArgs!) {\n    myCreateHabit(input: $input) {\n      id\n      title\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query GetMyTimeblocksForOnboarding {\n    myTimeBlocks {\n      id\n      activityType { id name color }\n      daysOfWeek\n      startTime\n      endTime\n    }\n  }\n"): (typeof documents)["\n  query GetMyTimeblocksForOnboarding {\n    myTimeBlocks {\n      id\n      activityType { id name color }\n      daysOfWeek\n      startTime\n      endTime\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation CreateTimeBlockOnboarding($input: CreateTimeBlockArgs!) {\n    myCreateTimeBlock(input: $input) {\n      id\n      daysOfWeek\n      startTime\n      endTime\n    }\n  }\n"): (typeof documents)["\n  mutation CreateTimeBlockOnboarding($input: CreateTimeBlockArgs!) {\n    myCreateTimeBlock(input: $input) {\n      id\n      daysOfWeek\n      startTime\n      endTime\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query GetMyTodosForOnboarding {\n    myTodos {\n      id\n      title\n      priority\n      activityType { id name color }\n    }\n  }\n"): (typeof documents)["\n  query GetMyTodosForOnboarding {\n    myTodos {\n      id\n      title\n      priority\n      activityType { id name color }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation CreateTodoOnboarding($input: CreateTodoArgs!) {\n    myCreateTodo(input: $input) {\n      id\n      title\n    }\n  }\n"): (typeof documents)["\n  mutation CreateTodoOnboarding($input: CreateTodoArgs!) {\n    myCreateTodo(input: $input) {\n      id\n      title\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
@@ -224,6 +288,14 @@ export function graphql(source: "\n  mutation UpdateProfile($timezone: String!) 
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  query GetMyHabits {\n    myHabits {\n      ...Habit_HabitList\n    }\n  }\n"): (typeof documents)["\n  query GetMyHabits {\n    myHabits {\n      ...Habit_HabitList\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query CheckOnboarded {\n    myActivityTypes {\n      id\n    }\n  }\n"): (typeof documents)["\n  query CheckOnboarded {\n    myActivityTypes {\n      id\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query GetProfileForSettings {\n    myProfile {\n      id\n    }\n  }\n"): (typeof documents)["\n  query GetProfileForSettings {\n    myProfile {\n      id\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

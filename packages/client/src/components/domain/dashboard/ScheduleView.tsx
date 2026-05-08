@@ -1,5 +1,6 @@
 import type { ScheduledItem_ScheduleViewFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
+import { TodoForm } from '@/components/domain/todo/TodoForm';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -19,8 +20,8 @@ import {
   startOfDay,
   startOfMonth,
 } from 'date-fns';
-import { AlertTriangle, Check } from 'lucide-react';
-import { useMemo } from 'react';
+import { AlertTriangle, Check, Plus } from 'lucide-react';
+import { useMemo, useState } from 'react';
 
 graphql(`
   fragment ScheduledItem_ScheduleView on ScheduledItem {
@@ -44,6 +45,16 @@ const COMPLETE_HABIT = gql`
   mutation CompleteHabitFromSchedule($input: CompleteHabitArgs!) {
     myCompleteHabit(input: $input) {
       id
+      completedAt
+    }
+  }
+`;
+
+const COMPLETE_TODO = gql`
+  mutation CompleteTodoFromSchedule($id: ID!) {
+    myCompleteTodo(id: $id) {
+      id
+      completedAt
     }
   }
 `;
@@ -98,6 +109,8 @@ function viewWindow(
 }
 
 export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
+  const [todoOpen, setTodoOpen] = useState(false);
+
   const { start: windowStart, end: windowEnd } = useMemo(
     () => viewWindow(view, date),
     [view, date],
@@ -118,25 +131,52 @@ export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
   const byDay = useMemo(() => groupByDay(scheduled), [scheduled]);
   const dayKeys = useMemo(() => [...byDay.keys()].sort(), [byDay]);
 
-  const [completeHabit, { loading: completing }] = useMutation(COMPLETE_HABIT, {
+  const [completeHabit, { loading: completingHabit }] = useMutation(COMPLETE_HABIT, {
     refetchQueries: ['MySchedule'],
     onError: (err) => console.error('[completeHabit]', err.message),
   });
 
+  const [completeTodo, { loading: completingTodo }] = useMutation(COMPLETE_TODO, {
+    refetchQueries: ['MySchedule'],
+    onError: (err) => console.error('[completeTodo]', err.message),
+  });
+
+  const completing = completingHabit || completingTodo;
+
   function handleCompleteHabit(item: ScheduledItem_ScheduleViewFragment) {
     const habitId = item.id.replace(/-\d+$/, '');
+    const now = new Date().toISOString();
     completeHabit({
-      variables: {
-        input: {
-          habitId,
-          scheduledAt: item.scheduledStart ?? undefined,
-        },
+      variables: { input: { habitId, scheduledAt: item.scheduledStart ?? undefined } },
+      optimisticResponse: {
+        myCompleteHabit: { __typename: 'HabitCompletion', id: `${item.id}-optimistic`, completedAt: now },
+      },
+    });
+  }
+
+  function handleCompleteTodo(item: ScheduledItem_ScheduleViewFragment) {
+    const now = new Date().toISOString();
+    completeTodo({
+      variables: { id: item.id },
+      optimisticResponse: {
+        myCompleteTodo: { __typename: 'Todo', id: item.id, completedAt: now },
       },
     });
   }
 
   return (
     <div className="flex flex-col gap-4 overflow-y-auto h-full">
+      <TodoForm open={todoOpen} onOpenChange={setTodoOpen} />
+
+      <Button
+        size="sm"
+        className="w-full"
+        onClick={() => setTodoOpen(true)}
+      >
+        <Plus className="mr-1 h-4 w-4" />
+        Add todo
+      </Button>
+
       {dayKeys.length === 0 && unscheduled.length === 0 && (
         <p className="text-muted-foreground text-sm text-center py-8">
           No tasks scheduled this week. Create todos or habits and assign them
@@ -159,9 +199,11 @@ export function ScheduleView({ schedule, view, date }: ScheduleViewProps) {
                   key={`${item.kind}-${item.id}`}
                   item={item}
                   onComplete={
-                    item.kind === 'habit' && !completing
-                      ? () => handleCompleteHabit(item)
-                      : undefined
+                    completing
+                      ? undefined
+                      : item.kind === 'habit'
+                        ? () => handleCompleteHabit(item)
+                        : () => handleCompleteTodo(item)
                   }
                 />
               ))}

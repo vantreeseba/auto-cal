@@ -123,7 +123,7 @@ export function applyStatsResolvers(queryFields: Fields): void {
         total: totalTodos,
         completed: completedTodos,
         overdue: overdueTodos,
-        completionRate: todoScore,
+        completionRate: todoScore ?? 0,
       },
     };
   };

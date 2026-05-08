@@ -154,7 +154,7 @@ function effectiveSlotStart(
   const slotDayMidnight = new Date(`${slot.dateStr}T00:00:00`);
   const nowMins = (now.getTime() - slotDayMidnight.getTime()) / (1000 * 60);
 
-  const startMins = Math.max(cursorMins, nowMins);
+  const startMins = Math.ceil(Math.max(cursorMins, nowMins));
   if (startMins + durationMins > slotEndMins) return null;
   return startMins;
 }

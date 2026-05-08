@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TodosRouteImport } from './routes/todos'
 import { Route as TimeBlocksRouteImport } from './routes/time-blocks'
 import { Route as StatsRouteImport } from './routes/stats'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HabitsRouteImport } from './routes/habits'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -34,6 +36,16 @@ const TimeBlocksRoute = TimeBlocksRouteImport.update({
 const StatsRoute = StatsRouteImport.update({
   id: '/stats',
   path: '/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -83,6 +95,8 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/habits': typeof HabitsRouteWithChildren
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
+  '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
   '/time-blocks': typeof TimeBlocksRoute
   '/todos': typeof TodosRoute
@@ -95,6 +109,8 @@ export interface FileRoutesByTo {
   '/activity-types': typeof ActivityTypesRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
+  '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
   '/time-blocks': typeof TimeBlocksRoute
   '/todos': typeof TodosRoute
@@ -109,6 +125,8 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/habits': typeof HabitsRouteWithChildren
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
+  '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
   '/time-blocks': typeof TimeBlocksRoute
   '/todos': typeof TodosRoute
@@ -124,6 +142,8 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/habits'
     | '/login'
+    | '/onboarding'
+    | '/settings'
     | '/stats'
     | '/time-blocks'
     | '/todos'
@@ -136,6 +156,8 @@ export interface FileRouteTypes {
     | '/activity-types'
     | '/dashboard'
     | '/login'
+    | '/onboarding'
+    | '/settings'
     | '/stats'
     | '/time-blocks'
     | '/todos'
@@ -149,6 +171,8 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/habits'
     | '/login'
+    | '/onboarding'
+    | '/settings'
     | '/stats'
     | '/time-blocks'
     | '/todos'
@@ -163,6 +187,8 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   HabitsRoute: typeof HabitsRouteWithChildren
   LoginRoute: typeof LoginRoute
+  OnboardingRoute: typeof OnboardingRoute
+  SettingsRoute: typeof SettingsRoute
   StatsRoute: typeof StatsRoute
   TimeBlocksRoute: typeof TimeBlocksRoute
   TodosRoute: typeof TodosRoute
@@ -190,6 +216,20 @@ declare module '@tanstack/react-router' {
       path: '/stats'
       fullPath: '/stats'
       preLoaderRoute: typeof StatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -270,6 +310,8 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   HabitsRoute: HabitsRouteWithChildren,
   LoginRoute: LoginRoute,
+  OnboardingRoute: OnboardingRoute,
+  SettingsRoute: SettingsRoute,
   StatsRoute: StatsRoute,
   TimeBlocksRoute: TimeBlocksRoute,
   TodosRoute: TodosRoute,

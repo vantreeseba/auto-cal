@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RouteError } from '@/components/ui/route-error';
 import { useQuery } from '@apollo/client/react';
 import { createFileRoute } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 const GET_MY_STATS = graphql(`
   query GetMyStats($startDate: String, $endDate: String) {
@@ -253,8 +253,10 @@ function TodosSection({
 function StatsPage() {
   const [range, setRange] = useState<DateRangeKey>('month');
 
+  const variables = useMemo(() => getDateRange(range), [range]);
+
   const { data, loading, error } = useQuery(GET_MY_STATS, {
-    variables: getDateRange(range),
+    variables,
     fetchPolicy: 'cache-and-network',
   });
 

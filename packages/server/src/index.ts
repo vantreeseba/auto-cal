@@ -9,6 +9,7 @@ import express from 'express';
 import { verifyToken } from './auth.ts';
 import { createLoaders } from './context.ts';
 import type { Context } from './context.ts';
+import { icalHandler } from './ical-route.ts';
 import { schema } from './schema/index.ts';
 
 const app = express();
@@ -55,6 +56,8 @@ app.use(
     },
   }),
 );
+
+app.get('/ical', icalHandler);
 
 if (clientDistExists) {
   app.get('*', (_req, res) => {
