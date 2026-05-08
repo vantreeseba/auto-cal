@@ -43,6 +43,34 @@ function countByPeriod(
   return counts;
 }
 
+/**
+ * Returns true if the todo's scheduledAt is in the future and still falls
+ * within a valid time block for its activity type. Used to decide whether to
+ * preserve an existing scheduled placement rather than re-running the scheduler.
+ */
+function isScheduledAtValid(
+  todo: Todo,
+  timeBlocks: TimeBlock[],
+  now: Date,
+): boolean {
+  if (!todo.scheduledAt || todo.scheduledAt <= now) return false;
+  if (!todo.activityTypeId) return false;
+
+  const scheduled = new Date(todo.scheduledAt);
+  const dayOfWeek = scheduled.getDay(); // 0=Sun…6=Sat
+  const scheduledMins = scheduled.getHours() * 60 + scheduled.getMinutes();
+
+  return timeBlocks.some((b) => {
+    if (b.activityTypeId !== todo.activityTypeId) return false;
+    if (!b.daysOfWeek.includes(dayOfWeek)) return false;
+    const [startH = 0, startM = 0] = b.startTime.split(':').map(Number);
+    const [endH = 0, endM = 0] = b.endTime.split(':').map(Number);
+    const blockStart = startH * 60 + startM;
+    const blockEnd = endH * 60 + endM;
+    return scheduledMins >= blockStart && scheduledMins < blockEnd;
+  });
+}
+
 /** Merge two count maps (add values for same key) */
 function addCounts(
   a: Map<string, number>,
@@ -122,9 +150,22 @@ export async function runSchedulerWriteback(
     userActivityTypes.map((at) => [at.id, at]),
   );
 
+  // ── Preserve already-scheduled todos whose slot is still valid ───────────
+  // Todos with a future scheduledAt that still falls within an existing time
+  // block are kept as-is and excluded from the scheduling loop.
+  const prePlacedIds = new Set(
+    userTodos
+      .filter((t) => isScheduledAtValid(t, userTimeBlocks, now))
+      .map((t) => t.id),
+  );
+
   // ── Iterate week-by-week over the 2-month horizon ─────────────────────────
-  let todoPool = [...userTodos];
-  const todoSchedules = new Map<string, Date | null>();
+  let todoPool = userTodos.filter((t) => !prePlacedIds.has(t.id));
+  const todoSchedules = new Map<string, Date | null>(
+    userTodos
+      .filter((t) => prePlacedIds.has(t.id))
+      .map((t) => [t.id, t.scheduledAt ? new Date(t.scheduledAt) : null]),
+  );
   const newTentativeCompletions: Array<{
     habitId: string;
     scheduledAt: Date | null;
