@@ -9,7 +9,7 @@
     "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
     "dev:server": "npm run dev -w @auto-cal/server",
     "dev:client": "npm run dev -w @auto-cal/client",
-    "build": "npm run build -w @auto-cal/client && npm run build -w @auto-cal/server",
+    "build": "npm run codegen:server && npm run codegen && (cd packages/client && npx @tanstack/router-cli generate) && npm run build -w @auto-cal/client && npm run build -w @auto-cal/server",
     "build:docker": "docker build -t auto-cal .",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "biome check .",
