@@ -64,12 +64,12 @@ if (databaseUrl) {
 
 ```typescript
 // Single record
-const user = await db._query.users.findFirst({
+const user = await db.query.users.findFirst({
   where: eq(users.id, userId),
 });
 
 // List with conditions
-const items = await db._query.todos.findMany({
+const items = await db.query.todos.findMany({
   where: and(
     eq(todos.userId, context.userId),
     isNull(todos.completedAt),

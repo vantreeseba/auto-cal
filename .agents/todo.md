@@ -91,9 +91,8 @@ If you're unsure what to work on, these three are the highest-leverage next step
 
 ---
 
-### #4 — Calendar: drag-to-reschedule
-**Problem:** The `CalendarView` displays the schedule but has no interaction — users cannot drag a task to a different slot to manually override the auto-scheduler.
-**Note:** Superseded by #21, which covers drag-to-schedule as part of the broader isPinnedSchedule → manuallyScheduled refactor. Close this when #21 is done.
+### #4 — Calendar: drag-to-reschedule ✓ Done (todos)
+Drag-and-drop is implemented for todos in `CalendarView`. Dragging a todo sets `scheduledAt` and `manuallyScheduled: true`. Habits are not draggable (scheduler-controlled only).
 
 ---
 

@@ -24,7 +24,7 @@ Migrations run on container start before the server process.
 | `DATABASE_URL` | Conditional | Postgres connection string (e.g. `postgresql://user:pass@host:5432/db`); when set, uses `postgres.js` driver |
 | `PGLITE_DATA_DIR` | Conditional | Path to PGLite data directory; required when `DATABASE_URL` is not set |
 | `NODE_ENV` | No | `production` / `development` |
-| `DEMO_USER_ID` | No | Hard-coded demo user for development (no real auth yet) |
+| `DEMO_USER_ID` | No | Hard-coded demo user UUID for development; bypasses magic-link flow |
 
 ## Switching to Full Postgres
 

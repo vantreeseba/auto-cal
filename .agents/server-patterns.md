@@ -2,6 +2,17 @@
 
 Express + Apollo Server, no build step (`--experimental-strip-types`). All imports **must** include `.ts` extension.
 
+## Scheduler Writeback — Fire-and-Forget
+
+`runSchedulerWriteback` is called without `await` so mutations return immediately. Errors are swallowed with `.catch(console.error)` — the client never sees a scheduler failure:
+
+```typescript
+runSchedulerWriteback(context.db, context.userId).catch(console.error);
+return result; // returned before writeback finishes
+```
+
+Do not await it. Do not surface scheduler errors to the client.
+
 ## Context
 
 ```typescript
@@ -15,7 +26,7 @@ export interface Context {
 export function createLoaders(db: DB) {
   return {
     activityType: new DataLoader<string, ActivityType | null>(async (ids) => {
-      const rows = await db._query.activityTypes.findMany({
+      const rows = await db.query.activityTypes.findMany({
         where: inArray(activityTypes.id, [...ids]),
       });
       const byId = new Map(rows.map((r) => [r.id, r]));
@@ -24,6 +35,16 @@ export function createLoaders(db: DB) {
   };
 }
 ```
+
+## Public Mutations
+
+Only two mutations bypass the `my*` scoping requirement and are accessible without authentication:
+
+```typescript
+const PUBLIC_MUTATIONS = new Set(['requestMagicLink', 'verifyMagicLink']);
+```
+
+Any new public endpoint (e.g. a webhook or health check) must be added to this set in `packages/server/src/schema/index.ts`.
 
 ## Schema Pipeline
 
@@ -68,7 +89,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
 
   queryFields.myTodos!.resolve = async (_parent, args, context: Context) => {
     if (!context.userId) throw new Error('Not authenticated');
-    return context.db._query.todos.findMany({
+    return context.db.query.todos.findMany({
       where: eq(todos.userId, context.userId),
     });
   };
@@ -90,24 +111,28 @@ Always check auth and ownership first:
 
 ```typescript
 if (!context.userId) throw new Error('Not authenticated');
-const todo = await context.db._query.todos.findFirst({ where: eq(todos.id, id) });
+const todo = await context.db.query.todos.findFirst({ where: eq(todos.id, id) });
 if (!todo) throw new Error(`Todo ${id} not found`);
 if (todo.userId !== context.userId) throw new Error('Forbidden');
 ```
 
 ## Zod Validation at Resolver Boundary
 
-```typescript
-// packages/server/src/schema/validators.ts
-export const CreateTodoInput = z.object({
-  title: z.string().min(1).max(200),
-  description: z.string().max(2000).optional(),
-  priority: z.number().int().min(0).max(100).default(0),
-  estimatedLength: z.number().int().min(1).max(1440),
-  activityTypeId: z.string().uuid().optional(),
-  scheduledAt: z.string().datetime().optional(),
-});
+All validators live in `packages/server/src/schema/validators.ts`. Key constraints:
 
+| Field | Rule |
+|-------|------|
+| `title` | min 1, max 200 |
+| `description` | max 2000, optional |
+| `priority` | int 0–100, default 0 |
+| `estimatedLength` | int 1–1440 (minutes); optional on create — defaults to `0` in the resolver. `0` is a valid state meaning "unestimated" — the item won't be auto-scheduled until a length is set. UI should allow 0 / no estimate. |
+| `frequencyCount` | int 1–30 |
+| `color` | must match `#[0-9a-fA-F]{6}` |
+| `daysOfWeek` | array of 0–6, min 1, max 7, unique |
+| `startTime` / `endTime` | `HH:mm` format; end must be after start |
+| `scheduledAt` | local datetime string (no `Z`) |
+
+```typescript
 // In resolver:
 const input = CreateTodoInput.parse(args.input);
 ```
@@ -155,6 +180,37 @@ activityType: async (parent, _args, context: Context) => {
   return context.loaders.activityType.load(parent.activityTypeId);
 },
 ```
+
+## iCal Endpoint
+
+`GET /ical?userId=<uuid>` — public, no auth token required. Returns a `.ics` feed for the current and next week. Naive local datetimes from the scheduler are converted to UTC using `fromZonedTime(datetime, user.timezone)` from `date-fns-tz`.
+
+The URL is intentionally public (no secret). Users are warned to treat it like a password.
+
+## Auth — Email Not Wired in Production
+
+Magic links are logged to the server console in both dev and prod. In dev, `requestMagicLink` also returns `magicLink` in the GraphQL response. In production the response has `magicLink: null`. There is a TODO to integrate Resend or Nodemailer — email is not yet sent.
+
+**Convention for email-adjacent features:** log to console in dev, leave a `// TODO: send email via Resend/Nodemailer` comment for production. Do not block features on the email provider being wired up.
+
+## Resolver File Structure
+
+Each domain has its own resolver file exporting an `apply*Resolvers(queryFields, mutationFields)` function:
+
+```
+packages/server/src/schema/resolvers/
+  index.ts          — extensionSDL + wires all apply* functions
+  todos.ts          — applyTodoResolvers
+  habits.ts         — applyHabitResolvers
+  time-blocks.ts    — applyTimeBlockResolvers
+  activity-types.ts — applyActivityTypeResolvers
+  schedule.ts       — applyScheduleResolvers
+  stats.ts          — applyStatsResolvers
+  profile.ts        — applyProfileResolvers
+  auth.ts           — applyAuthResolvers
+```
+
+New resolver domains follow the same pattern. SDL goes in `extensionSDL` in `index.ts`; resolver functions go in a new domain file.
 
 ## Scheduler Service (Pure Function)
 

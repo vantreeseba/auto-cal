@@ -40,6 +40,7 @@ npm test                 # vitest
 | **drizzle-graphql** | Auto-generates GraphQL schema from Drizzle tables — zero duplication; we extend with custom resolvers |
 | **PGLite** | Embedded Postgres, zero setup for local dev and single-node deploys; swap to full Postgres via `DATABASE_URL` |
 | **--experimental-strip-types** | Node 22+ runs TypeScript directly — no tsc watch, no build step for the server; requires `.ts` extensions in all imports |
+| **Auth** | Magic-link + JWT (jose) is live. `requestMagicLink` / `verifyMagicLink` mutations are public. `DEMO_USER_ID` env var is a dev fallback only. |
 
 ## Key Conventions
 
@@ -51,7 +52,7 @@ export type NewTodo = typeof todos.$inferInsert;
 
 **Enum pattern:**
 ```typescript
-export const FREQUENCY_UNITS = ['day', 'week', 'month'] as const;
+export const FREQUENCY_UNITS = ['week', 'month'] as const;
 export type FrequencyUnit = (typeof FREQUENCY_UNITS)[number];
 ```
 
