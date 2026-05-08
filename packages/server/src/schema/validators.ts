@@ -23,7 +23,7 @@ export const CreateTodoInput = z.object({
   priority: z.number().int().min(0).max(100).default(0),
   estimatedLength: z.number().int().min(1).max(1440).optional(),
   activityTypeId: z.string().uuid().optional(),
-  scheduledAt: z.string().datetime().optional(),
+  scheduledAt: z.string().datetime({ local: true }).optional(),
 });
 
 export const UpdateTodoInput = z.object({
@@ -99,5 +99,5 @@ export const UpdateTimeBlockInput = z.object({
 
 export const CompleteHabitInput = z.object({
   habitId: z.string().uuid(),
-  scheduledAt: z.string().datetime().optional(),
+  scheduledAt: z.string().datetime({ local: true }).optional(),
 });

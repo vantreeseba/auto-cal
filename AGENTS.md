@@ -271,6 +271,11 @@ When adding tests:
    - Shared GraphQL types
     - Push notifications
 
-## Project Documentation
+## Agent Reference Patterns
 
-For detailed project structure, schema definitions, and code patterns, see [`.agentic/project-structure.md`](.agentic/project-structure.md).
+Quick-lookup pattern files for agents working in this codebase:
+
+- [`.agents/db-patterns.md`](.agents/db-patterns.md) — Drizzle table definitions, type inference, query/insert/update/delete patterns, dual-backend connection, migrations
+- [`.agents/server-patterns.md`](.agents/server-patterns.md) — GraphQL schema pipeline, resolver authoring, guard clauses, Zod validation, JWT auth, DataLoader usage
+- [`.agents/graphql-patterns.md`](.agents/graphql-patterns.md) — Schema extension SDL, core/custom types, key queries and mutations, naming conventions, cache invalidation
+- [`.agents/client-patterns.md`](.agents/client-patterns.md) — Apollo Client setup, TanStack Router, colocated operations, fragment colocation, TanStack Form, ShadCN/Tailwind component patterns, codegen

@@ -1,6 +1,5 @@
 import type { DB } from '@auto-cal/db';
 import { users } from '@auto-cal/db/schema';
-import { eq } from 'drizzle-orm';
 import type { Router } from 'express';
 import express from 'express';
 import { signMagicToken, signSessionToken, verifyToken } from '../auth.ts';
@@ -47,7 +46,7 @@ export function createAuthRouter(db: DB): Router {
     const email = payload.email;
 
     // Find or create user
-    let user = await db._query.users.findFirst({ where: eq(users.email, email) });
+    let user = await db.query.users.findFirst({ where: { email } });
     if (!user) {
       const [created] = await db.insert(users).values({ email }).returning();
       if (!created) {

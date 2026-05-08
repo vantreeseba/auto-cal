@@ -8,7 +8,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { InlineLengthEdit } from '@/components/ui/inline-length-edit';
-import { gql, useMutation } from '@apollo/client';
+import { gql } from '@apollo/client';
+import { useMutation } from '@apollo/client/react';
 import { Pencil } from 'lucide-react';
 
 const UPDATE_HABIT_LENGTH = gql`
@@ -29,9 +30,12 @@ type HabitItemProps = {
 };
 
 export function HabitItem({ habit, onEdit, onSelect }: HabitItemProps) {
-  const [updateHabit, { loading: updatingLength }] = useMutation(UPDATE_HABIT_LENGTH, {
-    refetchQueries: ['GetMyHabits'],
-  });
+  const [updateHabit, { loading: updatingLength }] = useMutation(
+    UPDATE_HABIT_LENGTH,
+    {
+      refetchQueries: ['GetMyHabits'],
+    },
+  );
 
   function handleSaveLength(estimatedLength: number) {
     updateHabit({ variables: { input: { id: habit.id, estimatedLength } } });
@@ -62,7 +66,8 @@ export function HabitItem({ habit, onEdit, onSelect }: HabitItemProps) {
                 saving={updatingLength}
                 onSave={handleSaveLength}
               />
-              {' • '}{habit.frequencyCount}x per {habit.frequencyUnit}
+              {' • '}
+              {habit.frequencyCount}x per {habit.frequencyUnit}
               {' • '}Priority: {habit.priority}
             </CardDescription>
           </div>

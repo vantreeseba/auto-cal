@@ -52,7 +52,8 @@
         "**/routeTree.gen.ts"
       ],
       "linter": { "enabled": false },
-      "formatter": { "enabled": false }
+      "formatter": { "enabled": false },
+      "organizeImports": { "enabled": false }
     }
   ]
 }

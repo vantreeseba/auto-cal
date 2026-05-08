@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ApolloServer } from '@apollo/server';
-import { expressMiddleware } from '@apollo/server/express4';
+import { expressMiddleware } from '@as-integrations/express4';
 import { db } from '@auto-cal/db';
 import { seedDemoData, seedDemoUser } from '@auto-cal/db/seed';
 import cors from 'cors';
@@ -9,6 +9,7 @@ import express from 'express';
 import { verifyToken } from './auth.ts';
 import { createLoaders } from './context.ts';
 import type { Context } from './context.ts';
+import { icalHandler } from './ical-route.ts';
 import { schema } from './schema/index.ts';
 
 const app = express();
@@ -32,7 +33,6 @@ app.use(
   '/graphql',
   cors<cors.CorsRequest>(),
   express.json(),
-  // @ts-expect-error - apollo/server express types conflict with @types/express
   expressMiddleware(server, {
     context: async ({ req }: { req: express.Request }): Promise<Context> => {
       const authHeader = req.headers.authorization;
@@ -49,12 +49,15 @@ app.use(
       if (payload?.sub) return { db, userId: payload.sub, loaders };
 
       // Fall back to raw UUID for backwards-compat with dev/seed
-      if (/^[0-9a-f-]{36}$/i.test(rawToken)) return { db, userId: rawToken, loaders };
+      if (/^[0-9a-f-]{36}$/i.test(rawToken))
+        return { db, userId: rawToken, loaders };
 
       return { db, loaders };
     },
   }),
 );
+
+app.get('/ical', icalHandler);
 
 if (clientDistExists) {
   app.get('*', (_req, res) => {

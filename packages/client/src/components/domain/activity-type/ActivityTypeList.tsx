@@ -1,4 +1,9 @@
-import type { ActivityType_ActivityTypeListFragment, ActivityTypeStats } from '@/__generated__/graphql.js';
+import type {
+  ActivityType_ActivityTypeListFragment,
+  GetActivityTypeStatsQuery,
+} from '@/__generated__/graphql.js';
+
+type ActivityTypeStats = GetActivityTypeStatsQuery['activityTypeStats'][number];
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
 import {
@@ -91,9 +96,11 @@ export function ActivityTypeList({ items, statsById }: ActivityTypeListProps) {
                     <span className="text-sm font-medium">{item.name}</span>
                     {stats && (
                       <span className="text-xs text-muted-foreground">
-                        {stats.totalTodos} todo{stats.totalTodos !== 1 ? 's' : ''}
+                        {stats.totalTodos} todo
+                        {stats.totalTodos !== 1 ? 's' : ''}
                         {' · '}
-                        {stats.totalHabits} habit{stats.totalHabits !== 1 ? 's' : ''}
+                        {stats.totalHabits} habit
+                        {stats.totalHabits !== 1 ? 's' : ''}
                       </span>
                     )}
                   </div>

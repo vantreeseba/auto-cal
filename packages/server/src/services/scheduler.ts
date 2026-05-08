@@ -142,7 +142,11 @@ function sortTasks(tasks: Task[]): Task[] {
  * placed into this slot, advancing past `now` if the cursor is in the past.
  * Returns null if there is no future capacity left in the slot.
  */
-function effectiveSlotStart(slot: Slot, now: Date, durationMins: number): number | null {
+function effectiveSlotStart(
+  slot: Slot,
+  now: Date,
+  durationMins: number,
+): number | null {
   const slotEndMins = slot.startMinutes + slot.totalMinutes;
   const cursorMins = slot.startMinutes + slot.usedMinutes;
 
@@ -150,7 +154,7 @@ function effectiveSlotStart(slot: Slot, now: Date, durationMins: number): number
   const slotDayMidnight = new Date(`${slot.dateStr}T00:00:00`);
   const nowMins = (now.getTime() - slotDayMidnight.getTime()) / (1000 * 60);
 
-  const startMins = Math.max(cursorMins, nowMins);
+  const startMins = Math.ceil(Math.max(cursorMins, nowMins));
   if (startMins + durationMins > slotEndMins) return null;
   return startMins;
 }

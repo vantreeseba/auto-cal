@@ -1,4 +1,4 @@
-import type { TimeBlockListFieldsFragment } from '@/__generated__/graphql.js';
+import type { TimeBlock_TimeBlockListFragment } from '@/__generated__/graphql.js';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/card';
 import { Pencil } from 'lucide-react';
 
-type TimeBlock = TimeBlockListFieldsFragment;
+type TimeBlock = TimeBlock_TimeBlockListFragment;
 
 const DAY_NAMES = [
   'Sunday',

@@ -3,7 +3,8 @@ import { CalendarView } from '@/components/domain/dashboard/CalendarView';
 import { ScheduleView } from '@/components/domain/dashboard/ScheduleView';
 import { Button } from '@/components/ui/button';
 import { RouteError } from '@/components/ui/route-error';
-import { gql, useMutation, useQuery, useReadQuery } from '@apollo/client';
+import { gql } from '@apollo/client';
+import { useMutation, useQuery, useReadQuery } from '@apollo/client/react';
 import { createFileRoute } from '@tanstack/react-router';
 import { addDays, addMonths, addWeeks, format, startOfMonth } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -46,9 +47,12 @@ function toMonday(date: Date): Date {
 
 function navigateDate(date: Date, view: CalendarViewMode, dir: 1 | -1): Date {
   switch (view) {
-    case 'day': return addDays(date, dir);
-    case 'week': return toMonday(addWeeks(date, dir));
-    case 'month': return startOfMonth(addMonths(date, dir));
+    case 'day':
+      return addDays(date, dir);
+    case 'week':
+      return toMonday(addWeeks(date, dir));
+    case 'month':
+      return startOfMonth(addMonths(date, dir));
   }
 }
 
@@ -67,22 +71,30 @@ function dateLabel(date: Date, view: CalendarViewMode): string {
         : `${format(start, 'MMM d')} – ${format(end, 'MMM d, yyyy')}`;
     }
     case 'month':
-      return format(date, date.getFullYear() === thisYear ? 'MMMM' : 'MMMM yyyy');
+      return format(
+        date,
+        date.getFullYear() === thisYear ? 'MMMM' : 'MMMM yyyy',
+      );
   }
 }
 
 function isCurrent(date: Date, view: CalendarViewMode): boolean {
   const now = new Date();
   switch (view) {
-    case 'day': return format(date, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd');
-    case 'week': return toMonday(now).getTime() === toMonday(date).getTime();
-    case 'month': return format(date, 'yyyy-MM') === format(now, 'yyyy-MM');
+    case 'day':
+      return format(date, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd');
+    case 'week':
+      return toMonday(now).getTime() === toMonday(date).getTime();
+    case 'month':
+      return format(date, 'yyyy-MM') === format(now, 'yyyy-MM');
   }
 }
 
 export const Route = createFileRoute('/dashboard')({
   component: DashboardPage,
-  errorComponent: ({ error, reset }) => <RouteError error={error} reset={reset} />,
+  errorComponent: ({ error, reset }) => (
+    <RouteError error={error} reset={reset} />
+  ),
   loader: ({ context }) => ({
     calendarData: context.preloadQuery(GET_CALENDAR_DATA),
   }),
@@ -97,14 +109,20 @@ function DashboardPage() {
   const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   const [updateProfile] = useMutation(UPDATE_PROFILE);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional mount-only effect — timezone sync runs once on load
   useEffect(() => {
-    updateProfile({ variables: { timezone: clientTimezone } }).catch(console.error);
+    updateProfile({ variables: { timezone: clientTimezone } }).catch(
+      console.error,
+    );
   }, []);
 
   // Schedule is always week-scoped regardless of calendar view
   const weekStart = toMonday(date);
   const { data: scheduleData } = useQuery(MY_SCHEDULE, {
-    variables: { weekStart: format(weekStart, 'yyyy-MM-dd'), timezone: clientTimezone },
+    variables: {
+      weekStart: format(weekStart, 'yyyy-MM-dd'),
+      timezone: clientTimezone,
+    },
   });
 
   function handleViewChange(next: CalendarViewMode) {
@@ -181,12 +199,16 @@ function DashboardPage() {
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
         <CalendarView
-          timeBlocks={calendarViewData.myTimeBlocks}
+          timeBlocks={calendarViewData?.myTimeBlocks ?? []}
           schedule={scheduleData?.mySchedule ?? []}
           date={date}
           view={view}
         />
-        <ScheduleView schedule={scheduleData?.mySchedule ?? []} view={view} date={date} />
+        <ScheduleView
+          schedule={scheduleData?.mySchedule ?? []}
+          view={view}
+          date={date}
+        />
       </div>
     </div>
   );

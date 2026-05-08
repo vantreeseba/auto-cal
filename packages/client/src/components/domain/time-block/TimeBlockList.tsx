@@ -91,7 +91,9 @@ export function TimeBlockList({ items, loading, error }: TimeBlockListProps) {
             </div>
             <div>
               <p className="font-medium text-sm">No time blocks yet</p>
-              <p className="text-sm text-muted-foreground">Define when you work on different activities</p>
+              <p className="text-sm text-muted-foreground">
+                Define when you work on different activities
+              </p>
             </div>
             <Button size="sm" onClick={openCreate}>
               <Plus className="mr-2 h-4 w-4" />

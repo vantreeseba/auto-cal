@@ -1,9 +1,8 @@
 import { graphql } from '@/__generated__/index.js';
-import { type TodoOrderBy } from '@/components/domain/todo/TodoList';
+import type { TodoOrderBy } from '@/components/domain/todo/TodoList';
 import { TodoList } from '@/components/domain/todo/TodoList';
 import { RouteError } from '@/components/ui/route-error';
-import { OrderDirection } from '@/__generated__/graphql.js';
-import { useQuery } from '@apollo/client';
+import { useQuery } from '@apollo/client/react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 
@@ -16,13 +15,15 @@ const GET_MY_TODOS = graphql(`
 `);
 
 const DEFAULT_ORDER_BY: TodoOrderBy = {
-  priority: { direction: OrderDirection.Desc, priority: 1 },
-  createdAt: { direction: OrderDirection.Desc, priority: 2 },
+  priority: { direction: 'desc', priority: 1 },
+  createdAt: { direction: 'desc', priority: 2 },
 };
 
 export const Route = createFileRoute('/todos')({
   component: TodosPage,
-  errorComponent: ({ error, reset }) => <RouteError error={error} reset={reset} />,
+  errorComponent: ({ error, reset }) => (
+    <RouteError error={error} reset={reset} />
+  ),
 });
 
 function TodosPage() {

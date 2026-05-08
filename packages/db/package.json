@@ -19,10 +19,11 @@
     "postgres": "^3.4.9"
   },
   "peerDependencies": {
-    "drizzle-orm": "~1.0.0-beta"
+    "drizzle-orm": "~1.0.0-rc.2"
   },
   "devDependencies": {
-    "drizzle-kit": "~1.0.0-beta",
+    "@types/node": "^25.6.0",
+    "drizzle-kit": "~1.0.0-rc.2",
     "env-cmd": "^10.1.0"
   }
 }

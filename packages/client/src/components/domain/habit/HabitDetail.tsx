@@ -1,4 +1,11 @@
-import type { Habit_HabitListFragment, HabitPeriod } from '@/__generated__/graphql.js';
+import type {
+  GetHabitDetailQuery,
+  Habit_HabitListFragment,
+} from '@/__generated__/graphql.js';
+
+type HabitPeriod = NonNullable<
+  GetHabitDetailQuery['myHabitDetail']
+>['periods'][number];
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,7 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { useQuery } from '@apollo/client';
+import { useQuery } from '@apollo/client/react';
 import { ArrowLeft, Pencil } from 'lucide-react';
 import { useMemo } from 'react';
 
@@ -55,7 +62,6 @@ interface HabitDetailProps {
   onBack: () => void;
   onEdit: (habit: Habit) => void;
 }
-
 
 export function HabitDetail({ habit, onBack, onEdit }: HabitDetailProps) {
   const { data, loading, error } = useQuery(GET_HABIT_DETAIL, {

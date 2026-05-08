@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useAppForm } from '@/hooks/form-hook';
-import { useMutation } from '@apollo/client';
+import { useMutation } from '@apollo/client/react';
 import { z } from 'zod';
 
 // ─── GraphQL Operations ────────────────────────────────────────────────────
@@ -97,8 +97,8 @@ const FREQUENCY_UNIT_OPTIONS = [
 
 const habitSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Max 200 characters'),
-  description: z.string().max(2000, 'Max 2000 characters').optional(),
-  activityTypeId: z.string().uuid().optional(),
+  description: z.string().max(2000, 'Max 2000 characters'),
+  activityTypeId: z.string().uuid().or(z.undefined()),
   priority: z.string().min(1, 'Priority is required'),
   estimatedLength: z.string().min(1, 'Duration is required'),
   frequencyCount: z
@@ -108,6 +108,8 @@ const habitSchema = z.object({
     .max(30, 'Max 30'),
   frequencyUnit: z.string().min(1, 'Frequency unit is required'),
 });
+
+type HabitFormValues = z.infer<typeof habitSchema>;
 
 // ─── Props ─────────────────────────────────────────────────────────────────
 
@@ -145,7 +147,7 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
       estimatedLength: String(habit?.estimatedLength ?? 30),
       frequencyCount: habit?.frequencyCount ?? 1,
       frequencyUnit: habit?.frequencyUnit ?? 'week',
-    },
+    } as HabitFormValues,
     validators: {
       onChange: habitSchema,
     },

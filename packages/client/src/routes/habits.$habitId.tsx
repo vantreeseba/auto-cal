@@ -3,7 +3,7 @@ import { graphql } from '@/__generated__/index.js';
 import { HabitDetail } from '@/components/domain/habit/HabitDetail';
 import { HabitForm } from '@/components/domain/habit/HabitForm';
 import { RouteError } from '@/components/ui/route-error';
-import { useReadQuery } from '@apollo/client';
+import { useReadQuery } from '@apollo/client/react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 
@@ -17,7 +17,9 @@ const GET_HABIT_FOR_DETAIL = graphql(`
 
 export const Route = createFileRoute('/habits/$habitId')({
   component: HabitDetailPage,
-  errorComponent: ({ error, reset }) => <RouteError error={error} reset={reset} />,
+  errorComponent: ({ error, reset }) => (
+    <RouteError error={error} reset={reset} />
+  ),
   loader: ({ context }) => ({
     habits: context.preloadQuery(GET_HABIT_FOR_DETAIL),
   }),

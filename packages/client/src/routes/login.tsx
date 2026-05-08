@@ -1,7 +1,12 @@
 import { Button } from '@/components/ui/button';
-import { gql, useMutation } from '@apollo/client';
+import { gql } from '@apollo/client';
+import { useMutation } from '@apollo/client/react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
+
+interface RequestMagicLinkResult {
+  requestMagicLink: { ok: boolean; magicLink: string | null };
+}
 
 const REQUEST_MAGIC_LINK = gql`
   mutation RequestMagicLink($email: String!) {
@@ -21,12 +26,15 @@ function LoginPage() {
   const [submitted, setSubmitted] = useState(false);
   const [magicLink, setMagicLink] = useState<string | null>(null);
 
-  const [requestLink, { loading, error }] = useMutation(REQUEST_MAGIC_LINK, {
-    onCompleted(data) {
-      setMagicLink(data.requestMagicLink.magicLink ?? null);
-      setSubmitted(true);
+  const [requestLink, { loading, error }] = useMutation<RequestMagicLinkResult>(
+    REQUEST_MAGIC_LINK,
+    {
+      onCompleted(data) {
+        setMagicLink(data.requestMagicLink.magicLink ?? null);
+        setSubmitted(true);
+      },
     },
-  });
+  );
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -48,7 +56,8 @@ function LoginPage() {
             Sign in →
           </a>
           <p className="mt-6 text-xs text-muted-foreground">
-            This link is shown here because the server is running in development mode.
+            This link is shown here because the server is running in development
+            mode.
           </p>
         </div>
       </div>
@@ -61,11 +70,15 @@ function LoginPage() {
         <div className="text-center max-w-sm p-8">
           <h1 className="text-2xl font-bold mb-2">Check your email</h1>
           <p className="text-muted-foreground mb-4">
-            We sent a magic link to <strong>{email}</strong>. Click it to sign in.
+            We sent a magic link to <strong>{email}</strong>. Click it to sign
+            in.
           </p>
           <button
             type="button"
-            onClick={() => { setSubmitted(false); setEmail(''); }}
+            onClick={() => {
+              setSubmitted(false);
+              setEmail('');
+            }}
             className="text-sm underline text-muted-foreground"
           >
             Use a different email

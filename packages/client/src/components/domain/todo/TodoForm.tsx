@@ -1,7 +1,7 @@
 import type {
   CreateTodoMutation,
   CreateTodoMutationVariables,
-  TodoListFieldsFragment,
+  Todo_TodoListFragment,
   UpdateTodoMutation,
   UpdateTodoMutationVariables,
 } from '@/__generated__/graphql.js';
@@ -24,7 +24,7 @@ import {
   Form,
 } from '@/components/ui/form';
 import { useAppForm } from '@/hooks/form-hook';
-import { useMutation } from '@apollo/client';
+import { useMutation } from '@apollo/client/react';
 import { Check } from 'lucide-react';
 import { z } from 'zod';
 
@@ -101,8 +101,8 @@ const DURATION_OPTIONS = [
 
 const todoSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Max 200 characters'),
-  description: z.string().max(2000, 'Max 2000 characters').optional(),
-  activityTypeId: z.string().uuid().optional(),
+  description: z.string().max(2000, 'Max 2000 characters'),
+  activityTypeId: z.string().uuid().or(z.undefined()),
   priority: z.string().min(1, 'Priority is required'),
   estimatedLength: z.string().min(1, 'Duration is required'),
 });
@@ -111,7 +111,7 @@ type TodoFormValues = z.infer<typeof todoSchema>;
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
-type Todo = TodoListFieldsFragment;
+type Todo = Todo_TodoListFragment;
 
 // ─── Props ─────────────────────────────────────────────────────────────────
 
@@ -278,7 +278,7 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
                     Mark Complete
                   </Button>
                 )}
-                {isEdit && todo?.completedAt && (
+                {isEdit && !!todo?.completedAt && (
                   <span className="text-sm text-muted-foreground">
                     ✓ Completed
                   </span>

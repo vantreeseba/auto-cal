@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { relations } from './relations.ts';
 import * as schema from './schema.ts';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -16,7 +17,8 @@ if (databaseUrl) {
   const { drizzle } = await import('drizzle-orm/postgres-js');
   const postgres = await import('postgres');
   const client = postgres.default(databaseUrl);
-  db = drizzle({ client, schema });
+  // @ts-expect-error drizzle-orm 1.0-beta removed `schema` from DrizzlePgConfig types but it remains valid at runtime for relational queries
+  db = drizzle({ client, schema, relations });
 
   // Run migrations
   const { migrate } = await import('drizzle-orm/postgres-js/migrator');
@@ -32,7 +34,8 @@ if (databaseUrl) {
 
   const client = new PGlite(dir);
   await client.waitReady;
-  db = drizzle({ client, schema });
+  // @ts-expect-error drizzle-orm 1.0-beta removed `schema` from DrizzlePgConfig types but it remains valid at runtime for relational queries
+  db = drizzle({ client, schema, relations });
 
   await migrate(db, { migrationsFolder });
 }

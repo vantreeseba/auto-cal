@@ -3,8 +3,8 @@ import type {
   TimeBlock_CalendarViewFragment,
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
-import { gql, useMutation } from '@apollo/client';
-import { Check, Loader2 } from 'lucide-react';
+import { gql } from '@apollo/client';
+import { useMutation } from '@apollo/client/react';
 import {
   addDays,
   format,
@@ -16,6 +16,8 @@ import {
   startOfWeek,
 } from 'date-fns';
 import { enUS } from 'date-fns/locale/en-US';
+import { Check, Loader2 } from 'lucide-react';
+import type React from 'react';
 import { useMemo } from 'react';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
@@ -33,7 +35,10 @@ const localizer = dateFnsLocalizer({
 });
 
 // Create DnD-enabled Calendar
-const DnDCalendar = withDragAndDrop(Calendar as any) as any;
+// biome-ignore lint/suspicious/noExplicitAny: react-big-calendar DnD wrapper lacks proper generic types
+const wdnd: any = (withDragAndDrop as any).default ?? withDragAndDrop;
+// biome-ignore lint/suspicious/noExplicitAny: react-big-calendar DnD wrapper lacks proper generic types
+const DnDCalendar = wdnd(Calendar as any) as any;
 
 // ─── GraphQL ────────────────────────────────────────────────────────────────
 
@@ -75,7 +80,13 @@ const PIN_TODO = gql`
 
 const COMPLETE_HABIT = gql`
   mutation CompleteHabitFromCalendar($input: CompleteHabitArgs!) {
-    myCompleteHabit(input: $input) { id }
+    myCompleteHabit(input: $input) { id completedAt }
+  }
+`;
+
+const COMPLETE_TODO = gql`
+  mutation CompleteTodoFromCalendar($id: ID!) {
+    myCompleteTodo(id: $id) { id completedAt }
   }
 `;
 
@@ -193,12 +204,57 @@ function eventStyleGetter(event: CalendarEvent) {
 // ─── Custom Event Component ──────────────────────────────────────────────────
 
 function CalendarEventComponent({ event }: { event: CalendarEvent }) {
-  const [completeHabit, { loading: completing }] = useMutation(COMPLETE_HABIT, {
-    refetchQueries: ['MySchedule'],
-    onError: (err) => console.error('[completeHabit]', err.message),
-  });
+  const [completeHabit, { loading: completingHabit }] = useMutation(
+    COMPLETE_HABIT,
+    {
+      refetchQueries: ['MySchedule'],
+      onError: (err) => console.error('[completeHabit]', err.message),
+    },
+  );
 
+  const [completeTodo, { loading: completingTodo }] = useMutation(
+    COMPLETE_TODO,
+    {
+      refetchQueries: ['MySchedule'],
+      onError: (err) => console.error('[completeTodo]', err.message),
+    },
+  );
+
+  const completing = completingHabit || completingTodo;
   const isHabit = event.isTask && event.kind === 'habit';
+  const isTodo = event.isTask && event.kind === 'todo';
+
+  function handleClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    const now = new Date().toISOString();
+    if (isHabit) {
+      const raw = event.id.replace(/^scheduled-habit-/, '');
+      const habitId = raw.replace(/-\d+$/, '');
+      completeHabit({
+        variables: {
+          input: {
+            habitId,
+            scheduledAt: format(event.start, "yyyy-MM-dd'T'HH:mm:ss"),
+          },
+        },
+        optimisticResponse: {
+          myCompleteHabit: {
+            __typename: 'HabitCompletion',
+            id: `${event.id}-optimistic`,
+            completedAt: now,
+          },
+        },
+      }).catch(console.error);
+    } else if (isTodo) {
+      const todoId = event.id.replace(/^scheduled-todo-/, '');
+      completeTodo({
+        variables: { id: todoId },
+        optimisticResponse: {
+          myCompleteTodo: { __typename: 'Todo', id: todoId, completedAt: now },
+        },
+      }).catch(console.error);
+    }
+  }
 
   return (
     <div
@@ -206,25 +262,13 @@ function CalendarEventComponent({ event }: { event: CalendarEvent }) {
       style={{ opacity: completing ? 0.5 : 1, transition: 'opacity 150ms' }}
     >
       <span className="truncate text-xs leading-tight">{event.title}</span>
-      {isHabit && (
+      {(isHabit || isTodo) && (
         <button
           type="button"
           disabled={completing}
           className="flex-shrink-0 rounded p-0.5 opacity-80 hover:opacity-100 hover:bg-black/20 disabled:cursor-not-allowed"
-          title="Mark habit complete"
-          onClick={(e) => {
-            e.stopPropagation();
-            const raw = event.id.replace(/^scheduled-habit-/, '');
-            const habitId = raw.replace(/-\d+$/, '');
-            completeHabit({
-              variables: {
-                input: {
-                  habitId,
-                  scheduledAt: format(event.start, "yyyy-MM-dd'T'HH:mm:ss"),
-                },
-              },
-            }).catch(console.error);
-          }}
+          title={isHabit ? 'Mark habit complete' : 'Mark todo complete'}
+          onClick={handleClick}
         >
           {completing ? (
             <Loader2 className="h-3 w-3 animate-spin" />
@@ -248,14 +292,18 @@ type CalendarViewProps = {
   view: CalendarViewMode;
 };
 
-export function CalendarView({ timeBlocks, schedule, date, view }: CalendarViewProps) {
-  const now = new Date();
-
+export function CalendarView({
+  timeBlocks,
+  schedule,
+  date,
+  view,
+}: CalendarViewProps) {
   const [pinTodo] = useMutation(PIN_TODO, {
     refetchQueries: ['MySchedule'],
   });
 
   const backgroundEvents = useMemo<CalendarEvent[]>(() => {
+    const now = new Date();
     // Skip background time-block shading in month view — too noisy on a grid
     if (view === 'month') return [];
     return timeBlocks.flatMap((block) =>
@@ -267,9 +315,11 @@ export function CalendarView({ timeBlocks, schedule, date, view }: CalendarViewP
   }, [timeBlocks, date, view]);
 
   const scheduledEvents = useMemo<CalendarEvent[]>(() => {
+    const now = new Date();
     return schedule
       .filter((item) => {
-        if (!item.isScheduled || !item.scheduledStart || !item.scheduledEnd) return false;
+        if (!item.isScheduled || !item.scheduledStart || !item.scheduledEnd)
+          return false;
         // Don't show incomplete events that have already ended
         return new Date(item.scheduledEnd) > now;
       })
@@ -315,7 +365,10 @@ export function CalendarView({ timeBlocks, schedule, date, view }: CalendarViewP
       });
   }, [schedule]);
 
-  function onEventDrop({ event, start }: { event: CalendarEvent; start: Date | string }) {
+  function onEventDrop({
+    event,
+    start,
+  }: { event: CalendarEvent; start: Date | string }) {
     if (!event.isTask || event.kind !== 'todo') return;
     // event.id format: "scheduled-todo-{id}"
     const match = event.id.match(/^scheduled-todo-(.+)$/);
