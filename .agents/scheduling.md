@@ -9,6 +9,7 @@ The scheduler auto-assigns `scheduledAt` timestamps to todos and habit instances
 | File | Role |
 |------|------|
 | `packages/server/src/services/scheduler.ts` | Pure scheduling algorithm — no DB calls |
+| `packages/server/src/services/scheduler.test.ts` | Vitest coverage of `computeSchedule` |
 | `packages/server/src/services/scheduler-writeback.ts` | Fetches data, runs the algorithm, writes results back |
 
 ## Algorithm (`computeSchedule`)
@@ -18,7 +19,7 @@ The scheduler auto-assigns `scheduledAt` timestamps to todos and habit instances
 3. Sort all tasks (todos + habit instances) by **priority DESC**, then **estimatedLength ASC**
 4. For each task, find the first slot for its `activityTypeId` with enough remaining capacity (`effectiveSlotStart`)
    - Habit instances additionally try to spread across different days before falling back to any available slot
-5. Return `ScheduledItem[]` with `scheduledStart`/`scheduledEnd` as naive ISO strings (`YYYY-MM-DDTHH:mm:ss`, no `Z`) so browsers interpret them as local time
+5. Return `ScheduledItem[]` with `scheduledStart`/`scheduledEnd` as naive ISO strings (`YYYY-MM-DDTHH:mm:ss`, no `Z`) so browsers interpret them as local time. **Note:** the naive-string convention is a stopgap until proper UTC + timezone handling lands — see todo.md #3.
 
 ## Writeback (`runSchedulerWriteback`)
 
