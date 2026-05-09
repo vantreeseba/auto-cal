@@ -18,9 +18,9 @@ export const todos = pgTable('todos', {
   description: text('description'),
   priority: integer('priority').notNull().default(0),
   estimatedLength: integer('estimated_length').notNull(),
-  activityTypeId: uuid('activity_type_id').references(() => activityTypes.id, {
-    onDelete: 'set null',
-  }),
+  activityTypeId: uuid('activity_type_id')
+    .notNull()
+    .references(() => activityTypes.id, { onDelete: 'restrict' }),
   scheduledAt: timestamp('scheduled_at'),
   completedAt: timestamp('completed_at'),
   manuallyScheduled: boolean('manually_scheduled').notNull().default(false),

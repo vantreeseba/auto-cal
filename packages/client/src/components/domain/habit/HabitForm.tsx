@@ -98,7 +98,7 @@ const FREQUENCY_UNIT_OPTIONS = [
 const habitSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Max 200 characters'),
   description: z.string().max(2000, 'Max 2000 characters'),
-  activityTypeId: z.string().uuid().or(z.undefined()),
+  activityTypeId: z.string().uuid('Activity type is required'),
   priority: z.string().min(1, 'Priority is required'),
   estimatedLength: z.string().min(1, 'Duration is required'),
   frequencyCount: z
@@ -142,7 +142,7 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
     defaultValues: {
       title: habit?.title ?? '',
       description: habit?.description ?? '',
-      activityTypeId: habit?.activityType?.id ?? undefined,
+      activityTypeId: habit?.activityType?.id ?? '',
       priority: String(habit?.priority ?? 0),
       estimatedLength: String(habit?.estimatedLength ?? 30),
       frequencyCount: habit?.frequencyCount ?? 1,
@@ -159,7 +159,7 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
               id: habit.id,
               title: value.title,
               description: value.description ?? null,
-              activityTypeId: value.activityTypeId ?? null,
+              activityTypeId: value.activityTypeId,
               priority: Number(value.priority),
               estimatedLength: Number(value.estimatedLength),
               frequencyCount: value.frequencyCount,
@@ -173,7 +173,7 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
             input: {
               title: value.title,
               description: value.description ?? null,
-              activityTypeId: value.activityTypeId ?? null,
+              activityTypeId: value.activityTypeId,
               priority: Number(value.priority),
               estimatedLength: Number(value.estimatedLength),
               frequencyCount: value.frequencyCount,
@@ -224,11 +224,11 @@ export function HabitForm({ habit, open, onOpenChange }: HabitFormProps) {
             <form.AppField name="activityTypeId">
               {(field) => (
                 <Field>
-                  <FieldLabel>Activity Type (optional)</FieldLabel>
+                  <FieldLabel>Activity Type</FieldLabel>
                   <FieldControl>
                     <ActivityTypeSelect
-                      value={field.state.value}
-                      onValueChange={(v) => field.handleChange(v)}
+                      value={field.state.value || undefined}
+                      onValueChange={(v) => field.handleChange(v ?? '')}
                       onBlur={field.handleBlur}
                     />
                   </FieldControl>

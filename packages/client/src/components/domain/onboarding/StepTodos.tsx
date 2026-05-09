@@ -61,7 +61,7 @@ const PRIORITY_OPTIONS = [
 
 const schema = z.object({
   title: z.string().min(1, 'Title is required').max(200),
-  activityTypeId: z.string().uuid().optional(),
+  activityTypeId: z.string().uuid('Activity type is required'),
   priority: z.number().int().min(0).max(100),
 });
 
@@ -85,7 +85,7 @@ export function StepTodos({ onBack, onFinish, onSkip }: StepTodosProps) {
   const form = useAppForm({
     defaultValues: {
       title: '',
-      activityTypeId: undefined,
+      activityTypeId: '',
       priority: 0,
     } as FormValues,
     validators: { onChange: schema },
@@ -162,8 +162,8 @@ export function StepTodos({ onBack, onFinish, onSkip }: StepTodosProps) {
                     <FieldLabel>Activity type</FieldLabel>
                     <FieldControl>
                       <ActivityTypeSelect
-                        value={field.state.value}
-                        onValueChange={field.handleChange}
+                        value={field.state.value || undefined}
+                        onValueChange={(v) => field.handleChange(v ?? '')}
                         onBlur={field.handleBlur}
                       />
                     </FieldControl>

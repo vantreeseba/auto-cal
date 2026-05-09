@@ -276,7 +276,7 @@ input CreateHabitInput {
   description: String
   priority: Int
   estimatedLength: Int!
-  activityTypeId: String
+  activityTypeId: String!
   frequencyCount: Int!
   frequencyUnit: String!
 
@@ -351,7 +351,7 @@ input HabitOrderBy {
 input CreateTimeBlockInput {
   id: String
   userId: String!
-  activityTypeId: String
+  activityTypeId: String!
   daysOfWeek: [Int!]!
   startTime: String!
   endTime: String!
@@ -467,7 +467,7 @@ input CreateTodoInput {
   description: String
   priority: Int
   estimatedLength: Int!
-  activityTypeId: String
+  activityTypeId: String!
 
   """DateTime"""
   scheduledAt: DateTime
@@ -683,7 +683,7 @@ type Habit {
   description: String
   priority: Int!
   estimatedLength: Int!
-  activityTypeId: String
+  activityTypeId: String!
   frequencyCount: Int!
   frequencyUnit: String!
 
@@ -700,7 +700,7 @@ type Habit {
 type TimeBlock {
   id: String!
   userId: String!
-  activityTypeId: String
+  activityTypeId: String!
   daysOfWeek: [Int!]!
   startTime: String!
   endTime: String!
@@ -722,7 +722,7 @@ type Todo {
   description: String
   priority: Int!
   estimatedLength: Int!
-  activityTypeId: String
+  activityTypeId: String!
 
   """DateTime"""
   scheduledAt: DateTime
@@ -931,7 +931,7 @@ input CreateTodoArgs {
   description: String
   priority: Int
   estimatedLength: Int
-  activityTypeId: ID
+  activityTypeId: ID!
   scheduledAt: String
 }
 
@@ -952,13 +952,13 @@ input CreateHabitArgs {
   description: String
   priority: Int
   estimatedLength: Int
-  activityTypeId: ID
+  activityTypeId: ID!
   frequencyCount: Int!
   frequencyUnit: String!
 }
 
 input CreateTimeBlockArgs {
-  activityTypeId: ID
+  activityTypeId: ID!
   daysOfWeek: [Int!]!
   startTime: String!
   endTime: String!

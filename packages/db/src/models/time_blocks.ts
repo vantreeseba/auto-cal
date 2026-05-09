@@ -7,9 +7,9 @@ export const timeBlocks = pgTable('time_blocks', {
   userId: uuid('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  activityTypeId: uuid('activity_type_id').references(() => activityTypes.id, {
-    onDelete: 'set null',
-  }),
+  activityTypeId: uuid('activity_type_id')
+    .notNull()
+    .references(() => activityTypes.id, { onDelete: 'restrict' }),
   daysOfWeek: integer('days_of_week').array().notNull(),
   startTime: text('start_time').notNull(),
   endTime: text('end_time').notNull(),

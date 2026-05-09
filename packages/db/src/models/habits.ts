@@ -12,9 +12,9 @@ export const habits = pgTable('habits', {
   description: text('description'),
   priority: integer('priority').notNull().default(0),
   estimatedLength: integer('estimated_length').notNull(),
-  activityTypeId: uuid('activity_type_id').references(() => activityTypes.id, {
-    onDelete: 'set null',
-  }),
+  activityTypeId: uuid('activity_type_id')
+    .notNull()
+    .references(() => activityTypes.id, { onDelete: 'restrict' }),
   frequencyCount: integer('frequency_count').notNull(),
   frequencyUnit: text('frequency_unit').notNull().$type<FrequencyUnit>(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
