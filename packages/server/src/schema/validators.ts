@@ -100,4 +100,5 @@ export const UpdateTimeBlockInput = z.object({
 export const CompleteHabitInput = z.object({
   habitId: z.string().uuid(),
   scheduledAt: z.string().datetime({ local: true }).optional(),
+  completedAt: z.string().datetime({ local: true }).optional(),
 });

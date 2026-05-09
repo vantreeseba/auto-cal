@@ -399,19 +399,38 @@ describe('UpdateTimeBlockInput', () => {
 });
 
 describe('CompleteHabitInput', () => {
+  const validHabitId = '00000000-0000-0000-0000-000000000001';
+
   it('accepts valid habitId', () => {
     expect(() =>
-      CompleteHabitInput.parse({
-        habitId: '00000000-0000-0000-0000-000000000001',
-      }),
+      CompleteHabitInput.parse({ habitId: validHabitId }),
     ).not.toThrow();
   });
 
   it('accepts optional scheduledAt', () => {
     expect(() =>
       CompleteHabitInput.parse({
-        habitId: '00000000-0000-0000-0000-000000000001',
+        habitId: validHabitId,
         scheduledAt: '2026-04-27T09:00:00.000Z',
+      }),
+    ).not.toThrow();
+  });
+
+  it('accepts optional completedAt', () => {
+    expect(() =>
+      CompleteHabitInput.parse({
+        habitId: validHabitId,
+        completedAt: '2026-04-27T09:00:00.000Z',
+      }),
+    ).not.toThrow();
+  });
+
+  it('accepts both scheduledAt and completedAt', () => {
+    expect(() =>
+      CompleteHabitInput.parse({
+        habitId: validHabitId,
+        scheduledAt: '2026-04-27T09:00:00.000Z',
+        completedAt: '2026-04-27T09:30:00.000Z',
       }),
     ).not.toThrow();
   });

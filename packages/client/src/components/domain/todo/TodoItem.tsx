@@ -1,5 +1,9 @@
 import type { Todo_TodoListFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
+import {
+  CompletionDialog,
+  type CompletionDialogTarget,
+} from '@/components/domain/CompletionDialog';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -19,15 +23,7 @@ import { gql } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
 import { Link } from '@tanstack/react-router';
 import { AlertTriangle, Check, Pencil, Undo2 } from 'lucide-react';
-
-const COMPLETE_TODO = graphql(`
-  mutation CompleteTodo($id: ID!) {
-    myCompleteTodo(id: $id) {
-      id
-      completedAt
-    }
-  }
-`);
+import { useState } from 'react';
 
 const UPDATE_TODO_LENGTH = gql`
   mutation UpdateTodoEstimatedLength($input: UpdateTodoArgs!) {
@@ -56,10 +52,8 @@ type TodoItemProps = {
 
 export function TodoItem({ todo, onEdit }: TodoItemProps) {
   const isCompleted = todo.completedAt !== null;
-
-  const [completeTodo, { loading: completing }] = useMutation(COMPLETE_TODO, {
-    refetchQueries: ['GetMyTodos'],
-  });
+  const [completionTarget, setCompletionTarget] =
+    useState<CompletionDialogTarget | null>(null);
 
   const [uncompleteTodo, { loading: uncompleting }] = useMutation(
     UNCOMPLETE_TODO,
@@ -133,8 +127,13 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
               <Button
                 size="icon"
                 variant="ghost"
-                disabled={completing}
-                onClick={() => completeTodo({ variables: { id: todo.id } })}
+                onClick={() =>
+                  setCompletionTarget({
+                    kind: 'todo',
+                    id: todo.id,
+                    title: todo.title,
+                  })
+                }
                 aria-label={`Mark ${todo.title} as complete`}
                 className="text-muted-foreground hover:text-green-600"
               >
@@ -175,6 +174,11 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
           <p className="text-sm text-muted-foreground">{todo.description}</p>
         </CardContent>
       )}
+      <CompletionDialog
+        target={completionTarget}
+        onOpenChange={(open) => !open && setCompletionTarget(null)}
+        refetchQueries={['GetMyTodos']}
+      />
     </Card>
   );
 }

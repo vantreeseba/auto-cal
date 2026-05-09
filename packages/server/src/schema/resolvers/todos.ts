@@ -124,7 +124,7 @@ export function applyTodoResolvers(
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
   mutationFields.myCompleteTodo!.resolve = async (
     _parent,
-    args: { id: string },
+    args: { id: string; completedAt?: string },
     context: Context,
   ) => {
     if (!context.userId) throw new Error('Not authenticated');
@@ -133,12 +133,24 @@ export function applyTodoResolvers(
     });
     if (!existing) throw new Error(`Todo ${args.id} not found`);
     if (existing.userId !== context.userId) throw new Error('Forbidden');
+    const completedAt = args.completedAt
+      ? new Date(args.completedAt)
+      : new Date();
+    // Move scheduledAt to match completedAt — the calendar record reflects
+    // *when the work actually happened*, not when it was originally planned.
+    // If completed early, this frees the original future slot for the
+    // scheduler to backfill on the next writeback.
     const [completed] = await context.db
       .update(todos)
-      .set({ completedAt: new Date(), updatedAt: new Date() })
+      .set({
+        completedAt,
+        scheduledAt: completedAt,
+        updatedAt: new Date(),
+      })
       .where(eq(todos.id, args.id))
       .returning();
     if (!completed) throw new Error(`Failed to complete todo ${args.id}`);
+    runSchedulerWriteback(context.db, context.userId).catch(console.error);
     return completed;
   };
 
