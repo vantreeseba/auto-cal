@@ -102,7 +102,7 @@ const DURATION_OPTIONS = [
 const todoSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Max 200 characters'),
   description: z.string().max(2000, 'Max 2000 characters'),
-  activityTypeId: z.string().uuid().or(z.undefined()),
+  activityTypeId: z.string().uuid('Activity type is required'),
   priority: z.string().min(1, 'Priority is required'),
   estimatedLength: z.string().min(1, 'Duration is required'),
 });
@@ -148,7 +148,7 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
     defaultValues: {
       title: todo?.title ?? '',
       description: todo?.description ?? '',
-      activityTypeId: todo?.activityType?.id ?? undefined,
+      activityTypeId: todo?.activityType?.id ?? '',
       priority: String(todo?.priority ?? 0),
       estimatedLength: String(todo?.estimatedLength ?? 30),
     } as TodoFormValues,
@@ -163,7 +163,7 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
               id: todo.id,
               title: value.title,
               description: value.description ?? null,
-              activityTypeId: value.activityTypeId ?? null,
+              activityTypeId: value.activityTypeId,
               priority: Number(value.priority),
               estimatedLength: Number(value.estimatedLength),
             },
@@ -175,7 +175,7 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
             input: {
               title: value.title,
               description: value.description ?? null,
-              activityTypeId: value.activityTypeId ?? null,
+              activityTypeId: value.activityTypeId,
               priority: Number(value.priority),
               estimatedLength: Number(value.estimatedLength),
             },
@@ -223,11 +223,11 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
             <form.AppField name="activityTypeId">
               {(field) => (
                 <Field>
-                  <FieldLabel>Activity Type (optional)</FieldLabel>
+                  <FieldLabel>Activity Type</FieldLabel>
                   <FieldControl>
                     <ActivityTypeSelect
-                      value={field.state.value}
-                      onValueChange={(v) => field.handleChange(v)}
+                      value={field.state.value || undefined}
+                      onValueChange={(v) => field.handleChange(v ?? '')}
                       onBlur={field.handleBlur}
                     />
                   </FieldControl>

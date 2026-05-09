@@ -7,6 +7,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useQuery } from '@apollo/client/react';
+import { Link } from '@tanstack/react-router';
 
 const GET_ACTIVITY_TYPES = graphql(`
   query GetActivityTypesForSelect {
@@ -24,8 +25,6 @@ interface ActivityTypeSelectProps {
   onBlur?: () => void;
 }
 
-const NONE_VALUE = '__none__';
-
 export function ActivityTypeSelect({
   value,
   onValueChange,
@@ -35,13 +34,22 @@ export function ActivityTypeSelect({
 
   const activityTypes = data?.myActivityTypes ?? [];
 
+  if (activityTypes.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        No activity types yet —{' '}
+        <Link to="/activity-types" className="underline">
+          create one first
+        </Link>
+        .
+      </p>
+    );
+  }
+
   return (
-    <Select
-      value={value ?? NONE_VALUE}
-      onValueChange={(v) => onValueChange(v === NONE_VALUE ? undefined : v)}
-    >
+    <Select value={value ?? ''} onValueChange={(v) => onValueChange(v)}>
       <SelectTrigger onBlur={onBlur}>
-        <SelectValue placeholder="None">
+        <SelectValue placeholder="Select an activity type">
           {value
             ? (() => {
                 const at = activityTypes.find((a) => a.id === value);
@@ -54,16 +62,13 @@ export function ActivityTypeSelect({
                     {at.name}
                   </span>
                 ) : (
-                  'None'
+                  'Select an activity type'
                 );
               })()
-            : 'None'}
+            : 'Select an activity type'}
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={NONE_VALUE}>
-          <span className="text-muted-foreground">None</span>
-        </SelectItem>
         {activityTypes.map((at) => (
           <SelectItem key={at.id} value={at.id}>
             <span className="flex items-center gap-2">

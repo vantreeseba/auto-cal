@@ -57,7 +57,7 @@ const CREATE_HABIT = graphql(`
 
 const schema = z.object({
   title: z.string().min(1, 'Title is required').max(200),
-  activityTypeId: z.string().uuid().optional(),
+  activityTypeId: z.string().uuid('Activity type is required'),
   frequencyCount: z.number().int().min(1).max(30),
   frequencyUnit: z.enum(['week', 'month']),
 });
@@ -85,7 +85,7 @@ export function StepHabits({ onBack, onNext, onSkip }: StepHabitsProps) {
   const form = useAppForm({
     defaultValues: {
       title: '',
-      activityTypeId: undefined,
+      activityTypeId: '',
       frequencyCount: 3,
       frequencyUnit: 'week',
     } as FormValues,
@@ -185,8 +185,8 @@ export function StepHabits({ onBack, onNext, onSkip }: StepHabitsProps) {
                   <FieldLabel>Activity type</FieldLabel>
                   <FieldControl>
                     <ActivityTypeSelect
-                      value={field.state.value}
-                      onValueChange={field.handleChange}
+                      value={field.state.value || undefined}
+                      onValueChange={(v) => field.handleChange(v ?? '')}
                       onBlur={field.handleBlur}
                     />
                   </FieldControl>
