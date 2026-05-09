@@ -74,7 +74,7 @@ const WEEKEND = [0, 6];
 
 const timeBlockSchema = z
   .object({
-    activityTypeId: z.string().uuid().or(z.undefined()),
+    activityTypeId: z.string().uuid('Activity type is required'),
     daysOfWeek: z
       .array(z.number().int().min(0).max(6))
       .min(1, 'Select at least one day')
@@ -126,7 +126,7 @@ export function TimeBlockForm({
 
   const form = useAppForm({
     defaultValues: {
-      activityTypeId: timeBlock?.activityType?.id ?? undefined,
+      activityTypeId: timeBlock?.activityType?.id ?? '',
       daysOfWeek: timeBlock?.daysOfWeek ?? [1],
       startTime: timeBlock?.startTime ?? '09:00',
       endTime: timeBlock?.endTime ?? '10:00',
@@ -141,7 +141,7 @@ export function TimeBlockForm({
           variables: {
             input: {
               id: timeBlock.id,
-              activityTypeId: value.activityTypeId ?? null,
+              activityTypeId: value.activityTypeId,
               daysOfWeek: value.daysOfWeek,
               startTime: value.startTime,
               endTime: value.endTime,
@@ -153,7 +153,7 @@ export function TimeBlockForm({
         await createTimeBlock({
           variables: {
             input: {
-              activityTypeId: value.activityTypeId ?? null,
+              activityTypeId: value.activityTypeId,
               daysOfWeek: value.daysOfWeek,
               startTime: value.startTime,
               endTime: value.endTime,
@@ -186,11 +186,11 @@ export function TimeBlockForm({
             <form.AppField name="activityTypeId">
               {(field) => (
                 <Field>
-                  <FieldLabel>Activity Type (optional)</FieldLabel>
+                  <FieldLabel>Activity Type</FieldLabel>
                   <FieldControl>
                     <ActivityTypeSelect
-                      value={field.state.value}
-                      onValueChange={(v) => field.handleChange(v)}
+                      value={field.state.value || undefined}
+                      onValueChange={(v) => field.handleChange(v ?? '')}
                       onBlur={field.handleBlur}
                     />
                   </FieldControl>

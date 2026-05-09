@@ -78,10 +78,13 @@ describe('UpdateActivityTypeInput', () => {
 });
 
 describe('CreateTodoInput', () => {
+  const validActivityTypeId = '00000000-0000-0000-0000-000000000001';
+
   it('accepts valid minimal input', () => {
     const result = CreateTodoInput.parse({
       title: 'My todo',
       estimatedLength: 30,
+      activityTypeId: validActivityTypeId,
     });
     expect(result.title).toBe('My todo');
     expect(result.priority).toBe(0); // default
@@ -94,41 +97,68 @@ describe('CreateTodoInput', () => {
         description: 'A description',
         priority: 75,
         estimatedLength: 60,
-        activityTypeId: '00000000-0000-0000-0000-000000000001',
+        activityTypeId: validActivityTypeId,
         scheduledAt: '2026-04-28T09:00:00.000Z',
       }),
     ).not.toThrow();
   });
 
+  it('rejects missing activityTypeId', () => {
+    expect(() => CreateTodoInput.parse({ title: 'Test' })).toThrow();
+  });
+
   it('rejects empty title', () => {
-    expect(() => CreateTodoInput.parse({ title: '' })).toThrow();
+    expect(() =>
+      CreateTodoInput.parse({ title: '', activityTypeId: validActivityTypeId }),
+    ).toThrow();
   });
 
   it('rejects title exceeding 200 characters', () => {
-    expect(() => CreateTodoInput.parse({ title: 'a'.repeat(201) })).toThrow();
+    expect(() =>
+      CreateTodoInput.parse({
+        title: 'a'.repeat(201),
+        activityTypeId: validActivityTypeId,
+      }),
+    ).toThrow();
   });
 
   it('rejects priority below 0', () => {
     expect(() =>
-      CreateTodoInput.parse({ title: 'Test', priority: -1 }),
+      CreateTodoInput.parse({
+        title: 'Test',
+        priority: -1,
+        activityTypeId: validActivityTypeId,
+      }),
     ).toThrow();
   });
 
   it('rejects priority above 100', () => {
     expect(() =>
-      CreateTodoInput.parse({ title: 'Test', priority: 101 }),
+      CreateTodoInput.parse({
+        title: 'Test',
+        priority: 101,
+        activityTypeId: validActivityTypeId,
+      }),
     ).toThrow();
   });
 
   it('rejects estimatedLength of 0', () => {
     expect(() =>
-      CreateTodoInput.parse({ title: 'Test', estimatedLength: 0 }),
+      CreateTodoInput.parse({
+        title: 'Test',
+        estimatedLength: 0,
+        activityTypeId: validActivityTypeId,
+      }),
     ).toThrow();
   });
 
   it('rejects estimatedLength exceeding 1440', () => {
     expect(() =>
-      CreateTodoInput.parse({ title: 'Test', estimatedLength: 1441 }),
+      CreateTodoInput.parse({
+        title: 'Test',
+        estimatedLength: 1441,
+        activityTypeId: validActivityTypeId,
+      }),
     ).toThrow();
   });
 
@@ -146,9 +176,15 @@ describe('UpdateTodoInput', () => {
     expect(() => UpdateTodoInput.parse({ id: validId })).not.toThrow();
   });
 
-  it('accepts setting activityTypeId to null', () => {
+  it('rejects setting activityTypeId to null', () => {
     expect(() =>
       UpdateTodoInput.parse({ id: validId, activityTypeId: null }),
+    ).toThrow();
+  });
+
+  it('accepts changing activityTypeId to a valid uuid', () => {
+    expect(() =>
+      UpdateTodoInput.parse({ id: validId, activityTypeId: validId }),
     ).not.toThrow();
   });
 
@@ -164,14 +200,27 @@ describe('UpdateTodoInput', () => {
 });
 
 describe('CreateHabitInput', () => {
+  const validActivityTypeId = '00000000-0000-0000-0000-000000000001';
+
   it('accepts valid input', () => {
     const result = CreateHabitInput.parse({
       title: 'Exercise',
       frequencyCount: 3,
       frequencyUnit: 'week',
+      activityTypeId: validActivityTypeId,
     });
     expect(result.title).toBe('Exercise');
     expect(result.priority).toBe(0);
+  });
+
+  it('rejects missing activityTypeId', () => {
+    expect(() =>
+      CreateHabitInput.parse({
+        title: 'Test',
+        frequencyCount: 3,
+        frequencyUnit: 'week',
+      }),
+    ).toThrow();
   });
 
   it('rejects empty title', () => {
@@ -180,6 +229,7 @@ describe('CreateHabitInput', () => {
         title: '',
         frequencyCount: 3,
         frequencyUnit: 'week',
+        activityTypeId: validActivityTypeId,
       }),
     ).toThrow();
   });
@@ -190,6 +240,7 @@ describe('CreateHabitInput', () => {
         title: 'Test',
         frequencyCount: 0,
         frequencyUnit: 'week',
+        activityTypeId: validActivityTypeId,
       }),
     ).toThrow();
   });
@@ -200,6 +251,7 @@ describe('CreateHabitInput', () => {
         title: 'Test',
         frequencyCount: 31,
         frequencyUnit: 'week',
+        activityTypeId: validActivityTypeId,
       }),
     ).toThrow();
   });
@@ -210,6 +262,7 @@ describe('CreateHabitInput', () => {
         title: 'Test',
         frequencyCount: 3,
         frequencyUnit: 'day',
+        activityTypeId: validActivityTypeId,
       }),
     ).toThrow();
   });
@@ -220,6 +273,7 @@ describe('CreateHabitInput', () => {
         title: 'Monthly review',
         frequencyCount: 1,
         frequencyUnit: 'month',
+        activityTypeId: validActivityTypeId,
       }),
     ).not.toThrow();
   });
@@ -240,14 +294,27 @@ describe('UpdateHabitInput', () => {
 });
 
 describe('CreateTimeBlockInput', () => {
+  const validActivityTypeId = '00000000-0000-0000-0000-000000000001';
+
   it('accepts valid time block', () => {
     expect(() =>
       CreateTimeBlockInput.parse({
         daysOfWeek: [1, 3, 5],
         startTime: '09:00',
         endTime: '12:00',
+        activityTypeId: validActivityTypeId,
       }),
     ).not.toThrow();
+  });
+
+  it('rejects missing activityTypeId', () => {
+    expect(() =>
+      CreateTimeBlockInput.parse({
+        daysOfWeek: [1],
+        startTime: '09:00',
+        endTime: '12:00',
+      }),
+    ).toThrow();
   });
 
   it('rejects when end time is before start time', () => {
@@ -256,6 +323,7 @@ describe('CreateTimeBlockInput', () => {
         daysOfWeek: [1],
         startTime: '12:00',
         endTime: '09:00',
+        activityTypeId: validActivityTypeId,
       }),
     ).toThrow();
   });
@@ -266,6 +334,7 @@ describe('CreateTimeBlockInput', () => {
         daysOfWeek: [1],
         startTime: '09:00',
         endTime: '09:00',
+        activityTypeId: validActivityTypeId,
       }),
     ).toThrow();
   });
@@ -276,6 +345,7 @@ describe('CreateTimeBlockInput', () => {
         daysOfWeek: [1, 1, 3],
         startTime: '09:00',
         endTime: '12:00',
+        activityTypeId: validActivityTypeId,
       }),
     ).toThrow();
   });
@@ -286,6 +356,7 @@ describe('CreateTimeBlockInput', () => {
         daysOfWeek: [],
         startTime: '09:00',
         endTime: '12:00',
+        activityTypeId: validActivityTypeId,
       }),
     ).toThrow();
   });
@@ -296,6 +367,7 @@ describe('CreateTimeBlockInput', () => {
         daysOfWeek: [7],
         startTime: '09:00',
         endTime: '12:00',
+        activityTypeId: validActivityTypeId,
       }),
     ).toThrow();
   });
@@ -306,19 +378,9 @@ describe('CreateTimeBlockInput', () => {
         daysOfWeek: [1],
         startTime: '9am',
         endTime: '12:00',
+        activityTypeId: validActivityTypeId,
       }),
     ).toThrow();
-  });
-
-  it('accepts optional activityTypeId', () => {
-    expect(() =>
-      CreateTimeBlockInput.parse({
-        activityTypeId: '00000000-0000-0000-0000-000000000001',
-        daysOfWeek: [1],
-        startTime: '08:00',
-        endTime: '09:00',
-      }),
-    ).not.toThrow();
   });
 });
 

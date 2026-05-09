@@ -120,7 +120,7 @@ const extensionSDL = `
     description: String
     priority: Int
     estimatedLength: Int
-    activityTypeId: ID
+    activityTypeId: ID!
     scheduledAt: String
   }
 
@@ -141,13 +141,13 @@ const extensionSDL = `
     description: String
     priority: Int
     estimatedLength: Int
-    activityTypeId: ID
+    activityTypeId: ID!
     frequencyCount: Int!
     frequencyUnit: String!
   }
 
   input CreateTimeBlockArgs {
-    activityTypeId: ID
+    activityTypeId: ID!
     daysOfWeek: [Int!]!
     startTime: String!
     endTime: String!
@@ -244,14 +244,13 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   applyAuthResolvers(mutationFields);
 
   // Field resolvers: activityType on Todo, Habit, TimeBlock
-  type RowWithActivityTypeId = { activityTypeId?: string | null };
+  type RowWithActivityTypeId = { activityTypeId: string };
 
   function resolveActivityType(
     parent: RowWithActivityTypeId,
     _args: unknown,
     context: Context,
   ) {
-    if (!parent.activityTypeId) return null;
     return context.loaders.activityType.load(parent.activityTypeId);
   }
 

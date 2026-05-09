@@ -22,7 +22,7 @@ export const CreateTodoInput = z.object({
   description: z.string().max(2000).optional(),
   priority: z.number().int().min(0).max(100).default(0),
   estimatedLength: z.number().int().min(1).max(1440).optional(),
-  activityTypeId: z.string().uuid().optional(),
+  activityTypeId: z.string().uuid(),
   scheduledAt: z.string().datetime({ local: true }).optional(),
 });
 
@@ -32,7 +32,7 @@ export const UpdateTodoInput = z.object({
   description: z.string().max(2000).optional(),
   priority: z.number().int().min(0).max(100).optional(),
   estimatedLength: z.number().int().min(1).max(1440).optional(),
-  activityTypeId: z.string().uuid().nullable().optional(),
+  activityTypeId: z.string().uuid().optional(),
   scheduledAt: z.string().optional(),
   manuallyScheduled: z.boolean().optional(),
   completedAt: z.string().nullable().optional(),
@@ -43,7 +43,7 @@ export const CreateHabitInput = z.object({
   description: z.string().max(2000).optional(),
   priority: z.number().int().min(0).max(100).default(0),
   estimatedLength: z.number().int().min(1).max(1440).optional(),
-  activityTypeId: z.string().uuid().optional(),
+  activityTypeId: z.string().uuid(),
   frequencyCount: z.number().int().positive().min(1).max(30),
   frequencyUnit: z.enum(['week', 'month'] as const),
 });
@@ -54,12 +54,12 @@ export const UpdateHabitInput = z.object({
   description: z.string().max(2000).optional(),
   priority: z.number().int().min(0).max(100).optional(),
   estimatedLength: z.number().int().min(1).max(1440).optional(),
-  activityTypeId: z.string().uuid().nullable().optional(),
+  activityTypeId: z.string().uuid().optional(),
 });
 
 export const CreateTimeBlockInput = z
   .object({
-    activityTypeId: z.string().uuid().optional(),
+    activityTypeId: z.string().uuid(),
     daysOfWeek: z
       .array(z.number().int().min(0).max(6))
       .min(1)
@@ -78,7 +78,7 @@ export const CreateTimeBlockInput = z
 
 export const UpdateTimeBlockInput = z.object({
   id: z.string().uuid(),
-  activityTypeId: z.string().uuid().nullable().optional(),
+  activityTypeId: z.string().uuid().optional(),
   daysOfWeek: z
     .array(z.number().int().min(0).max(6))
     .min(1)

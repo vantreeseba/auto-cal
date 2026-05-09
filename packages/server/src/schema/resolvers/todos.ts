@@ -62,7 +62,7 @@ export function applyTodoResolvers(
         description: input.description,
         priority: input.priority,
         estimatedLength: input.estimatedLength ?? 0,
-        activityTypeId: input.activityTypeId ?? null,
+        activityTypeId: input.activityTypeId,
         scheduledAt: input.scheduledAt
           ? new Date(input.scheduledAt)
           : undefined,

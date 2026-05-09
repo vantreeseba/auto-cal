@@ -57,7 +57,7 @@ const WEEKEND = [0, 6];
 
 const schema = z
   .object({
-    activityTypeId: z.string().uuid().optional(),
+    activityTypeId: z.string().uuid('Activity type is required'),
     daysOfWeek: z
       .array(z.number().int().min(0).max(6))
       .min(1, 'Select at least one day'),
@@ -94,7 +94,7 @@ export function StepTimeBlocks({ onBack, onNext }: StepTimeBlocksProps) {
 
   const form = useAppForm({
     defaultValues: {
-      activityTypeId: undefined,
+      activityTypeId: '',
       daysOfWeek: [...WEEKDAYS],
       startTime: '09:00',
       endTime: '17:00',
@@ -136,8 +136,8 @@ export function StepTimeBlocks({ onBack, onNext }: StepTimeBlocksProps) {
                   <FieldLabel>Activity type</FieldLabel>
                   <FieldControl>
                     <ActivityTypeSelect
-                      value={field.state.value}
-                      onValueChange={field.handleChange}
+                      value={field.state.value || undefined}
+                      onValueChange={(v) => field.handleChange(v ?? '')}
                       onBlur={field.handleBlur}
                     />
                   </FieldControl>

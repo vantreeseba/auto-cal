@@ -21,7 +21,7 @@ const UpdateHabitInput = z.object({
   description: z.string().max(2000).optional(),
   priority: z.number().int().min(0).max(100).optional(),
   estimatedLength: z.number().int().min(1).max(1440).optional(),
-  activityTypeId: z.string().uuid().nullable().optional(),
+  activityTypeId: z.string().uuid().optional(),
   frequencyCount: z.number().int().positive().min(1).max(30).optional(),
   frequencyUnit: z.enum(['week', 'month'] as const).optional(),
 });
@@ -106,11 +106,10 @@ export function applyHabitResolvers(
     if (!habit) throw new Error(`Habit ${args.habitId} not found`);
     if (habit.userId !== context.userId) throw new Error('Forbidden');
 
-    const activityType: ActivityType | undefined = habit.activityTypeId
-      ? await context.db.query.activityTypes.findFirst({
-          where: { id: habit.activityTypeId },
-        })
-      : undefined;
+    const activityType: ActivityType | undefined =
+      await context.db.query.activityTypes.findFirst({
+        where: { id: habit.activityTypeId },
+      });
 
     const numPeriods = Math.min(Math.max(args.periods ?? 8, 1), 26);
     const now = new Date();
@@ -205,7 +204,7 @@ export function applyHabitResolvers(
         description: input.description,
         priority: input.priority,
         estimatedLength: input.estimatedLength ?? 0,
-        activityTypeId: input.activityTypeId ?? null,
+        activityTypeId: input.activityTypeId,
         frequencyCount: input.frequencyCount,
         frequencyUnit: input.frequencyUnit,
       })
