@@ -6,9 +6,21 @@ Express + Apollo Server, no build step (`--experimental-strip-types`). All impor
 
 `seedDemoUser()` always runs on startup. `seedDemoData()` runs in non-production and is idempotent (skips if the demo user already has activity types). Demo seed creates 3 activity types (Work, Exercise, Learning), 6 time blocks, 5 todos, 3 habits.
 
-## Auth — UUID Bearer Fallback (Dev Only)
+## Auth — UUID Bearer Fallback (Dev Only, currently active in prod too — see todo.md #25)
 
-The server context accepts a raw UUID as a Bearer token for backwards compatibility with the demo user (`DEMO_USER_ID`). **This fallback must be removed before production deployment** (guard with `NODE_ENV !== 'production'` or remove entirely once real auth replaces the demo user flow). See `packages/server/src/index.ts`.
+The server context accepts a raw UUID as a Bearer token for backwards compatibility with the demo user (`DEMO_USER_ID`). The fallback runs in **all environments today** — there is no `NODE_ENV` guard. The check lives in `packages/server/src/index.ts` after JWT verification fails:
+
+```typescript
+// Try JWT first
+const payload = await verifyToken(rawToken);
+if (payload?.sub) return { db, userId: payload.sub, loaders };
+
+// Fall back to raw UUID for backwards-compat with dev/seed
+if (/^[0-9a-f-]{36}$/i.test(rawToken))
+  return { db, userId: rawToken, loaders };
+```
+
+This must be guarded with `NODE_ENV !== 'production'` (or removed) before any real public deployment. Tracked in `todo.md` #25.
 
 ## mySchedule vs DB scheduledAt
 
@@ -136,7 +148,7 @@ if (todo.userId !== context.userId) throw new Error('Forbidden');
 
 ## Zod Validation at Resolver Boundary
 
-All validators live in `packages/server/src/schema/validators.ts`. Key constraints:
+All validators live in `packages/server/src/schema/validators.ts`, with coverage in `packages/server/src/schema/validators.test.ts`. Key constraints:
 
 | Field | Rule |
 |-------|------|
@@ -243,4 +255,14 @@ export function computeSchedule(
 ): ScheduledItem[] { ... }
 ```
 
-Pure function — deterministic, easy to unit test.
+Pure function — deterministic, easy to unit test. Coverage in `packages/server/src/services/scheduler.test.ts`.
+
+## Tests
+
+The server package has the following vitest suites — run with `npm test` from the repo root:
+
+- `packages/server/src/auth.test.ts` — magic-link token + JWT helpers
+- `packages/server/src/schema/validators.test.ts` — Zod validator coverage
+- `packages/server/src/services/scheduler.test.ts` — pure scheduler algorithm
+
+Resolver-level integration tests (PGLite in-memory) are not yet in place — see todo.md #15.
