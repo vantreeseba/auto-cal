@@ -11,7 +11,7 @@ type Fields = ReturnType<GraphQLObjectType['getFields']>;
 const UpdateTimeBlockInput = z
   .object({
     id: z.string().uuid(),
-    activityTypeId: z.string().uuid().nullable().optional(),
+    activityTypeId: z.string().uuid().optional(),
     daysOfWeek: z
       .array(z.number().int().min(0).max(6))
       .min(1)
@@ -74,7 +74,7 @@ export function applyTimeBlockResolvers(
       .insert(timeBlocks)
       .values({
         userId: context.userId,
-        activityTypeId: input.activityTypeId ?? null,
+        activityTypeId: input.activityTypeId,
         daysOfWeek: input.daysOfWeek,
         startTime: input.startTime,
         endTime: input.endTime,
