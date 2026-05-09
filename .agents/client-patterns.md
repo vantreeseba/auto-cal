@@ -4,11 +4,13 @@ React + Vite + Apollo Client + TanStack Router + TanStack Form + ShadCN/Radix + 
 
 ## Installed ShadCN Components
 
-Only use components that are already installed — do not add new ones without checking first:
+Only use components that are already installed — do not add new ones without checking first. Files live in `packages/client/src/components/ui/`.
 
-`button` `card` `dialog` `field` `form` `input` `label` `select` `tabs` `textarea` `tooltip`
+ShadCN primitives (11): `button` `card` `dialog` `field` `form` `input` `label` `select` `tabs` `textarea` `tooltip`
 
-Also present: `inline-length-edit` (custom), `route-error` (custom error boundary component).
+Custom (2, not from ShadCN — keep tagged as such):
+- `inline-length-edit` — quick-edit duration chip used on list items
+- `route-error` — error boundary used in `__root.tsx` and route components
 
 ## Error Handling Conventions
 
@@ -63,20 +65,22 @@ Completion sets `localStorage.onboarding_done = '1'`. Re-runnable from Settings 
 
 ## Routes
 
-File-based routes under `packages/client/src/routes/`. Key routes:
+File-based routes under `packages/client/src/routes/`:
 
 | File | Path | Notes |
 |------|------|-------|
 | `__root.tsx` | `/` | Layout + auth guard — redirects to `/login` if no token, `/onboarding` if not set up |
+| `index.tsx` | `/` | Landing/redirect |
 | `login.tsx` | `/login` | Magic-link request form |
 | `auth.verify.tsx` | `/auth/verify` | Consumes magic-link token, stores JWT, redirects |
 | `onboarding.tsx` | `/onboarding?step=1` | 4-step setup wizard |
 | `dashboard.tsx` | `/dashboard` | Main schedule view |
 | `todos.tsx` | `/todos` | Todo list |
-| `habits.tsx` | `/habits` | Habit list; nested `$habitId` route for detail |
+| `habits.tsx` + `habits.index.tsx` | `/habits` | Habit list (parent + index) |
+| `habits.$habitId.tsx` | `/habits/$habitId` | Habit detail (rates, periods) |
 | `time-blocks.tsx` | `/time-blocks` | Time block management |
 | `activity-types.tsx` | `/activity-types` | Activity type management |
-| `stats.tsx` | `/stats` | Stats overview with date range selector |
+| `stats.tsx` | `/stats` | Analytics surface (composite score, charts — see todo.md #9 for build-out) |
 | `settings.tsx` | `/settings` | iCal feed URL + re-run onboarding wizard |
 
 Auth flow: `requestMagicLink` → magic link logged to server console (and returned in dev) → user visits `/auth/verify?token=…` → `verifyMagicLink` returns `{ token, userId }` → store `token` as `auth_token` in `localStorage` → redirect to `/dashboard`.

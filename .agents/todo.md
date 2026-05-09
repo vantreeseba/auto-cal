@@ -6,26 +6,31 @@
 
 ## Recommended starting points
 
-If you're unsure what to work on, these three are the highest-leverage next steps:
+If you're unsure what to work on, these are the highest-leverage next steps (#17 has shipped, removed from this list):
 
-1. **#17 — Seed data** — makes development and demos usable in minutes (2-3 hours)
-2. **#7 — Weekly navigation on dashboard** — obvious UX gap any user will hit immediately (half day)
-3. **#19 — Completion datetime dialog** — core UX for completing tasks accurately (1 day)
+1. **#7 — Weekly navigation on dashboard** — obvious UX gap any user will hit immediately (half day)
+2. **#19 — Completion datetime dialog** — core UX for completing tasks accurately (1 day)
+3. **#21 — Activity type required (residual)** — closes the silent "item never schedules" failure mode for new todos/habits
 
 ---
 
 ## P0 — Core correctness / blocking
 
-### #21 — Remove isPinnedSchedule, make activity type required, add drag-to-schedule
-**Problem:** `isPinnedSchedule` adds complexity with no defined behavior. Activity type is currently optional, making items unschedulable by default. There is no way to manually place an item on the calendar.
+### #21 — Make activity type required on todos and habits
+**Status:** Originally bundled `isPinnedSchedule` removal, drag-to-schedule, and activity-type-required. The first two have shipped:
+- `manuallyScheduled` is the live signal (`todos.manually_scheduled` boolean, default false). `isPinnedSchedule` never made it into the schema.
+- Drag-to-reschedule is live for todos in `CalendarView` (see #4).
+
+**What's left:** Activity type is still nullable in the database and accepted as `undefined` by the form Zod schemas (`activityTypeId: z.string().uuid().or(z.undefined())` in both `TodoForm.tsx` and `HabitForm.tsx`). The scheduler silently skips items without an activity type, which is the user-visible bug.
+
 **Spec:** See `specifications.md` → "Scheduler" section.
 **Work:**
-- Replace `isPinnedSchedule` with `manuallyScheduled` boolean on `todos` (and equivalent on `habit_completions`): set true when user drags the item, false when scheduler places it; manually scheduled items resist eviction by lower-priority auto-scheduler runs but can still be bumped by a higher-priority item
-- Make `activityTypeId` non-nullable on `todos` and `habits` tables + migration
-- Enforce activity type selection in `TodoForm` and `HabitForm` (required field, block save without it)
-- Implement drag-to-schedule on `CalendarView` (react-big-calendar DnD addon); on drop call `myUpdateTodo`/`myUpdateHabit` with the new `scheduledAt`; dragged items outside time blocks are allowed
+- Make `activityTypeId` `notNull` on `todos` and `habits` tables + migration (handle existing nulls — backfill or block)
+- Update Zod inputs (`CreateTodoInput`, `UpdateTodoInput`, `CreateHabitInput`, `UpdateHabitInput`) to require `activityTypeId`
+- Update `TodoForm` and `HabitForm` Zod + UI to require selection (block save without it; show inline validation)
+- Surface the migration concern: existing rows with null `activityTypeId` need a strategy (e.g. assign to a default "General" activity type per user, or block migration if any exist)
 
-**Acceptance:** Saving a todo without an activity type is blocked. Dragging a todo to any calendar slot updates its scheduled time. `isPinnedSchedule` is gone everywhere.
+**Acceptance:** Saving a todo or habit without an activity type is blocked at form, resolver, and DB layers. Existing data either has a default applied or migration is gated until cleaned up.
 
 ---
 
@@ -54,28 +59,40 @@ If you're unsure what to work on, these three are the highest-leverage next step
 
 **Acceptance:** Completing a todo early moves it on the calendar and immediately schedules something else in the freed slot. Uncompleting returns it to the queue.
 
-### #1 — Real authentication (magic link + JWT)
-**Problem:** The app currently hard-codes a demo user ID sent as a Bearer token. There is no real login or user isolation.  
-**Work:**
-- Add magic-link email flow (e.g. Resend or Nodemailer)
-- Issue signed JWTs on login; verify in server context
-- Store sessions (or keep stateless with short-lived tokens)
-- Replace `DEMO_USER_ID` env var with real token extraction
-- Add a login/signup page in the client
+### #1 — Wire magic-link email delivery (auth is otherwise live)
+**Status:** Magic-link + JWT auth is implemented end-to-end:
+- `requestMagicLink` / `verifyMagicLink` mutations exist (`packages/server/src/schema/resolvers/auth.ts`)
+- JWT sign/verify via `jose` in `packages/server/src/auth.ts`
+- Login flow (`/login`) and verify route (`/auth/verify`) live in the client
+- Apollo client attaches `Bearer <token>` from `localStorage.auth_token`; expired-auth errors redirect to `/login`
+- Server context extracts JWT first, falls back to raw UUID for dev/seed (see #25)
 
-**Acceptance:** A new user can sign up via email, log in with a magic link, and see only their own data.
+**What's left:** The magic link is logged to the server console but no email is actually sent. In dev the `requestMagicLink` mutation also returns the link in the response; in prod the response has `magicLink: null`.
+
+**Work:**
+- Pick a provider (Resend or Nodemailer) and wire the send call in `requestMagicLink`'s resolver where the `// TODO: send email` comment lives
+- Provider creds in env (`RESEND_API_KEY` or SMTP equivalent)
+- Keep console logging as a fallback when no provider is configured
+
+**Acceptance:** Requesting a magic link in production triggers an actual email; dev can still use console-logged links when no provider is set.
 
 ---
 
-### #3 — Timezone handling
-**Problem:** The scheduler returns naive ISO strings with no timezone suffix ("local time"). With a real multi-user deployment, times need to be stored in UTC and displayed in the user's local timezone.  
-**Work:**
-- Store all timestamps as UTC in Postgres (already the default — but verify)
-- Add a `timezone` field to the `users` table (IANA zone string)
-- Accept `weekStart` in the user's local timezone in `mySchedule`; convert to UTC before querying
-- Return UTC from the API; convert to local time in the client using `date-fns-tz` or `Intl`
+### #3 — Finish UTC migration (partially shipped)
+**Status:** Partially done.
+- `users.timezone` column exists (IANA string, default `'UTC'`)
+- `mySchedule` accepts a `timezone` argument; client syncs the browser timezone via `myUpdateProfile` on dashboard mount
+- iCal endpoint converts naive datetimes to UTC via `fromZonedTime(datetime, user.timezone)` from `date-fns-tz`
 
-**Acceptance:** A user in UTC-5 and a user in UTC+9 both see the correct local times for the same schedule.
+**What's left:** The GraphQL API still returns naive datetime strings (`YYYY-MM-DDTHH:mm:ss`, no `Z`) and relies on the browser interpreting them as local time. This is the stopgap that needs to go away.
+
+**Work:**
+- Switch the scheduler / `mySchedule` to emit UTC ISO strings (`Z` suffix or explicit offset)
+- Verify `scheduledAt` / `completedAt` are stored as true UTC in the DB (not naive)
+- Convert UTC → user.timezone client-side using `date-fns-tz` or `Intl.DateTimeFormat`
+- Update `CalendarView` and `ScheduleView` to do the conversion at render time
+
+**Acceptance:** Two browsers in different timezones, hitting the same backend, both render the schedule in their respective local times correctly. The naive-string convention is gone from the API surface.
 
 ---
 
@@ -141,12 +158,15 @@ Drag-and-drop is implemented for todos in `CalendarView`. Dragging a todo sets `
 
 ---
 
-### #9 — Analytics page
-**Problem:** The `activityTypeStats` and `habitStats` queries exist but nothing is surfaced beyond raw numbers. There is no `/analytics` route.
+### #9 — Analytics page on `/stats`
+**Note:** The route is `/stats`, not `/analytics` — the existing `/stats` route IS the surface this item describes; there is no separate `/analytics` planned.
+
+**Status:** A `/stats` route exists with a `StatsOverview` component backed by the `myStats` query (composite score + per-habit summary + todo summary). Charts and the full layout below are not yet built out.
+
 **Spec:** See `specifications.md` → "Analytics" section.
 **Work:**
 - Install shadcn charts (Recharts 3); do not add a second charting library
-- Add `/analytics` route and nav link; rename "Dashboard" nav link to "Calendar"
+- Verify the "Dashboard" nav rename to "Calendar" — confirm/adjust as needed
 - **Composite score** at top: weighted average of habit consistency + todo completion rate, displayed as % with a plain-English label
 - **Habit consistency section**: bar chart (one bar per habit, completion rate % capped at 100%, colored by activity type); click a bar to expand a week-by-week trend line
 - **Time distribution section**: grouped bar or donut chart — scheduled time vs completed time side-by-side per activity type
@@ -154,7 +174,7 @@ Drag-and-drop is implemented for todos in `CalendarView`. Dragging a todo sets `
 - All sections share a single fixed time-range filter: This week / This month / Last 3 months / All time
 - All data real-time (no caching layer yet)
 
-**Acceptance:** User can open `/analytics`, select "Last 3 months", and see habit rates, time distribution, and todo throughput with working charts. Clicking a habit bar shows its week-by-week trend.
+**Acceptance:** User can open `/stats`, select "Last 3 months", and see habit rates, time distribution, and todo throughput with working charts. Clicking a habit bar shows its week-by-week trend.
 
 ---
 
@@ -240,38 +260,38 @@ Drag-and-drop is implemented for todos in `CalendarView`. Dragging a todo sets `
 
 ## P3 — Infrastructure & DX
 
-### #15 — Test suite (unit + integration)
-**Problem:** There are zero automated tests. The scheduling algorithm, resolvers, and Zod validators are completely untested.  
-**Work:**
-- Unit tests for `scheduler.ts` with known fixture inputs (Vitest)
-- Integration tests for all custom resolvers using PGLite in-memory
-- Snapshot/type tests for Zod validators
-- Set up a CI workflow (GitHub Actions) that runs `npm test` and `npm run typecheck`
+### #15 — Expand test suite + CI
+**Status:** Partially done. Existing vitest suites:
+- `packages/server/src/auth.test.ts` — JWT + magic-link helpers
+- `packages/server/src/schema/validators.test.ts` — Zod validators
+- `packages/server/src/services/scheduler.test.ts` — pure scheduler algorithm
 
-**Acceptance:** `npm test` passes with >80% coverage on the scheduler and resolvers; CI blocks merges on failure.
+**What's left:**
+- Resolver integration tests (PGLite in-memory) for the `my*` mutations and queries
+- Client component / route smoke tests
+- CI workflow (GitHub Actions) that runs `npm run typecheck`, `npm run lint`, `npm test` on PRs and blocks merges on failure
+- Coverage targets (e.g. >80% on scheduler / resolvers)
 
----
-
-### #16 — Replace PGLite with full Postgres for production
-**Problem:** PGLite is a single-process embedded database. It cannot handle concurrent connections, making it unsuitable for a multi-user hosted deployment.  
-**Work:**
-- Add a `DATABASE_URL` env var and switch the DB driver based on it
-- Test migrations against real Postgres
-- Update Docker Compose to include a Postgres service
-- Document the swap in AGENTS.md
-
-**Acceptance:** `docker compose up` starts the app backed by real Postgres; PGLite still works for local dev without `DATABASE_URL`.
+**Acceptance:** PRs cannot merge with failing typecheck/lint/tests; resolver and validator paths are exercised end-to-end via PGLite.
 
 ---
 
-### #17 — Seed data for development
-**Problem:** The seed file creates a demo user but no sample todos, habits, or time blocks. Starting the app for the first time shows an empty state with no guidance.  
-**Work:**
-- Extend `seed.ts` with realistic sample data (3 activity types, 5 todos, 3 habits, 6 time blocks)
-- Guard with `NODE_ENV !== 'production'` check
-- Add a `npm run db:seed` script
+### #16 — Postgres production path (dual-backend shipped, end-to-end test pending)
+**Status:** The driver switch is implemented — `packages/db/src/index.ts` selects `postgres.js` when `DATABASE_URL` is set, PGLite otherwise. `.env.example` and `docker-compose.yml` cover both modes.
 
-**Acceptance:** Running `npm run db:seed` populates a useful demo state; the dashboard is non-empty on first load.
+**What's left:**
+- Run migrations against a real Postgres instance and confirm there are no PGLite-specific oddities (e.g. array column behavior in `time_blocks.daysOfWeek`)
+- Smoke-test the app under a real Postgres deployment (concurrency, connection pooling)
+- Decide on a connection-pool config (pg pool defaults, or pgBouncer)
+
+**Acceptance:** A real Postgres deployment runs the full app without surprises; PGLite remains the no-config dev default.
+
+---
+
+### #17 — Seed data for development ✓ Done
+`seedDemoData()` in `packages/db/src/seed.ts` creates 3 activity types (Work / Exercise / Learning), 6 time blocks, 5 todos, 3 habits, all guarded by `NODE_ENV !== 'production'` and idempotent. It runs automatically on server start in dev (see `packages/server/src/index.ts`). A standalone `npm run db:seed` script is **not** wired up — the only entry point is the server-startup hook.
+
+If a CLI seed entry is wanted, `packages/db/src/seed-runner.ts` exists as the scaffolding; just add the `db:seed` script to `package.json`.
 
 ---
 

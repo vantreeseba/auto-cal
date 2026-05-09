@@ -14,7 +14,14 @@ The Dockerfile installs only production deps, then copies:
 - `packages/db` — TypeScript source + migration files
 - `packages/client/dist` — built static assets
 
-Migrations run on container start before the server process.
+Migrations run on container start before the server process — the Dockerfile `CMD` is:
+
+```sh
+cd packages/db && node --experimental-strip-types src/migrator.ts \
+  && cd /app && node --experimental-strip-types packages/server/src/index.ts
+```
+
+`packages/db/src/migrator.ts` runs `drizzle-kit migrate` programmatically before the server boots.
 
 ## Environment Variables
 

@@ -22,8 +22,10 @@ npm run codegen
 |---------|---------------|---------|
 | User-scoped queries | `my<Resource>` | `myTodos`, `myProfile` |
 | User-scoped mutations | `my<Action><Resource>` | `myCreateTodo`, `myUpdateHabit` |
-| Public mutations | Literal name | `requestMagicLink`, `verifyMagicLink` |
+| Public mutations | Literal name (no `my` prefix); must also be added to `PUBLIC_MUTATIONS` set in `schema/index.ts` | `requestMagicLink`, `verifyMagicLink` |
 | Input types | `<Action><Resource>Args` | `CreateTodoArgs`, `UpdateHabitArgs` |
+
+The full SDL (drizzle-generated + extensions) is emitted to `packages/server/src/__generated__/schema.graphql` by `npm run codegen:server`.
 
 ## Extending the Schema
 
@@ -256,7 +258,9 @@ mutation CreateTodo($input: CreateTodoArgs!) {
 }
 
 mutation UpdateTodo($input: UpdateTodoArgs!) {
-  myUpdateTodo(input: $input) { id title priority scheduledAt completedAt }
+  # UpdateTodoArgs accepts: id (required), title, description, priority,
+  # estimatedLength, activityTypeId, scheduledAt, manuallyScheduled, completedAt
+  myUpdateTodo(input: $input) { id title priority scheduledAt completedAt manuallyScheduled }
 }
 
 mutation CompleteTodo($id: ID!) {
