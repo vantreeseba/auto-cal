@@ -34,15 +34,8 @@ If you're unsure what to work on, these are the highest-leverage next steps (#17
 
 ---
 
-### #20 — Time block priority field
-**Problem:** Time blocks can overlap. Currently there is no way to express which block should be preferred when two cover the same slot, so scheduler behavior is undefined for overlapping blocks.
-**Spec:** See `specifications.md` → "Time Blocks" section.
-**Work:**
-- Add `priority` integer column (default 0) to the `time_blocks` table + migration
-- Expose it in `TimeBlockForm` as a numeric input
-- Update the scheduler to sort candidate blocks by priority descending when selecting a slot
-
-**Acceptance:** A "Deep Work" block (priority 2) and "Side Project" block (priority 1) that overlap on Monday 10–11am will have todos scheduled into "Deep Work" first.
+### #20 — Time block priority field ✓ Done
+`time_blocks.priority` (integer, default 0) exists in the schema (`packages/db/src/models/time_blocks.ts:18`); `TimeBlockForm` exposes it as a numeric input (line 318); `TimeBlockItem` displays it; the scheduler sorts candidate blocks by priority DESC at `packages/server/src/services/scheduler.ts:195`.
 
 ---
 
@@ -113,25 +106,13 @@ Drag-and-drop is implemented for todos in `CalendarView`. Dragging a todo sets `
 
 ---
 
-### #5 — Conflict detection & "unschedulable" state
-**Problem:** If a todo's estimated length exceeds any available slot for its activity type, it silently goes unscheduled with no feedback.  
-**Work:**
-- Add a `scheduleStatus` field to todos: `'scheduled' | 'unschedulable' | 'pending'`
-- Surface unschedulable todos in the UI with a warning badge
-- Show a tooltip explaining why (no matching time block, no slot long enough, etc.)
-
-**Acceptance:** User can see which todos will never be auto-scheduled and why.
+### #5 — Conflict detection & "unschedulable" state ✓ Done
+The `ScheduledItem.isScheduled` boolean is exposed by `mySchedule`; `ScheduleView` filters unschedulable items into a separate section with amber border styling and an `unschedulableReason()` tooltip explaining why (`packages/client/src/components/domain/dashboard/ScheduleView.tsx:240`). The implementation uses a boolean rather than the originally-proposed `scheduleStatus` enum, but covers the same UX need.
 
 ---
 
-### #6 — Habit completion tracking via the dashboard
-**Problem:** Habits can be "completed" via the habits list, but there's no quick-complete from the dashboard or from within a scheduled slot.  
-**Work:**
-- Add a "complete" button on scheduled habit slots in `CalendarView` and `ScheduleView`
-- Completing a slot calls `myCompleteHabit` and marks the matching `habit_completions` row
-- Show a checkmark/strikethrough on the completed slot
-
-**Acceptance:** User can complete habits directly from the weekly schedule view.
+### #6 — Habit completion tracking via the dashboard ✓ Done
+`myCompleteHabit` is wired into both `CalendarView` (line 83) and `ScheduleView` (line 46), with optimistic-response cache updates. Habits can be completed inline from the weekly schedule view.
 
 ---
 
@@ -191,13 +172,8 @@ Drag-and-drop is implemented for todos in `CalendarView`. Dragging a todo sets `
 
 ---
 
-### #11 — Estimated length quick-edit (inline)
-**Problem:** Changing `estimatedLength` requires opening the full edit dialog, which is disruptive when the user just wants to tweak a time estimate.  
-**Work:**
-- Add an inline editable chip on `TodoItem` and `HabitItem` for estimated length
-- Single-click to edit; blur or Enter to save via `myUpdateTodo`
-
-**Acceptance:** User can change the estimated length of a todo without opening the edit form.
+### #11 — Estimated length quick-edit (inline) ✓ Done
+`InlineLengthEdit` (`packages/client/src/components/ui/inline-length-edit.tsx`) is the custom chip component; wired into both `TodoItem.tsx:103` and `HabitItem.tsx:64`. Single-click edit, blur/Enter to save via `myUpdateTodo` / `myUpdateHabit`.
 
 ---
 
@@ -295,11 +271,12 @@ If a CLI seed entry is wanted, `packages/db/src/seed-runner.ts` exists as the sc
 
 ---
 
-### #18 — Error boundary + empty state UI polish
-**Problem:** GraphQL errors surface as raw error text or silently fail; empty states show no call-to-action.  
-**Work:**
-- Add React error boundaries around each route
-- Add empty-state illustrations/messages to `TodoList`, `HabitList`, `TimeBlockList` with a "Create your first X" CTA button
-- Map GraphQL error codes to user-friendly messages in Apollo error handler
+### #18 — Error boundary + empty state UI polish (substantially done)
+**Status:**
+- `RouteError` (`packages/client/src/components/ui/route-error.tsx`) is wired as `errorComponent` on the major routes (todos, stats, habits, habits.index, activity-types, etc.). A generic `ErrorBoundary` class component also exists.
+- `TodoList` has an empty state ("No todos yet — Add your first todo to get started").
 
-**Acceptance:** An empty todos list shows "No todos yet — add one to get started" with a button. A network error shows a user-friendly message instead of crashing.
+**What's left:**
+- Audit which routes still lack `errorComponent` and add `RouteError` to them.
+- Verify `HabitList`, `TimeBlockList`, and `ActivityTypeList` have parity empty states with the `TodoList` treatment.
+- Map GraphQL error codes to user-friendly messages in the Apollo error handler (currently `errorLink` only handles the auth case).
