@@ -292,11 +292,39 @@ export function applyHabitResolvers(
       .values({
         habitId: input.habitId,
         scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : null,
-        completedAt: new Date(),
+        completedAt: input.completedAt
+          ? new Date(input.completedAt)
+          : new Date(),
       })
       .returning();
     if (!completion) throw new Error('Failed to record habit completion');
     runSchedulerWriteback(context.db, context.userId).catch(console.error);
     return completion;
+  };
+
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  mutationFields.myUncompleteHabit!.resolve = async (
+    _parent,
+    args: { completionId: string },
+    context: Context,
+  ) => {
+    if (!context.userId) throw new Error('Not authenticated');
+    // Look up the completion + its habit to enforce ownership
+    const completion = await context.db.query.habitCompletions.findFirst({
+      where: { id: args.completionId },
+    });
+    if (!completion) {
+      throw new Error(`Habit completion ${args.completionId} not found`);
+    }
+    const habit = await context.db.query.habits.findFirst({
+      where: { id: completion.habitId },
+    });
+    if (!habit) throw new Error('Underlying habit not found');
+    if (habit.userId !== context.userId) throw new Error('Forbidden');
+    await context.db
+      .delete(habitCompletions)
+      .where(eq(habitCompletions.id, args.completionId));
+    runSchedulerWriteback(context.db, context.userId).catch(console.error);
+    return true;
   };
 }

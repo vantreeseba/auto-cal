@@ -177,6 +177,7 @@ const extensionSDL = `
   input CompleteHabitArgs {
     habitId: ID!
     scheduledAt: String
+    completedAt: String
   }
 
   extend type Query {
@@ -199,13 +200,14 @@ const extensionSDL = `
     myDeleteActivityType(id: ID!): Boolean!
     myCreateTodo(input: CreateTodoArgs!): Todo!
     myUpdateTodo(input: UpdateTodoArgs!): Todo!
-    myCompleteTodo(id: ID!): Todo!
+    myCompleteTodo(id: ID!, completedAt: String): Todo!
     myDeleteTodo(id: ID!): Boolean!
     myCreateHabit(input: CreateHabitArgs!): Habit!
     myDeleteHabit(id: ID!): Boolean!
     myUpdateHabit(input: UpdateHabitArgs!): Habit!
     myUpdateTimeBlock(input: UpdateTimeBlockArgs!): TimeBlock!
     myCompleteHabit(input: CompleteHabitArgs!): HabitCompletion!
+    myUncompleteHabit(completionId: ID!): Boolean!
     myCreateTimeBlock(input: CreateTimeBlockArgs!): TimeBlock!
     myDeleteTimeBlock(id: ID!): Boolean!
     myReschedule(weekStart: String): Boolean!
