@@ -19,7 +19,8 @@
     "db:seed": "npm run db:seed -w @auto-cal/db",
     "db:studio": "npm run db:studio -w @auto-cal/db",
     "codegen": "graphql-codegen --config codegen.ts",
-    "codegen:server": "graphql-codegen-esm --config codegen.server.ts",
+    "codegen:schema": "PGLITE_DATA_DIR=./pgdata-codegen node --experimental-strip-types -e \"import('./packages/server/src/schema/index.ts').then(() => process.exit(0))\"",
+    "codegen:server": "npm run codegen:schema && graphql-codegen-esm --config codegen.server.ts",
     "test": "vitest"
   },
   "keywords": ["scheduling", "todo", "habits", "calendar", "productivity"],

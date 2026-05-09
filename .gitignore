@@ -4,6 +4,7 @@ __generated__
 #drizzle
 routeTree.gen.ts
 pgdata
+pgdata-codegen
 .env
 .env.local
 *.log
