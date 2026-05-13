@@ -108,10 +108,6 @@ If you're unsure what to work on, these are the highest-leverage next steps:
 
 ---
 
-### #19 — Build a way for users to generate API keys and access calendar / todo lists via an API.
-
----
-
 ## P2 — Quality of life
 
 ### #10 — URL-driven filters (TanStack Router search params)
