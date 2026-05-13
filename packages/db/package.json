@@ -5,6 +5,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./schema": "./src/schema.ts",
+    "./relations": "./src/relations.ts",
     "./seed": "./src/seed.ts"
   },
   "scripts": {

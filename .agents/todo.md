@@ -142,15 +142,19 @@
 ## P3 — Infrastructure & DX
 
 ### #15 — Expand test suite + CI
-**Status:** Partially done. Existing vitest suites:
+**Status:** Substantially done. Shipped:
+- `.github/workflows/ci.yml` — runs codegen, typecheck, lint, and `npm test` on every PR and push to main; blocks merges on failure
+- `packages/server/src/schema/resolvers/resolvers.integration.test.ts` — 3 resolver integration tests (PGLite in-memory) covering `myCreateActivityType`, `myCreateTodoList` + `myCreateTodo`, and `myCompleteTodo`
+- `vitest.config.ts` updated with a `graphql` alias to prevent duplicate-module issues in the ESM test graph
+- `packages/db/package.json` adds `./relations` export for use in test harnesses
+
+Existing vitest suites:
 - `packages/server/src/auth.test.ts` — JWT + magic-link helpers
 - `packages/server/src/schema/validators.test.ts` — Zod validators
 - `packages/server/src/services/scheduler.test.ts` — pure scheduler algorithm
 
 **What's left:**
-- Resolver integration tests (PGLite in-memory) for the `my*` mutations and queries
 - Client component / route smoke tests
-- CI workflow (GitHub Actions) that runs `npm run typecheck`, `npm run lint`, `npm test` on PRs and blocks merges on failure
 - Coverage targets (e.g. >80% on scheduler / resolvers)
 
 **Acceptance:** PRs cannot merge with failing typecheck/lint/tests; resolver and validator paths are exercised end-to-end via PGLite.
