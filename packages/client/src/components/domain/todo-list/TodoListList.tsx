@@ -1,4 +1,7 @@
-import type { TodoList_TodoListListFragment } from '@/__generated__/graphql.js';
+import type {
+  TodoList_TodoListListFragment,
+  Todo_TodoListFragment,
+} from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,8 +11,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { ListTodo, Pencil, Plus } from 'lucide-react';
+import { ListTodo, Plus } from 'lucide-react';
 import { useState } from 'react';
+import { TodoListCard } from './TodoListCard';
 import { TodoListForm } from './TodoListForm';
 
 export const TODO_LIST_LIST_FRAGMENT = graphql(`
@@ -28,50 +32,27 @@ export const TODO_LIST_LIST_FRAGMENT = graphql(`
 `);
 
 type TodoList = TodoList_TodoListListFragment;
+type Todo = Todo_TodoListFragment;
 
 type TodoListListProps = {
-  items: TodoList[];
+  lists: TodoList[];
+  todosByListId: Map<string, Todo[]>;
 };
 
-export function TodoListList({ items }: TodoListListProps) {
-  const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<TodoList | null>(null);
+export function TodoListList({ lists, todosByListId }: TodoListListProps) {
+  const [creatingList, setCreatingList] = useState(false);
 
-  function openCreate() {
-    setEditing(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(list: TodoList) {
-    setEditing(list);
-    setFormOpen(true);
-  }
-
-  function handleFormOpenChange(open: boolean) {
-    setFormOpen(open);
-    if (!open) setEditing(null);
-  }
-
-  return (
-    <>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Todo Lists</CardTitle>
-              <CardDescription>
-                Group todos by activity. Each list has an activity type and
-                defaults for new todos.
-              </CardDescription>
-            </div>
-            <Button size="sm" onClick={openCreate}>
-              <Plus className="mr-2 h-4 w-4" />
-              New List
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {items.length === 0 && (
+  if (lists.length === 0) {
+    return (
+      <>
+        <Card>
+          <CardHeader>
+            <CardTitle>Todos</CardTitle>
+            <CardDescription>
+              Lists group todos by activity type. Create one to get started.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             <div className="flex flex-col items-center gap-3 py-10 text-center">
               <div className="rounded-full bg-muted p-3">
                 <ListTodo className="h-6 w-6 text-muted-foreground" />
@@ -82,57 +63,46 @@ export function TodoListList({ items }: TodoListListProps) {
                   Create one to start adding todos
                 </p>
               </div>
-              <Button size="sm" onClick={openCreate}>
+              <Button size="sm" onClick={() => setCreatingList(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Create list
               </Button>
             </div>
-          )}
-          <div className="space-y-2">
-            {items.map((list) => (
-              <div
-                key={list.id}
-                className="flex items-center justify-between rounded-md border px-3 py-2"
-              >
-                <div className="flex items-center gap-3">
-                  {list.activityType && (
-                    <span
-                      className="inline-block h-4 w-4 rounded-full border border-border"
-                      style={{ backgroundColor: list.activityType.color }}
-                    />
-                  )}
-                  <div>
-                    <span className="text-sm font-medium">{list.name}</span>
-                    {list.description && (
-                      <p className="text-xs text-muted-foreground">
-                        {list.description}
-                      </p>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      Defaults: priority {list.defaultPriority} ·{' '}
-                      {list.defaultEstimatedLength}m
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => openEdit(list)}
-                  aria-label={`Edit ${list.name}`}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <TodoListForm
-        {...(editing !== null ? { list: editing } : {})}
-        open={formOpen}
-        onOpenChange={handleFormOpenChange}
-      />
+        <TodoListForm open={creatingList} onOpenChange={setCreatingList} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">Todos</h2>
+          <p className="text-sm text-muted-foreground">
+            One card per list. Click a list title to edit it; click the pencil
+            on a todo to open the full form.
+          </p>
+        </div>
+        <Button size="sm" onClick={() => setCreatingList(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          New List
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {lists.map((list) => (
+          <TodoListCard
+            key={list.id}
+            list={list}
+            todos={todosByListId.get(list.id) ?? []}
+          />
+        ))}
+      </div>
+
+      <TodoListForm open={creatingList} onOpenChange={setCreatingList} />
     </>
   );
 }
