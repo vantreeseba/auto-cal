@@ -6,11 +6,10 @@
 
 ## Recommended starting points
 
-If you're unsure what to work on, these are the highest-leverage next steps (#17 has shipped, removed from this list):
+If you're unsure what to work on, these are the highest-leverage next steps (#7 and #17 have shipped, removed from this list):
 
-1. **#7 — Weekly navigation on dashboard** — obvious UX gap any user will hit immediately (half day)
-2. **#19 — Completion datetime dialog** — core UX for completing tasks accurately (1 day)
-3. **#21 — Activity type required (residual)** — closes the silent "item never schedules" failure mode for new todos/habits
+1. **#19 — Completion datetime dialog** — core UX for completing tasks accurately (1 day)
+2. **#21 — Activity type required (residual)** — closes the silent "item never schedules" failure mode for new todos/habits
 
 ---
 
@@ -116,14 +115,8 @@ The `ScheduledItem.isScheduled` boolean is exposed by `mySchedule`; `ScheduleVie
 
 ---
 
-### #7 — Weekly/daily navigation on the dashboard
-**Problem:** The dashboard always shows the current week with no way to browse forward or backward.  
-**Work:**
-- Add prev/next week controls to `CalendarView` and `ScheduleView`
-- Pass the selected `weekStart` to the `mySchedule` query
-- Persist the selected week in the URL (`?week=2026-04-27`) using TanStack Router search params
-
-**Acceptance:** User can navigate to past and future weeks; the URL is shareable.
+### #7 — Weekly/daily navigation on the dashboard ✓ Done
+Prev/next/today navigation + day/week/month view switcher are wired into the dashboard header via a `WeekNavigator` component (`packages/client/src/components/domain/dashboard/WeekNavigator.tsx`). Selected week and view mode persist in the URL via TanStack Router search params (`?weekStart=`, `?day=`, `?view=`). The `mySchedule` query refetches as the week changes.
 
 ---
 
