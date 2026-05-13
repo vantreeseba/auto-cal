@@ -13,3 +13,4 @@ pgdata-codegen
 .idea
 .claude/worktrees/
 .claude/scheduled_tasks.lock
+coverage/
