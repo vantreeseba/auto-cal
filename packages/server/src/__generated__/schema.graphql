@@ -759,6 +759,7 @@ input CreateUserInput {
   id: String
   email: String!
   timezone: String
+  icalSecret: String
 
   """DateTime"""
   createdAt: DateTime
@@ -771,6 +772,7 @@ input UpdateUserInput {
   id: String
   email: String
   timezone: String
+  icalSecret: String
 
   """DateTime"""
   createdAt: DateTime
@@ -783,6 +785,7 @@ input UserFilters {
   id: IdFilter
   email: StringFilter
   timezone: StringFilter
+  icalSecret: StringFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
   OR: [UserFiltersOr!]
@@ -792,6 +795,7 @@ input UserFiltersOr {
   id: IdFilter
   email: StringFilter
   timezone: StringFilter
+  icalSecret: StringFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
 }
@@ -800,6 +804,7 @@ input UserOrderBy {
   id: InnerOrder
   email: InnerOrder
   timezone: InnerOrder
+  icalSecret: InnerOrder
   createdAt: InnerOrder
   updatedAt: InnerOrder
 }
@@ -949,6 +954,7 @@ type User {
   id: String!
   email: String!
   timezone: String!
+  icalSecret: String!
 
   """DateTime"""
   createdAt: DateTime!
@@ -1028,6 +1034,7 @@ type Mutation {
   updateUsers(set: UpdateUserInput!, where: UserFilters): [User!]!
   deleteUsers(where: UserFilters): [User!]!
   myUpdateProfile(timezone: String!): Boolean!
+  myRegenerateIcalSecret: String!
   myCreateActivityType(input: CreateActivityTypeArgs!): ActivityType!
   myUpdateActivityType(input: UpdateActivityTypeArgs!): ActivityType!
   myDeleteActivityType(id: ID!): Boolean!
@@ -1057,6 +1064,7 @@ type UserProfile {
   id: ID!
   email: String!
   timezone: String!
+  icalSecret: String!
 }
 
 type ActivityTypeStats {

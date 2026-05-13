@@ -24,23 +24,26 @@ function addWeeks(dateStr: string, n: number): string {
 }
 
 export async function icalHandler(req: Request, res: Response): Promise<void> {
-  const { userId } = req.query;
+  const { secret } = req.query;
 
   if (
-    !userId ||
-    typeof userId !== 'string' ||
-    !/^[0-9a-f-]{36}$/i.test(userId)
+    !secret ||
+    typeof secret !== 'string' ||
+    !/^[0-9a-f-]{36}$/i.test(secret)
   ) {
-    res.status(400).send('Invalid userId');
+    res.status(400).send('Invalid secret');
     return;
   }
 
-  const user = await db.query.users.findFirst({ where: { id: userId } });
+  const user = await db.query.users.findFirst({
+    where: { icalSecret: secret },
+  });
   if (!user) {
     res.status(404).send('User not found');
     return;
   }
 
+  const userId = user.id;
   const timezone = user.timezone || 'UTC';
   const weekStartStr = startOfISOWeekStr(new Date());
 

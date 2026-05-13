@@ -1,3 +1,4 @@
+import { graphql } from '@/__generated__/index.js';
 import { ApiKeyManager } from '@/components/domain/settings/ApiKeyManager';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,21 +9,25 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { RouteError } from '@/components/ui/route-error';
-import { gql } from '@apollo/client';
-import { useQuery } from '@apollo/client/react';
+import { useMutation, useQuery } from '@apollo/client/react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { Calendar, Check, Copy, Wand2 } from 'lucide-react';
+import { Calendar, Check, Copy, RefreshCw, Wand2 } from 'lucide-react';
 import { useState } from 'react';
 
-type ProfileQuery = { myProfile: { id: string } };
-
-const GET_PROFILE = gql`
+const GET_PROFILE = graphql(`
   query GetProfileForSettings {
     myProfile {
       id
+      icalSecret
     }
   }
-`;
+`);
+
+const REGENERATE_ICAL_SECRET = graphql(`
+  mutation RegenerateIcalSecret {
+    myRegenerateIcalSecret
+  }
+`);
 
 export const Route = createFileRoute('/settings')({
   component: SettingsPage,
@@ -31,15 +36,24 @@ export const Route = createFileRoute('/settings')({
   ),
 });
 
-function ICalCard({ userId }: { userId: string }) {
-  const feedUrl = `${window.location.origin}/ical?userId=${userId}`;
+function ICalCard({ icalSecret }: { icalSecret: string }) {
+  const feedUrl = `${window.location.origin}/ical?secret=${icalSecret}`;
   const [copied, setCopied] = useState(false);
+
+  const [regenerate, { loading: regenerating }] = useMutation(
+    REGENERATE_ICAL_SECRET,
+    { refetchQueries: ['GetProfileForSettings'] },
+  );
 
   function handleCopy() {
     navigator.clipboard.writeText(feedUrl).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
+  }
+
+  function handleRegenerate() {
+    regenerate();
   }
 
   return (
@@ -67,10 +81,20 @@ function ICalCard({ userId }: { userId: string }) {
               <Copy className="h-4 w-4" />
             )}
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRegenerate}
+            disabled={regenerating}
+            title="Regenerate secret"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${regenerating ? 'animate-spin' : ''}`}
+            />
+          </Button>
         </div>
         <p className="text-xs text-amber-600 dark:text-amber-400">
-          This URL is public — anyone with the link can view your schedule.
-          Treat it like a password.
+          Treat this URL like a password — regenerate if shared accidentally.
         </p>
       </CardContent>
     </Card>
@@ -79,8 +103,8 @@ function ICalCard({ userId }: { userId: string }) {
 
 function SettingsPage() {
   const navigate = useNavigate();
-  const { data } = useQuery<ProfileQuery>(GET_PROFILE);
-  const userId = data?.myProfile?.id as string | undefined;
+  const { data } = useQuery(GET_PROFILE);
+  const icalSecret = data?.myProfile?.icalSecret as string | undefined;
 
   function handleRunWizard() {
     localStorage.removeItem('onboarding_done');
@@ -107,7 +131,7 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
-      {userId && <ICalCard userId={userId} />}
+      {icalSecret && <ICalCard icalSecret={icalSecret} />}
 
       <ApiKeyManager />
     </div>
