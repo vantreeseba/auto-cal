@@ -8,14 +8,23 @@ import type {
   User,
 } from '@auto-cal/db';
 import { db } from '@auto-cal/db';
+import type { ApiKey } from '@auto-cal/db';
 import type { Request, Response } from 'express';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { icalHandler } from './ical-route.ts';
+
+const { mockUpdate } = vi.hoisted(() => {
+  const mockWhere = vi.fn().mockReturnValue({ catch: vi.fn() });
+  const mockSet = vi.fn().mockReturnValue({ where: mockWhere });
+  const mockUpdate = vi.fn().mockReturnValue({ set: mockSet });
+  return { mockUpdate };
+});
 
 vi.mock('@auto-cal/db', () => ({
   db: {
     query: {
       users: { findFirst: vi.fn() },
+      apiKeys: { findFirst: vi.fn() },
       timeBlocks: { findMany: vi.fn() },
       todos: { findMany: vi.fn() },
       todoLists: { findMany: vi.fn() },
@@ -23,12 +32,14 @@ vi.mock('@auto-cal/db', () => ({
       activityTypes: { findMany: vi.fn() },
       habitCompletions: { findMany: vi.fn() },
     },
+    update: mockUpdate,
   },
 }));
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
 const VALID_SECRET = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+const VALID_API_KEY = 'acal_dGVzdGtleXRlc3RrZXl0ZXN0a2V5dGVzdGtleXRlc3Q';
 
 function makeReq(query: Record<string, unknown> = {}): Request {
   return { query } as unknown as Request;
@@ -52,6 +63,23 @@ function makeRes() {
     },
   };
   return res as typeof res & Response;
+}
+
+function makeApiKey(overrides: Partial<ApiKey> = {}): ApiKey {
+  return {
+    id: 'key-1',
+    userId: 'user-1',
+    name: 'Test key',
+    keyHash: 'fakehash',
+    keyPrefix: 'dGVzdGt',
+    // drizzle infers .array().$type<T[]> as T[][] at the type level
+    scopes: ['read'] as unknown as ('read' | 'write')[][],
+    lastUsedAt: null,
+    expiresAt: null,
+    revokedAt: null,
+    createdAt: new Date(),
+    ...overrides,
+  };
 }
 
 function makeUser(overrides: Partial<User> = {}): User {
@@ -222,6 +250,67 @@ describe('icalHandler', () => {
       expect(db.query.users.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({ where: { icalSecret: VALID_SECRET } }),
       );
+    });
+  });
+
+  describe('API key auth', () => {
+    it('accepts a valid API key with read scope', async () => {
+      vi.mocked(db.query.apiKeys.findFirst).mockResolvedValue(makeApiKey());
+      vi.mocked(db.query.users.findFirst).mockResolvedValue(makeUser());
+      setupEmptyDb();
+      const res = makeRes();
+      await icalHandler(makeReq({ secret: VALID_API_KEY }), res);
+      expect(res.body).toContain('BEGIN:VCALENDAR');
+    });
+
+    it('returns 401 when the API key is not found', async () => {
+      vi.mocked(db.query.apiKeys.findFirst).mockResolvedValue(undefined);
+      const res = makeRes();
+      await icalHandler(makeReq({ secret: VALID_API_KEY }), res);
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('returns 401 when the API key is revoked', async () => {
+      vi.mocked(db.query.apiKeys.findFirst).mockResolvedValue(
+        makeApiKey({ revokedAt: new Date() }),
+      );
+      const res = makeRes();
+      await icalHandler(makeReq({ secret: VALID_API_KEY }), res);
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('returns 401 when the API key is expired', async () => {
+      vi.mocked(db.query.apiKeys.findFirst).mockResolvedValue(
+        makeApiKey({ expiresAt: new Date(Date.now() - 1000) }),
+      );
+      const res = makeRes();
+      await icalHandler(makeReq({ secret: VALID_API_KEY }), res);
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('returns 403 when the API key lacks read scope', async () => {
+      vi.mocked(db.query.apiKeys.findFirst).mockResolvedValue(
+        makeApiKey({ scopes: ['write'] as unknown as ('read' | 'write')[][] }),
+      );
+      const res = makeRes();
+      await icalHandler(makeReq({ secret: VALID_API_KEY }), res);
+      expect(res.statusCode).toBe(403);
+    });
+
+    it('returns 404 when the API key user is not found', async () => {
+      vi.mocked(db.query.apiKeys.findFirst).mockResolvedValue(makeApiKey());
+      vi.mocked(db.query.users.findFirst).mockResolvedValue(undefined);
+      const res = makeRes();
+      await icalHandler(makeReq({ secret: VALID_API_KEY }), res);
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('updates lastUsedAt fire-and-forget on valid key', async () => {
+      vi.mocked(db.query.apiKeys.findFirst).mockResolvedValue(makeApiKey());
+      vi.mocked(db.query.users.findFirst).mockResolvedValue(makeUser());
+      setupEmptyDb();
+      await icalHandler(makeReq({ secret: VALID_API_KEY }), makeRes());
+      expect(mockUpdate).toHaveBeenCalled();
     });
   });
 

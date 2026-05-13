@@ -7,8 +7,11 @@ import type {
   Todo,
   TodoList,
 } from '@auto-cal/db';
+import { apiKeys } from '@auto-cal/db/schema';
+import { eq } from 'drizzle-orm';
 import type { Request, Response } from 'express';
 import ical from 'ical-generator';
+import { hashApiKey, isApiKey } from './api-keys.ts';
 import {
   type TodoWithActivityType,
   computeSchedule,
@@ -26,25 +29,60 @@ function addWeeks(dateStr: string, n: number): string {
 export async function icalHandler(req: Request, res: Response): Promise<void> {
   const { secret } = req.query;
 
+  const isUuidSecret =
+    typeof secret === 'string' && /^[0-9a-f-]{36}$/i.test(secret);
+  const isApiKeySecret = typeof secret === 'string' && isApiKey(secret);
+
   if (
     !secret ||
     typeof secret !== 'string' ||
-    !/^[0-9a-f-]{36}$/i.test(secret)
+    (!isUuidSecret && !isApiKeySecret)
   ) {
     res.status(400).send('Invalid secret');
     return;
   }
 
-  const user = await db.query.users.findFirst({
-    where: { icalSecret: secret },
-  });
-  if (!user) {
-    res.status(404).send('User not found');
-    return;
-  }
+  let userId: string;
+  let timezone: string;
 
-  const userId = user.id;
-  const timezone = user.timezone;
+  if (isApiKeySecret) {
+    const hash = hashApiKey(secret);
+    const key = await db.query.apiKeys.findFirst({ where: { keyHash: hash } });
+    const now = new Date();
+    if (
+      !key ||
+      key.revokedAt !== null ||
+      (key.expiresAt !== null && key.expiresAt < now)
+    ) {
+      res.status(401).send('Invalid or expired API key');
+      return;
+    }
+    if (!key.scopes.includes('read')) {
+      res.status(403).send('API key requires read scope');
+      return;
+    }
+    db.update(apiKeys)
+      .set({ lastUsedAt: now })
+      .where(eq(apiKeys.id, key.id))
+      .catch(console.error);
+    const user = await db.query.users.findFirst({ where: { id: key.userId } });
+    if (!user) {
+      res.status(404).send('User not found');
+      return;
+    }
+    userId = user.id;
+    timezone = user.timezone;
+  } else {
+    const user = await db.query.users.findFirst({
+      where: { icalSecret: secret },
+    });
+    if (!user) {
+      res.status(404).send('User not found');
+      return;
+    }
+    userId = user.id;
+    timezone = user.timezone;
+  }
   const weekStartStr = startOfISOWeekStr(new Date());
 
   const [timeBlocks, rawTodos, todoLists, habits, activityTypes]: [
