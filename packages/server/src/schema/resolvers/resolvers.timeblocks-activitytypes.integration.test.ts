@@ -49,6 +49,29 @@ describe('time-block and activity-type resolvers', () => {
       expect(blocks).toHaveLength(1);
     });
 
+    it('filters by containsDay', async () => {
+      const { id: userId } = await seedUser(db, 'tb-containsday@example.com');
+      const at = await seedActivityType(db, userId);
+      await gql(testSchema, db, userId,
+        'mutation($input: CreateTimeBlockArgs!) { myCreateTimeBlock(input: $input) { id } }',
+        { input: { activityTypeId: at.id, daysOfWeek: [1, 2], startTime: '09:00', endTime: '10:00' } },
+      );
+      await gql(testSchema, db, userId,
+        'mutation($input: CreateTimeBlockArgs!) { myCreateTimeBlock(input: $input) { id } }',
+        { input: { activityTypeId: at.id, daysOfWeek: [5, 6], startTime: '10:00', endTime: '11:00' } },
+      );
+
+      // Day 1 (Monday) should only return the first block
+      const result = await gql(
+        testSchema, db, userId,
+        'query($day: Int) { myTimeBlocks(containsDay: $day) { id daysOfWeek } }',
+        { day: 1 },
+      );
+      expect(result.errors).toBeUndefined();
+      const blocks = result.data?.myTimeBlocks as Array<{ daysOfWeek: number[] }>;
+      expect(blocks.every((b) => b.daysOfWeek.includes(1))).toBe(true);
+    });
+
     it('filters by activityTypeId', async () => {
       const { id: userId } = await seedUser(db, 'tb-atfilter@example.com');
       const at1 = await seedActivityType(db, userId, 'Work');

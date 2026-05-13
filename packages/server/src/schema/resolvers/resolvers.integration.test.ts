@@ -21,7 +21,7 @@ import { buildSchema } from '@vantreeseba/drizzle-graphql';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { graphql } from 'graphql';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createLoaders } from '../../context.ts';
 import { applyCustomResolvers } from './index.ts';
 
@@ -76,12 +76,15 @@ describe('resolver integration tests', () => {
   let testSchema: ReturnType<typeof buildTestSchema>;
   let userId: string;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     db = await createTestDb();
     testSchema = buildTestSchema(db);
+  }, 30000);
+
+  beforeEach(async () => {
     const [user] = await db
       .insert(users)
-      .values({ email: 'integration@example.com' })
+      .values({ email: `integration-${Date.now()}@example.com` })
       .returning();
     if (!user) throw new Error('Failed to create test user');
     userId = user.id;
