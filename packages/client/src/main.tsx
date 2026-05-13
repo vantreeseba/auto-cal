@@ -23,13 +23,15 @@ const httpLink = new HttpLink({
 
 const errorLink = new ErrorLink(({ error }) => {
   if (CombinedGraphQLErrors.is(error)) {
-    const isUnauthenticated = error.errors.some((e) =>
-      e.message.includes('Not authenticated'),
+    const needsLogin = error.errors.some(
+      (e) =>
+        e.message.includes('Not authenticated') || e.message === 'Forbidden',
     );
-    if (isUnauthenticated) {
+    if (needsLogin) {
       localStorage.removeItem('auth_token');
       window.location.replace('/login');
     }
+    // "not found" errors are surfaced to the RouteError boundary — no redirect needed
   }
 });
 
