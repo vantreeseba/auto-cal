@@ -1,9 +1,10 @@
-import type { ActivityType, DB, TodoList } from '@auto-cal/db';
+import type { ActivityType, ApiKeyScope, DB, TodoList } from '@auto-cal/db';
 import DataLoader from 'dataloader';
 
 export interface Context {
   db: DB;
   userId?: string; // undefined = not authenticated
+  apiKey?: { id: string; scopes: ApiKeyScope[] };
   loaders: ReturnType<typeof createLoaders>;
 }
 

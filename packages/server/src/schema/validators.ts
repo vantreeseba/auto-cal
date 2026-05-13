@@ -1,3 +1,4 @@
+import { API_KEY_SCOPES } from '@auto-cal/db/schema';
 import { z } from 'zod';
 
 export const CreateActivityTypeInput = z.object({
@@ -120,4 +121,10 @@ export const CompleteHabitInput = z.object({
   habitId: z.string().uuid(),
   scheduledAt: z.string().datetime({ local: true }).optional(),
   completedAt: z.string().datetime({ local: true }).optional(),
+});
+
+export const MyCreateApiKeyInput = z.object({
+  name: z.string().min(1).max(60),
+  scopes: z.array(z.enum(API_KEY_SCOPES)).min(1),
+  expiresAt: z.string().datetime({ local: true }).optional(),
 });
