@@ -1,5 +1,8 @@
 import type { ActivityType, Habit, TimeBlock, Todo } from '@auto-cal/db';
 
+/** A Todo plus the activityTypeId resolved from its list — what computeSchedule needs */
+export type TodoWithActivityType = Todo & { activityTypeId: string | null };
+
 // ─── Output Types ────────────────────────────────────────────────────────────
 
 export type ScheduledItemKind = 'todo' | 'habit';
@@ -175,7 +178,7 @@ function effectiveSlotStart(
 export function computeSchedule(
   weekStartStr: string,
   timeBlocks: TimeBlock[],
-  todos: Todo[],
+  todos: TodoWithActivityType[],
   habits: Array<Habit & { instanceIndex: number }>,
   activityTypeMap: Map<string, ActivityType>,
 ): ScheduledItem[] {

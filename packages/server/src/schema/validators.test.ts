@@ -78,13 +78,13 @@ describe('UpdateActivityTypeInput', () => {
 });
 
 describe('CreateTodoInput', () => {
-  const validActivityTypeId = '00000000-0000-0000-0000-000000000001';
+  const validListId = '00000000-0000-0000-0000-000000000001';
 
   it('accepts valid minimal input', () => {
     const result = CreateTodoInput.parse({
       title: 'My todo',
       estimatedLength: 30,
-      activityTypeId: validActivityTypeId,
+      listId: validListId,
     });
     expect(result.title).toBe('My todo');
     expect(result.priority).toBe(0); // default
@@ -97,19 +97,20 @@ describe('CreateTodoInput', () => {
         description: 'A description',
         priority: 75,
         estimatedLength: 60,
-        activityTypeId: validActivityTypeId,
-        scheduledAt: '2026-04-28T09:00:00.000Z',
+        listId: validListId,
+        dueAt: '2026-05-01T17:00:00',
+        scheduledAt: '2026-04-28T09:00:00',
       }),
     ).not.toThrow();
   });
 
-  it('rejects missing activityTypeId', () => {
+  it('rejects missing listId', () => {
     expect(() => CreateTodoInput.parse({ title: 'Test' })).toThrow();
   });
 
   it('rejects empty title', () => {
     expect(() =>
-      CreateTodoInput.parse({ title: '', activityTypeId: validActivityTypeId }),
+      CreateTodoInput.parse({ title: '', listId: validListId }),
     ).toThrow();
   });
 
@@ -117,7 +118,7 @@ describe('CreateTodoInput', () => {
     expect(() =>
       CreateTodoInput.parse({
         title: 'a'.repeat(201),
-        activityTypeId: validActivityTypeId,
+        listId: validListId,
       }),
     ).toThrow();
   });
@@ -127,7 +128,7 @@ describe('CreateTodoInput', () => {
       CreateTodoInput.parse({
         title: 'Test',
         priority: -1,
-        activityTypeId: validActivityTypeId,
+        listId: validListId,
       }),
     ).toThrow();
   });
@@ -137,7 +138,7 @@ describe('CreateTodoInput', () => {
       CreateTodoInput.parse({
         title: 'Test',
         priority: 101,
-        activityTypeId: validActivityTypeId,
+        listId: validListId,
       }),
     ).toThrow();
   });
@@ -147,7 +148,7 @@ describe('CreateTodoInput', () => {
       CreateTodoInput.parse({
         title: 'Test',
         estimatedLength: 0,
-        activityTypeId: validActivityTypeId,
+        listId: validListId,
       }),
     ).toThrow();
   });
@@ -157,14 +158,14 @@ describe('CreateTodoInput', () => {
       CreateTodoInput.parse({
         title: 'Test',
         estimatedLength: 1441,
-        activityTypeId: validActivityTypeId,
+        listId: validListId,
       }),
     ).toThrow();
   });
 
-  it('rejects invalid activityTypeId (not a UUID)', () => {
+  it('rejects invalid listId (not a UUID)', () => {
     expect(() =>
-      CreateTodoInput.parse({ title: 'Test', activityTypeId: 'not-a-uuid' }),
+      CreateTodoInput.parse({ title: 'Test', listId: 'not-a-uuid' }),
     ).toThrow();
   });
 });
@@ -176,15 +177,15 @@ describe('UpdateTodoInput', () => {
     expect(() => UpdateTodoInput.parse({ id: validId })).not.toThrow();
   });
 
-  it('rejects setting activityTypeId to null', () => {
+  it('accepts changing listId to a valid uuid', () => {
     expect(() =>
-      UpdateTodoInput.parse({ id: validId, activityTypeId: null }),
-    ).toThrow();
+      UpdateTodoInput.parse({ id: validId, listId: validId }),
+    ).not.toThrow();
   });
 
-  it('accepts changing activityTypeId to a valid uuid', () => {
+  it('accepts clearing dueAt to null', () => {
     expect(() =>
-      UpdateTodoInput.parse({ id: validId, activityTypeId: validId }),
+      UpdateTodoInput.parse({ id: validId, dueAt: null }),
     ).not.toThrow();
   });
 

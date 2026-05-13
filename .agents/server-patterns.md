@@ -4,7 +4,7 @@ Express + Apollo Server, no build step (`--experimental-strip-types`). All impor
 
 ## Startup Behaviour
 
-`seedDemoUser()` always runs on startup. `seedDemoData()` runs in non-production and is idempotent (skips if the demo user already has activity types). Demo seed creates 3 activity types (Work, Exercise, Learning), 6 time blocks, 5 todos, 3 habits.
+`seedDemoUser()` always runs on startup. `seedDemoData()` runs in non-production and is idempotent (skips if the demo user already has activity types). Demo seed creates 3 activity types (Work, Exercise, Learning), 3 todo lists (one per activity type), 6 time blocks, 5 todos (distributed across the lists), 3 habits.
 
 ## Auth — UUID Bearer Fallback (Dev Only, currently active in prod too — see todo.md #25)
 
@@ -26,7 +26,7 @@ This must be guarded with `NODE_ENV !== 'production'` (or removed) before any re
 
 `mySchedule` re-computes the schedule fresh from scratch on every call using `computeSchedule` — it does **not** read `scheduledAt` from the DB for non-pinned todos. The DB `scheduledAt` is written by `runSchedulerWriteback` and used for:
 1. The pre-placement lock (writeback won't move a todo that already has a valid future slot)
-2. The "Unschedulable" indicator in `TodoItem` (`activityTypeId` set but `scheduledAt` null)
+2. The "Unschedulable" indicator in `TodoItem` (todo belongs to a list with an activity type but `scheduledAt` is null — typically because no matching time block exists)
 
 Manually-pinned todos (`manuallyScheduled: true`) are the exception — they use their stored `scheduledAt` directly in `mySchedule`.
 
@@ -57,7 +57,14 @@ export function createLoaders(db: DB) {
   return {
     activityType: new DataLoader<string, ActivityType | null>(async (ids) => {
       const rows = await db.query.activityTypes.findMany({
-        where: inArray(activityTypes.id, [...ids]),
+        where: { id: { in: [...ids] } },
+      });
+      const byId = new Map(rows.map((r) => [r.id, r]));
+      return ids.map((id) => byId.get(id) ?? null);
+    }),
+    todoList: new DataLoader<string, TodoList | null>(async (ids) => {
+      const rows = await db.query.todoLists.findMany({
+        where: { id: { in: [...ids] } },
       });
       const byId = new Map(rows.map((r) => [r.id, r]));
       return ids.map((id) => byId.get(id) ?? null);
@@ -102,10 +109,11 @@ const extensionSDL = `
     myCreateTodo(input: CreateTodoArgs!): Todo!
   }
   input CreateTodoArgs {
+    listId: ID!
     title: String!
     priority: Int
-    estimatedLength: Int!
-    activityTypeId: ID
+    estimatedLength: Int
+    dueAt: String
     scheduledAt: String
   }
 `;
@@ -205,10 +213,18 @@ context: async ({ req }): Promise<Context> => {
 Loaders are created per-request in context. Use them in type resolvers:
 
 ```typescript
+// Habit and TimeBlock: direct activityTypeId
 activityType: async (parent, _args, context: Context) => {
   if (!parent.activityTypeId) return null;
   return context.loaders.activityType.load(parent.activityTypeId);
 },
+
+// Todo: derived via the list. Two batched loader calls, both DataLoader-deduped.
+const todoActivityType = async (parent, _args, context: Context) => {
+  const list = await context.loaders.todoList.load(parent.listId);
+  if (!list) return null;
+  return context.loaders.activityType.load(list.activityTypeId);
+};
 ```
 
 ## iCal Endpoint
@@ -230,6 +246,7 @@ Each domain has its own resolver file exporting an `apply*Resolvers(queryFields,
 ```
 packages/server/src/schema/resolvers/
   index.ts          — extensionSDL + wires all apply* functions
+  todo-lists.ts     — applyTodoListResolvers
   todos.ts          — applyTodoResolvers
   habits.ts         — applyHabitResolvers
   time-blocks.ts    — applyTimeBlockResolvers
@@ -246,16 +263,20 @@ New resolver domains follow the same pattern. SDL goes in `extensionSDL` in `ind
 
 ```typescript
 // packages/server/src/services/scheduler.ts
+export type TodoWithActivityType = Todo & { activityTypeId: string | null };
+
 export function computeSchedule(
   weekStartStr: string,
   timeBlocks: TimeBlock[],
-  todos: Todo[],
+  todos: TodoWithActivityType[],
   habits: Array<Habit & { instanceIndex: number }>,
   activityTypeMap: Map<string, ActivityType>,
 ): ScheduledItem[] { ... }
 ```
 
 Pure function — deterministic, easy to unit test. Coverage in `packages/server/src/services/scheduler.test.ts`.
+
+Since `todos.activityTypeId` no longer exists on the DB row, callers (`schedule.ts`, `scheduler-writeback.ts`, `ical-route.ts`) fetch `todoLists` alongside `todos`, build a `Map<listId, activityTypeId>`, and enrich each todo before passing it in.
 
 ## Tests
 

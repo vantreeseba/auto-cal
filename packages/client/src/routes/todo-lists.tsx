@@ -1,0 +1,71 @@
+import type { Todo_TodoListFragment } from '@/__generated__/graphql.js';
+import { graphql } from '@/__generated__/index.js';
+import { TodoListList } from '@/components/domain/todo-list/TodoListList';
+import { RouteError } from '@/components/ui/route-error';
+import { useQuery } from '@apollo/client/react';
+import { createFileRoute } from '@tanstack/react-router';
+import { useMemo } from 'react';
+
+const GET_TODO_LISTS_PAGE = graphql(`
+  query GetTodoListsPage {
+    myTodoLists {
+      ...TodoList_TodoListList
+    }
+    myTodos {
+      ...Todo_TodoList
+    }
+  }
+`);
+
+export const Route = createFileRoute('/todo-lists')({
+  component: TodoListsPage,
+  errorComponent: ({ error, reset }) => (
+    <RouteError error={error} reset={reset} />
+  ),
+});
+
+function TodoListsPage() {
+  const { data, loading, error } = useQuery(GET_TODO_LISTS_PAGE, {
+    fetchPolicy: 'cache-and-network',
+  });
+
+  const todosByListId = useMemo(() => {
+    const map = new Map<string, Todo_TodoListFragment[]>();
+    for (const todo of data?.myTodos ?? []) {
+      if (!todo.list?.id) continue;
+      const bucket = map.get(todo.list.id) ?? [];
+      bucket.push(todo);
+      map.set(todo.list.id, bucket);
+    }
+    // Stable per-list order: incomplete first, then by createdAt desc
+    for (const todos of map.values()) {
+      todos.sort((a, b) => {
+        const aDone = a.completedAt ? 1 : 0;
+        const bDone = b.completedAt ? 1 : 0;
+        if (aDone !== bDone) return aDone - bDone;
+        return (
+          new Date(b.createdAt as string).getTime() -
+          new Date(a.createdAt as string).getTime()
+        );
+      });
+    }
+    return map;
+  }, [data?.myTodos]);
+
+  return (
+    <div className="container mx-auto flex-1 overflow-y-auto px-4 py-6">
+      {error && (
+        <p className="text-destructive text-sm">
+          Error loading todos: {error.message}
+        </p>
+      )}
+      {loading && !data && (
+        <p className="text-muted-foreground text-sm">Loading…</p>
+      )}
+      <TodoListList
+        lists={data?.myTodoLists ?? []}
+        todosByListId={todosByListId}
+      />
+    </div>
+  );
+}

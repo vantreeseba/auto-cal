@@ -6,7 +6,7 @@ import {
   timestamp,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { activityTypes } from './activity_types.ts';
+import { todoLists } from './todo_lists.ts';
 import { users } from './users.ts';
 
 export const todos = pgTable('todos', {
@@ -14,13 +14,14 @@ export const todos = pgTable('todos', {
   userId: uuid('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
+  listId: uuid('list_id')
+    .notNull()
+    .references(() => todoLists.id, { onDelete: 'restrict' }),
   title: text('title').notNull(),
   description: text('description'),
   priority: integer('priority').notNull().default(0),
   estimatedLength: integer('estimated_length').notNull(),
-  activityTypeId: uuid('activity_type_id')
-    .notNull()
-    .references(() => activityTypes.id, { onDelete: 'restrict' }),
+  dueAt: timestamp('due_at'),
   scheduledAt: timestamp('scheduled_at'),
   completedAt: timestamp('completed_at'),
   manuallyScheduled: boolean('manually_scheduled').notNull().default(false),

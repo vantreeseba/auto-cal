@@ -5,10 +5,12 @@ import type {
   HabitCompletion,
   TimeBlock,
   Todo,
+  TodoList,
 } from '@auto-cal/db';
 import { habitCompletions, todos } from '@auto-cal/db/schema';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 import {
+  type TodoWithActivityType,
   computeSchedule,
   startOfISOWeek,
   startOfLocalMonth,
@@ -49,7 +51,7 @@ function countByPeriod(
  * preserve an existing scheduled placement rather than re-running the scheduler.
  */
 function isScheduledAtValid(
-  todo: Todo,
+  todo: TodoWithActivityType,
   timeBlocks: TimeBlock[],
   now: Date,
 ): boolean {
@@ -94,7 +96,8 @@ export async function runSchedulerWriteback(
   // ── Fetch all user data in one round-trip ──────────────────────────────────
   const [
     userTimeBlocks,
-    allIncompleteTodos,
+    allIncompleteRawTodos,
+    userTodoLists,
     userHabits,
     userActivityTypes,
     allActualCompletions,
@@ -106,12 +109,14 @@ export async function runSchedulerWriteback(
       where: {
         userId,
         completedAt: { isNull: true },
-        activityTypeId: { isNotNull: true },
         OR: [
           { manuallyScheduled: { ne: true } },
           { manuallyScheduled: true, scheduledAt: { lt: now } },
         ],
       },
+    }),
+    db.query.todoLists.findMany({
+      where: { userId },
     }),
     db.query.habits.findMany({
       where: { userId, activityTypeId: { isNotNull: true } },
@@ -126,7 +131,25 @@ export async function runSchedulerWriteback(
         completedAt: { isNotNull: true },
       },
     }),
-  ])) as [TimeBlock[], Todo[], Habit[], ActivityType[], HabitCompletion[]];
+  ])) as [
+    TimeBlock[],
+    Todo[],
+    TodoList[],
+    Habit[],
+    ActivityType[],
+    HabitCompletion[],
+  ];
+
+  const listActivityTypeMap = new Map(
+    userTodoLists.map((l) => [l.id, l.activityTypeId]),
+  );
+
+  const allIncompleteTodos: TodoWithActivityType[] = allIncompleteRawTodos.map(
+    (t) => ({
+      ...t,
+      activityTypeId: listActivityTypeMap.get(t.listId) ?? null,
+    }),
+  );
 
   // ── Reset overdue manually-scheduled todos ─────────────────────────────────
   const overduePinnedIds = allIncompleteTodos
@@ -140,7 +163,7 @@ export async function runSchedulerWriteback(
       .where(inArray(todos.id, overduePinnedIds));
   }
 
-  const userTodos = allIncompleteTodos.map((t) =>
+  const userTodos: TodoWithActivityType[] = allIncompleteTodos.map((t) =>
     overduePinnedIds.includes(t.id)
       ? { ...t, manuallyScheduled: false, scheduledAt: null }
       : t,

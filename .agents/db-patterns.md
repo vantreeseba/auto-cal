@@ -11,13 +11,14 @@ export const todos = pgTable('todos', {
   userId: uuid('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
+  listId: uuid('list_id')
+    .notNull()
+    .references(() => todoLists.id, { onDelete: 'restrict' }),
   title: text('title').notNull(),
   description: text('description'),
   priority: integer('priority').notNull().default(0),
   estimatedLength: integer('estimated_length').notNull(),
-  activityTypeId: uuid('activity_type_id').references(() => activityTypes.id, {
-    onDelete: 'set null',
-  }),
+  dueAt: timestamp('due_at'),
   scheduledAt: timestamp('scheduled_at'),
   completedAt: timestamp('completed_at'),
   manuallyScheduled: boolean('manually_scheduled').notNull().default(false),
@@ -29,6 +30,8 @@ export const todos = pgTable('todos', {
 export type Todo = typeof todos.$inferSelect;
 export type NewTodo = typeof todos.$inferInsert;
 ```
+
+Todos no longer carry an `activityTypeId` directly — it's resolved through `todos.listId → todo_lists.activityTypeId`. The `Todo.activityType` GraphQL field is a field-resolver that chains the `todoList` and `activityType` DataLoaders (see `server-patterns.md`).
 
 ## Enum Pattern
 
@@ -95,7 +98,7 @@ await db.delete(todos).where(and(eq(todos.id, id), eq(todos.userId, userId)));
 `packages/db/src/seed.ts` exports two entry points used by the server on startup (`packages/server/src/index.ts`):
 
 - `seedDemoUser()` — runs in all environments; idempotent insert of the demo user row (`DEMO_USER_ID = '00000000-0000-0000-0000-000000000001'`).
-- `seedDemoData()` — guarded with `NODE_ENV !== 'production'`; idempotent (skips if the demo user already has activity types). Creates 3 activity types (Work / Exercise / Learning), 6 time blocks, 5 todos, 3 habits.
+- `seedDemoData()` — guarded with `NODE_ENV !== 'production'`; idempotent (skips if the demo user already has activity types). Creates 3 activity types (Work / Exercise / Learning), 3 todo lists (one per activity type), 6 time blocks, 5 todos (distributed across the lists), 3 habits.
 
 `packages/db/src/seed-runner.ts` is a CLI scaffold for running the seed standalone (no `npm run db:seed` script is currently wired in `package.json`).
 
@@ -124,6 +127,6 @@ Migration files live in `packages/db/drizzle/` — never edit manually.
 ## Foreign Key Conventions
 
 - User-owned resources: `references(() => users.id, { onDelete: 'cascade' })`
-- Optional references: `references(() => activityTypes.id, { onDelete: 'set null' })`
+- Required references where the parent must not be deleted while children exist: `references(() => activityTypes.id, { onDelete: 'restrict' })` (current default for activity-type and list FKs)
 - All PKs: `uuid('id').primaryKey().defaultRandom()`
 - All timestamps: Postgres `timestamp` type (not `timestamptz`)

@@ -6,51 +6,15 @@
 
 ## Recommended starting points
 
-If you're unsure what to work on, these are the highest-leverage next steps (#17 has shipped, removed from this list):
+If you're unsure what to work on, these are the highest-leverage next steps:
 
 1. **#7 — Weekly navigation on dashboard** — obvious UX gap any user will hit immediately (half day)
-2. **#19 — Completion datetime dialog** — core UX for completing tasks accurately (1 day)
-3. **#21 — Activity type required (residual)** — closes the silent "item never schedules" failure mode for new todos/habits
+2. **#1 — Wire magic-link email delivery** — auth flow is otherwise live; this unblocks real users
+3. **#3 — Finish UTC migration** — closes out the naive-datetime stopgap
 
 ---
 
 ## P0 — Core correctness / blocking
-
-### #21 — Make activity type required on todos and habits
-**Status:** Originally bundled `isPinnedSchedule` removal, drag-to-schedule, and activity-type-required. The first two have shipped:
-- `manuallyScheduled` is the live signal (`todos.manually_scheduled` boolean, default false). `isPinnedSchedule` never made it into the schema.
-- Drag-to-reschedule is live for todos in `CalendarView` (see #4).
-
-**What's left:** Activity type is still nullable in the database and accepted as `undefined` by the form Zod schemas (`activityTypeId: z.string().uuid().or(z.undefined())` in both `TodoForm.tsx` and `HabitForm.tsx`). The scheduler silently skips items without an activity type, which is the user-visible bug.
-
-**Spec:** See `specifications.md` → "Scheduler" section.
-**Work:**
-- Make `activityTypeId` `notNull` on `todos` and `habits` tables + migration (handle existing nulls — backfill or block)
-- Update Zod inputs (`CreateTodoInput`, `UpdateTodoInput`, `CreateHabitInput`, `UpdateHabitInput`) to require `activityTypeId`
-- Update `TodoForm` and `HabitForm` Zod + UI to require selection (block save without it; show inline validation)
-- Surface the migration concern: existing rows with null `activityTypeId` need a strategy (e.g. assign to a default "General" activity type per user, or block migration if any exist)
-
-**Acceptance:** Saving a todo or habit without an activity type is blocked at form, resolver, and DB layers. Existing data either has a default applied or migration is gated until cleaned up.
-
----
-
-### #20 — Time block priority field ✓ Done
-`time_blocks.priority` (integer, default 0) exists in the schema (`packages/db/src/models/time_blocks.ts:18`); `TimeBlockForm` exposes it as a numeric input (line 318); `TimeBlockItem` displays it; the scheduler sorts candidate blocks by priority DESC at `packages/server/src/services/scheduler.ts:195`.
-
----
-
-### #19 — Completion datetime dialog + calendar move-on-completion
-**Problem:** Marking a todo or habit complete sets `completedAt = now` with no way to record when it actually happened. Completed items also don't move on the calendar to reflect their real completion time, and freeing future slots doesn't trigger rescheduling.  
-**Spec:** See `specifications.md` → "Completion Behavior" section.  
-**Work:**
-- Add a "Complete" confirmation dialog (todos and habits) with a datetime picker defaulting to now
-- On confirm: set `completedAt`, update `scheduledAt` to match `completedAt`
-- If `completedAt < original scheduledAt` (completed early): clear the original future slot, run scheduler to backfill
-- Calendar: render completed items at `completedAt` with a checkmark overlay; keep them interactive
-- Uncomplete (todos): clear `completedAt` + `scheduledAt`, return to unscheduled pool, run scheduler
-- Uncomplete (habits): delete the `habit_completions` row, run scheduler
-
-**Acceptance:** Completing a todo early moves it on the calendar and immediately schedules something else in the freed slot. Uncompleting returns it to the queue.
 
 ### #1 — Wire magic-link email delivery (auth is otherwise live)
 **Status:** Magic-link + JWT auth is implemented end-to-end:
@@ -101,21 +65,6 @@ If you're unsure what to work on, these are the highest-leverage next steps (#17
 
 ---
 
-### #4 — Calendar: drag-to-reschedule ✓ Done (todos)
-Drag-and-drop is implemented for todos in `CalendarView`. Dragging a todo sets `scheduledAt` and `manuallyScheduled: true`. Habits are not draggable (scheduler-controlled only).
-
----
-
-### #5 — Conflict detection & "unschedulable" state ✓ Done
-The `ScheduledItem.isScheduled` boolean is exposed by `mySchedule`; `ScheduleView` filters unschedulable items into a separate section with amber border styling and an `unschedulableReason()` tooltip explaining why (`packages/client/src/components/domain/dashboard/ScheduleView.tsx:240`). The implementation uses a boolean rather than the originally-proposed `scheduleStatus` enum, but covers the same UX need.
-
----
-
-### #6 — Habit completion tracking via the dashboard ✓ Done
-`myCompleteHabit` is wired into both `CalendarView` (line 83) and `ScheduleView` (line 46), with optimistic-response cache updates. Habits can be completed inline from the weekly schedule view.
-
----
-
 ### #7 — Weekly/daily navigation on the dashboard
 **Problem:** The dashboard always shows the current week with no way to browse forward or backward.  
 **Work:**
@@ -159,6 +108,10 @@ The `ScheduledItem.isScheduled` boolean is exposed by `mySchedule`; `ScheduleVie
 
 ---
 
+### #19 — Build a way for users to generate API keys and access calendar / todo lists via an API.
+
+---
+
 ## P2 — Quality of life
 
 ### #10 — URL-driven filters (TanStack Router search params)
@@ -172,11 +125,6 @@ The `ScheduledItem.isScheduled` boolean is exposed by `mySchedule`; `ScheduleVie
 
 ---
 
-### #11 — Estimated length quick-edit (inline) ✓ Done
-`InlineLengthEdit` (`packages/client/src/components/ui/inline-length-edit.tsx`) is the custom chip component; wired into both `TodoItem.tsx:103` and `HabitItem.tsx:64`. Single-click edit, blur/Enter to save via `myUpdateTodo` / `myUpdateHabit`.
-
----
-
 ### #12 — Bulk complete / bulk delete todos
 **Problem:** Completing or deleting todos one-by-one is tedious when clearing a backlog.  
 **Work:**
@@ -185,18 +133,6 @@ The `ScheduledItem.isScheduled` boolean is exposed by `mySchedule`; `ScheduleVie
 - Backend: batch mutations or multiple calls in a single Apollo request (via `Promise.all`)
 
 **Acceptance:** User can select 5 todos and complete them all in one click.
-
----
-
-### #13 — Due dates on todos
-**Problem:** Todos have no hard due date — only `scheduledAt` (which is auto-assigned). Users can't express "this must be done by Friday."  
-**Work:**
-- Add `dueAt` timestamp column to `todos` table + migration
-- Add due date picker to `TodoForm`
-- Scheduler should prioritize overdue items (past `dueAt`) regardless of priority score
-- Surface overdue todos with a red badge
-
-**Acceptance:** A todo with a due date appears with a countdown; it gets promoted in scheduling once overdue.
 
 ---
 
@@ -261,13 +197,6 @@ The `ScheduledItem.isScheduled` boolean is exposed by `mySchedule`; `ScheduleVie
 - Decide on a connection-pool config (pg pool defaults, or pgBouncer)
 
 **Acceptance:** A real Postgres deployment runs the full app without surprises; PGLite remains the no-config dev default.
-
----
-
-### #17 — Seed data for development ✓ Done
-`seedDemoData()` in `packages/db/src/seed.ts` creates 3 activity types (Work / Exercise / Learning), 6 time blocks, 5 todos, 3 habits, all guarded by `NODE_ENV !== 'production'` and idempotent. It runs automatically on server start in dev (see `packages/server/src/index.ts`). A standalone `npm run db:seed` script is **not** wired up — the only entry point is the server-startup hook.
-
-If a CLI seed entry is wanted, `packages/db/src/seed-runner.ts` exists as the scaffolding; just add the `db:seed` script to `package.json`.
 
 ---
 

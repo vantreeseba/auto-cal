@@ -6,7 +6,10 @@ import type {
   UpdateTodoMutationVariables,
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
-import { ActivityTypeSelect } from '@/components/domain/activity-type/ActivityTypeSelect';
+import {
+  type TodoListForSelect,
+  TodoListSelect,
+} from '@/components/domain/todo-list/TodoListSelect';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -23,6 +26,7 @@ import {
   FieldLabel,
   Form,
 } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import { useAppForm } from '@/hooks/form-hook';
 import { useMutation } from '@apollo/client/react';
 import { Check } from 'lucide-react';
@@ -36,6 +40,7 @@ const CREATE_TODO = graphql(`
       id
       title
       description
+      list { id name }
       activityType {
         id
         name
@@ -43,6 +48,7 @@ const CREATE_TODO = graphql(`
       }
       priority
       estimatedLength
+      dueAt
       scheduledAt
       completedAt
     }
@@ -55,6 +61,7 @@ const UPDATE_TODO = graphql(`
       id
       title
       description
+      list { id name }
       activityType {
         id
         name
@@ -62,6 +69,7 @@ const UPDATE_TODO = graphql(`
       }
       priority
       estimatedLength
+      dueAt
       scheduledAt
       completedAt
     }
@@ -102,9 +110,11 @@ const DURATION_OPTIONS = [
 const todoSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Max 200 characters'),
   description: z.string().max(2000, 'Max 2000 characters'),
-  activityTypeId: z.string().uuid('Activity type is required'),
+  listId: z.string().uuid('List is required'),
   priority: z.string().min(1, 'Priority is required'),
   estimatedLength: z.string().min(1, 'Duration is required'),
+  // Local datetime string (YYYY-MM-DDTHH:mm) from <input type="datetime-local">
+  dueAt: z.string(),
 });
 
 type TodoFormValues = z.infer<typeof todoSchema>;
@@ -121,6 +131,16 @@ type TodoFormProps = {
   onOpenChange: (open: boolean) => void;
 };
 
+// ─── Helpers ──────────────────────────────────────────────────────────────
+
+/** Convert a server datetime string ("YYYY-MM-DDTHH:mm:ss" naive) to the
+ *  "YYYY-MM-DDTHH:mm" shape that <input type="datetime-local"> expects. */
+function toDateTimeLocal(value: string | null | undefined): string {
+  if (!value) return '';
+  // Trim seconds (and any trailing Z) — the input only accepts minute precision.
+  return value.replace(/Z$/, '').slice(0, 16);
+}
+
 // ─── Component ─────────────────────────────────────────────────────────────
 
 export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
@@ -130,32 +150,36 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
     CreateTodoMutation,
     CreateTodoMutationVariables
   >(CREATE_TODO, {
-    refetchQueries: ['GetMyTodos'],
+    refetchQueries: ['GetTodoListsPage'],
   });
 
   const [updateTodo] = useMutation<
     UpdateTodoMutation,
     UpdateTodoMutationVariables
   >(UPDATE_TODO, {
-    refetchQueries: ['GetMyTodos'],
+    refetchQueries: ['GetTodoListsPage'],
   });
 
   const [completeTodo, { loading: completing }] = useMutation(COMPLETE_TODO, {
-    refetchQueries: ['GetMyTodos'],
+    refetchQueries: ['GetTodoListsPage'],
   });
 
   const form = useAppForm({
     defaultValues: {
       title: todo?.title ?? '',
       description: todo?.description ?? '',
-      activityTypeId: todo?.activityType?.id ?? '',
+      listId: todo?.list?.id ?? '',
       priority: String(todo?.priority ?? 0),
       estimatedLength: String(todo?.estimatedLength ?? 30),
+      dueAt: toDateTimeLocal(todo?.dueAt as string | null | undefined),
     } as TodoFormValues,
     validators: {
       onChange: todoSchema,
     },
     onSubmit: async ({ value }) => {
+      // datetime-local gives "YYYY-MM-DDTHH:mm" — append ":00" so it satisfies
+      // the server's datetime({ local: true }) validator which expects seconds.
+      const dueAt = value.dueAt ? `${value.dueAt}:00` : null;
       if (isEdit) {
         await updateTodo({
           variables: {
@@ -163,9 +187,10 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
               id: todo.id,
               title: value.title,
               description: value.description ?? null,
-              activityTypeId: value.activityTypeId,
+              listId: value.listId,
               priority: Number(value.priority),
               estimatedLength: Number(value.estimatedLength),
+              dueAt,
             },
           },
         });
@@ -175,9 +200,10 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
             input: {
               title: value.title,
               description: value.description ?? null,
-              activityTypeId: value.activityTypeId,
+              listId: value.listId,
               priority: Number(value.priority),
               estimatedLength: Number(value.estimatedLength),
+              dueAt: dueAt ?? undefined,
             },
           },
         });
@@ -185,6 +211,28 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
       onOpenChange(false);
     },
   });
+
+  // Snapshot the list's defaults into the priority/duration fields when the
+  // user picks a list (only if they haven't customized those fields yet).
+  function applyListDefaults(list?: TodoListForSelect) {
+    if (!list) return;
+    if (isEdit) return; // never overwrite values on an existing todo
+    if (
+      !form.getFieldValue('priority') ||
+      form.getFieldValue('priority') === '0'
+    ) {
+      form.setFieldValue('priority', String(list.defaultPriority));
+    }
+    if (
+      !form.getFieldValue('estimatedLength') ||
+      form.getFieldValue('estimatedLength') === '30'
+    ) {
+      form.setFieldValue(
+        'estimatedLength',
+        String(list.defaultEstimatedLength || 30),
+      );
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -194,7 +242,7 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
           <DialogDescription>
             {isEdit
               ? 'Update the details of your todo.'
-              : 'Add a new task to your list.'}
+              : 'Add a new task to one of your lists.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -209,7 +257,6 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
               )}
             </form.AppField>
 
-            {/* Description */}
             <form.AppField name="description">
               {(field) => (
                 <field.TextAreaField
@@ -219,15 +266,17 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
               )}
             </form.AppField>
 
-            {/* Activity Type */}
-            <form.AppField name="activityTypeId">
+            <form.AppField name="listId">
               {(field) => (
                 <Field>
-                  <FieldLabel>Activity Type</FieldLabel>
+                  <FieldLabel>List</FieldLabel>
                   <FieldControl>
-                    <ActivityTypeSelect
+                    <TodoListSelect
                       value={field.state.value || undefined}
-                      onValueChange={(v) => field.handleChange(v ?? '')}
+                      onValueChange={(v, list) => {
+                        field.handleChange(v ?? '');
+                        applyListDefaults(list);
+                      }}
                       onBlur={field.handleBlur}
                     />
                   </FieldControl>
@@ -236,9 +285,7 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
               )}
             </form.AppField>
 
-            {/* Priority + Duration — two columns */}
             <div className="grid grid-cols-2 gap-4">
-              {/* Priority */}
               <form.AppField name="priority">
                 {(field) => (
                   <field.SelectField
@@ -249,7 +296,6 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
                 )}
               </form.AppField>
 
-              {/* Estimated Length */}
               <form.AppField name="estimatedLength">
                 {(field) => (
                   <field.SelectField
@@ -260,6 +306,23 @@ export function TodoForm({ todo, open, onOpenChange }: TodoFormProps) {
                 )}
               </form.AppField>
             </div>
+
+            <form.AppField name="dueAt">
+              {(field) => (
+                <Field>
+                  <FieldLabel>Due date (optional)</FieldLabel>
+                  <FieldControl>
+                    <Input
+                      type="datetime-local"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                    />
+                  </FieldControl>
+                  <FieldError />
+                </Field>
+              )}
+            </form.AppField>
 
             <DialogFooter className="flex items-center justify-between">
               <div>

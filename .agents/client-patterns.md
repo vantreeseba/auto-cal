@@ -48,7 +48,7 @@ const client = new ApolloClient({
 
 ## Nav Structure
 
-Top nav (hidden during onboarding): **Dashboard · Todos · Habits · Time Blocks · Activity Types · Stats** + Settings icon + Sign out + dark mode toggle.
+Top nav (hidden during onboarding): **Dashboard · Todos · Todo Lists · Habits · Time Blocks · Activity Types · Stats** + Settings icon + Sign out + dark mode toggle.
 
 Dark mode is fully supported — toggle stored in `localStorage.theme`, falls back to `prefers-color-scheme`. All new UI **must** include `dark:` Tailwind variants. The `dark` class is toggled on `document.documentElement`.
 
@@ -59,7 +59,7 @@ New users are redirected to `/onboarding` automatically (before dashboard) if `l
 1. Activity Types (required)
 2. Time Blocks (required)
 3. Habits (optional — skippable)
-4. Todos (optional — skippable)
+4. Todos (optional — skippable; requires at least one todo list to exist before adding a todo — link out to `/todo-lists` if empty)
 
 Completion sets `localStorage.onboarding_done = '1'`. Re-runnable from Settings with `?force=true`. The auth guard in `__root.tsx` handles the redirect — do not replicate this logic elsewhere.
 
@@ -76,6 +76,7 @@ File-based routes under `packages/client/src/routes/`:
 | `onboarding.tsx` | `/onboarding?step=1` | 4-step setup wizard |
 | `dashboard.tsx` | `/dashboard` | Main schedule view |
 | `todos.tsx` | `/todos` | Todo list |
+| `todo-lists.tsx` | `/todo-lists` | Todo list (lists, not todos) CRUD |
 | `habits.tsx` + `habits.index.tsx` | `/habits` | Habit list (parent + index) |
 | `habits.$habitId.tsx` | `/habits/$habitId` | Habit detail (rates, periods) |
 | `time-blocks.tsx` | `/time-blocks` | Time block management |
@@ -128,7 +129,9 @@ const MY_TODOS = graphql(`
       title
       priority
       estimatedLength
+      dueAt
       completedAt
+      list { id name }
       activityType { id name color }
     }
   }
@@ -141,6 +144,7 @@ const CREATE_TODO = graphql(`
       title
       priority
       estimatedLength
+      list { id name }
       activityType { id name color }
     }
   }
@@ -233,11 +237,15 @@ const form = useAppForm({
 
 ```
 packages/client/src/components/
-  ui/          — ShadCN primitives (Button, Card, Input, etc.)
-  domain/      — Feature components organized by entity
-    todo/      — TodoItem, TodoForm, TodoList
-    habit/     — HabitItem, HabitForm
-    time-block/ — TimeBlockItem, TimeBlockForm
+  ui/             — ShadCN primitives (Button, Card, Input, etc.)
+  domain/         — Feature components organized by entity
+    activity-type/ — ActivityTypeForm, ActivityTypeList, ActivityTypeSelect
+    todo-list/    — TodoListForm, TodoListList, TodoListSelect
+    todo/         — TodoItem, TodoForm, TodoList
+    habit/        — HabitItem, HabitForm
+    time-block/   — TimeBlockItem, TimeBlockForm
+    dashboard/    — CalendarView, ScheduleView
+    onboarding/   — Step*.tsx wizard panels
 ```
 
 ## ShadCN + Tailwind Conventions
@@ -323,7 +331,11 @@ No dedicated mutation — use `myUpdateTodo` with `completedAt: null`.
 
 ### Unschedulable Items
 
-Items with `!isScheduled` appear in ScheduleView under an "Unschedulable" heading with an amber warning icon linking to `/time-blocks`. The tooltip explains the reason (no activity type, no matching time block, or estimated length too long).
+Items with `!isScheduled` appear in ScheduleView under an "Unschedulable" heading with an amber warning icon linking to `/time-blocks`. The tooltip explains the reason (no matching time block, or estimated length too long). A todo's activity type is sourced from its list, so the previous "no activity type" branch is gone.
+
+### TodoForm Defaults Snapshot
+
+When the user picks a list in `TodoForm`, the form snapshots that list's `defaultPriority` / `defaultEstimatedLength` into the priority and duration fields — only when those fields still hold the form's initial values. Editing an existing todo never overwrites them. The todo persists its own copy of priority/duration; later edits to the list's defaults do **not** propagate.
 
 ## Codegen
 
