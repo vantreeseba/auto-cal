@@ -4,7 +4,9 @@
   "type": "module",
   "description": "Auto Cal - Todo and habit scheduling application",
   "private": true,
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
     "dev:server": "npm run dev -w @auto-cal/server",
@@ -23,7 +25,13 @@
     "codegen:server": "graphql-codegen-esm --config codegen.server.ts",
     "test": "vitest"
   },
-  "keywords": ["scheduling", "todo", "habits", "calendar", "productivity"],
+  "keywords": [
+    "scheduling",
+    "todo",
+    "habits",
+    "calendar",
+    "productivity"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
@@ -34,6 +42,7 @@
     "@graphql-codegen/schema-ast": "^6.0.0",
     "@graphql-codegen/typescript": "^6.0.0",
     "@graphql-codegen/typescript-resolvers": "^6.0.0",
+    "@vitest/coverage-v8": "^4.1.6",
     "concurrently": "^9.1.2",
     "esbuild": "^0.28.0",
     "typescript": "^6.0.3",

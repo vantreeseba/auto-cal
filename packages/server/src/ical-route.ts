@@ -44,7 +44,7 @@ export async function icalHandler(req: Request, res: Response): Promise<void> {
   }
 
   const userId = user.id;
-  const timezone = user.timezone || 'UTC';
+  const timezone = user.timezone;
   const weekStartStr = startOfISOWeekStr(new Date());
 
   const [timeBlocks, rawTodos, todoLists, habits, activityTypes]: [
@@ -128,7 +128,6 @@ export async function icalHandler(req: Request, res: Response): Promise<void> {
 
     const habitInstances: Array<Habit & { instanceIndex: number }> = [];
     for (const h of habits) {
-      if (!h.activityTypeId) continue;
       const counts = h.frequencyUnit === 'week' ? weekCounts : monthCounts;
       const done = counts.get(h.id) ?? 0;
       const deficit = h.frequencyCount - done;
