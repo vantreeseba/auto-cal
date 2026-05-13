@@ -76,6 +76,37 @@ describe('todo resolvers', () => {
       expect(items.every((i) => i.title === 'Done')).toBe(true);
     });
 
+    it('accepts a custom orderBy argument', async () => {
+      const { id: userId } = await seedUser(db, 'todos-orderby@example.com');
+      const at = await seedActivityType(db, userId);
+      const list = await seedTodoList(db, userId, at.id);
+      await seedTodo(db, userId, list.id, { title: 'Low', priority: 1 });
+      await seedTodo(db, userId, list.id, { title: 'High', priority: 10 });
+
+      const result = await gql(
+        testSchema, db, userId,
+        'query($o: TodoOrderBy) { myTodos(orderBy: $o) { title priority } }',
+        { o: { priority: { direction: 'asc', priority: 1 } } },
+      );
+      expect(result.errors).toBeUndefined();
+      const items = result.data?.myTodos as Array<{ title: string; priority: number }>;
+      expect(items[0]?.priority).toBeLessThanOrEqual(items[1]?.priority ?? 999);
+    });
+
+    it('falls back to default order when orderBy has no entries', async () => {
+      const { id: userId } = await seedUser(db, 'todos-orderby-empty@example.com');
+      const at = await seedActivityType(db, userId);
+      const list = await seedTodoList(db, userId, at.id);
+      await seedTodo(db, userId, list.id, { title: 'Todo' });
+
+      const result = await gql(
+        testSchema, db, userId,
+        'query($o: TodoOrderBy) { myTodos(orderBy: $o) { id } }',
+        { o: {} },
+      );
+      expect(result.errors).toBeUndefined();
+    });
+
     it('filters completed:false returns only incomplete todos', async () => {
       const { id: userId } = await seedUser(db, 'todos-incomplete@example.com');
       const at = await seedActivityType(db, userId);

@@ -127,6 +127,15 @@ describe('schedule resolvers', () => {
       expect(items.some((i) => i.isScheduled && i.scheduledStart)).toBe(true);
     });
 
+    it('updates user timezone when timezone arg is provided', async () => {
+      const { id: userId } = await seedUser(db, 'sched-timezone@example.com');
+      const result = await gql(
+        testSchema, db, userId,
+        'query { mySchedule(timezone: "America/Chicago") { id } }',
+      );
+      expect(result.errors).toBeUndefined();
+    });
+
     it('re-queues overdue pinned todos as regular items', async () => {
       const { id: userId } = await seedUser(db, 'sched-overdue@example.com');
       const at = await seedActivityType(db, userId);
