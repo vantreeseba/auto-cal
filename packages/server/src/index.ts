@@ -81,8 +81,12 @@ app.use(
         }
       }
 
-      // Fall back to raw UUID for backwards-compat with dev/seed
-      if (/^[0-9a-f-]{36}$/i.test(rawToken))
+      // Dev-only: accept raw UUID as Bearer token for the demo user.
+      // In production, only JWTs and API keys (acal_ prefix) are valid.
+      if (
+        process.env.NODE_ENV !== 'production' &&
+        /^[0-9a-f-]{36}$/i.test(rawToken)
+      )
         return { db, userId: rawToken, loaders };
 
       return { db, loaders };
