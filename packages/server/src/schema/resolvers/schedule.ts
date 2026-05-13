@@ -4,6 +4,7 @@ import {
   type HabitCompletion,
   type TimeBlock,
   type Todo,
+  type TodoList,
   todos,
   users,
 } from '@auto-cal/db/schema';
@@ -13,6 +14,7 @@ import { z } from 'zod';
 import type { Context } from '../../context.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import {
+  type TodoWithActivityType,
   computeSchedule,
   startOfISOWeek,
   startOfISOWeekStr,
@@ -67,11 +69,12 @@ export function applyScheduleResolvers(
 
     const [
       userTimeBlocks,
-      allIncompleteTodos,
-      userCompletedTodos,
+      allIncompleteRawTodos,
+      userCompletedRawTodos,
+      userTodoLists,
       userHabits,
       userActivityTypes,
-    ]: [TimeBlock[], Todo[], Todo[], Habit[], ActivityType[]] =
+    ]: [TimeBlock[], Todo[], Todo[], TodoList[], Habit[], ActivityType[]] =
       await Promise.all([
         context.db.query.timeBlocks.findMany({
           where: { userId: context.userId },
@@ -80,7 +83,6 @@ export function applyScheduleResolvers(
           where: {
             userId: context.userId,
             completedAt: { isNull: true },
-            activityTypeId: { isNotNull: true },
           },
           orderBy: { priority: 'desc' },
         }),
@@ -88,8 +90,10 @@ export function applyScheduleResolvers(
           where: {
             userId: context.userId,
             completedAt: { isNotNull: true },
-            activityTypeId: { isNotNull: true },
           },
+        }),
+        context.db.query.todoLists.findMany({
+          where: { userId: context.userId },
         }),
         context.db.query.habits.findMany({
           where: {
@@ -101,6 +105,21 @@ export function applyScheduleResolvers(
           where: { userId: context.userId },
         }),
       ]);
+
+    const listActivityTypeMap = new Map(
+      userTodoLists.map((l) => [l.id, l.activityTypeId]),
+    );
+
+    const allIncompleteTodos: TodoWithActivityType[] =
+      allIncompleteRawTodos.map((t) => ({
+        ...t,
+        activityTypeId: listActivityTypeMap.get(t.listId) ?? null,
+      }));
+    const userCompletedTodos: TodoWithActivityType[] =
+      userCompletedRawTodos.map((t) => ({
+        ...t,
+        activityTypeId: listActivityTypeMap.get(t.listId) ?? null,
+      }));
 
     const now = new Date();
 

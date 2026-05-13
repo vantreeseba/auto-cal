@@ -1,6 +1,7 @@
-import type { ActivityType, Habit, TimeBlock, Todo } from '@auto-cal/db';
+import type { ActivityType, Habit, TimeBlock } from '@auto-cal/db';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  type TodoWithActivityType,
   computeSchedule,
   startOfISOWeek,
   startOfISOWeekStr,
@@ -47,15 +48,19 @@ function makeBlock(overrides: Partial<TimeBlock> = {}): TimeBlock {
   };
 }
 
-function makeTodo(overrides: Partial<Todo> = {}): Todo {
+function makeTodo(
+  overrides: Partial<TodoWithActivityType> = {},
+): TodoWithActivityType {
   return {
     id: 'todo-1',
     userId: 'u1',
+    listId: 'list-default',
     title: 'Test todo',
     description: null,
     priority: 1,
     estimatedLength: 60,
     activityTypeId: WORK.id,
+    dueAt: null,
     scheduledAt: null,
     completedAt: null,
     manuallyScheduled: false,

@@ -29,7 +29,7 @@ export function applyTodoResolvers(
   queryFields.myTodos!.resolve = async (
     _parent,
     args: {
-      activityTypeId?: string;
+      listId?: string;
       completed?: boolean;
       orderBy?: TodoOrderBy;
     },
@@ -37,7 +37,7 @@ export function applyTodoResolvers(
   ) => {
     if (!context.userId) throw new Error('Not authenticated');
     const where: Record<string, unknown> = { userId: context.userId };
-    if (args.activityTypeId) where.activityTypeId = args.activityTypeId;
+    if (args.listId) where.listId = args.listId;
     if (args.completed === true) where.completedAt = { isNotNull: true };
     else if (args.completed === false) where.completedAt = { isNull: true };
     return context.db.query.todos.findMany({
@@ -54,15 +54,24 @@ export function applyTodoResolvers(
   ) => {
     if (!context.userId) throw new Error('Not authenticated');
     const input = CreateTodoInput.parse(args.input);
+
+    // Validate list ownership before insert
+    const list = await context.db.query.todoLists.findFirst({
+      where: { id: input.listId },
+    });
+    if (!list) throw new Error(`TodoList ${input.listId} not found`);
+    if (list.userId !== context.userId) throw new Error('Forbidden');
+
     const [todo] = await context.db
       .insert(todos)
       .values({
         userId: context.userId,
+        listId: input.listId,
         title: input.title,
         description: input.description,
         priority: input.priority,
         estimatedLength: input.estimatedLength ?? 0,
-        activityTypeId: input.activityTypeId,
+        dueAt: input.dueAt ? new Date(input.dueAt) : null,
         scheduledAt: input.scheduledAt
           ? new Date(input.scheduledAt)
           : undefined,
@@ -86,9 +95,19 @@ export function applyTodoResolvers(
     });
     if (!existing) throw new Error(`Todo ${input.id} not found`);
     if (existing.userId !== context.userId) throw new Error('Forbidden');
+
+    if (input.listId !== undefined) {
+      const list = await context.db.query.todoLists.findFirst({
+        where: { id: input.listId },
+      });
+      if (!list) throw new Error(`TodoList ${input.listId} not found`);
+      if (list.userId !== context.userId) throw new Error('Forbidden');
+    }
+
     const [updated] = await context.db
       .update(todos)
       .set({
+        ...(input.listId !== undefined && { listId: input.listId }),
         ...(input.title !== undefined && { title: input.title }),
         ...(input.description !== undefined && {
           description: input.description,
@@ -97,8 +116,8 @@ export function applyTodoResolvers(
         ...(input.estimatedLength !== undefined && {
           estimatedLength: input.estimatedLength,
         }),
-        ...(input.activityTypeId !== undefined && {
-          activityTypeId: input.activityTypeId,
+        ...('dueAt' in input && {
+          dueAt: input.dueAt ? new Date(input.dueAt) : null,
         }),
         ...(input.scheduledAt !== undefined && {
           scheduledAt: new Date(input.scheduledAt),
