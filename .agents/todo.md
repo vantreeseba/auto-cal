@@ -148,17 +148,6 @@ If you're unsure what to work on, these are the highest-leverage next steps:
 
 ---
 
-### #24 — iCal secret token
-**Problem:** The iCal feed URL uses only `?userId=<uuid>` with no secret. Anyone who knows a user's UUID can access their schedule.
-**Work:**
-- Add a random `icalSecret` field (UUID or random hex) to the `users` table
-- Change the iCal URL to `?secret=<icalSecret>` instead of `?userId=`
-- Expose a `myRegenerateIcalSecret` mutation so users can rotate it
-- Update the Settings page to show/regenerate the secret
-
-**Acceptance:** The iCal URL contains a random secret that can be rotated without changing the user ID.
-
----
 
 ### #25 — Remove UUID Bearer token fallback in production
 **Problem:** The server accepts a raw UUID as a Bearer token for dev convenience (DEMO_USER_ID). This means anyone who knows a user's UUID can authenticate as them in production.

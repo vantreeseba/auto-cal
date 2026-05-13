@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { users } from '@auto-cal/db/schema';
 import { eq } from 'drizzle-orm';
 import type { GraphQLObjectType } from 'graphql';
@@ -32,5 +33,20 @@ export function applyProfileResolvers(
       .set({ timezone: args.timezone, updatedAt: new Date() })
       .where(eq(users.id, context.userId));
     return true;
+  };
+
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  mutationFields.myRegenerateIcalSecret!.resolve = async (
+    _parent,
+    _args,
+    context: Context,
+  ) => {
+    if (!context.userId) throw new Error('Not authenticated');
+    const newSecret = randomUUID();
+    await context.db
+      .update(users)
+      .set({ icalSecret: newSecret, updatedAt: new Date() })
+      .where(eq(users.id, context.userId));
+    return newSecret;
   };
 }
