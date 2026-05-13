@@ -96,6 +96,70 @@ export type ActivityTypeStats = {
   totalTodos: Scalars['Int']['output'];
 };
 
+export type ApiKey = {
+  __typename?: 'ApiKey';
+  /** DateTime */
+  createdAt: Scalars['DateTime']['output'];
+  /** DateTime */
+  expiresAt: Maybe<Scalars['DateTime']['output']>;
+  id: Scalars['String']['output'];
+  keyHash: Scalars['String']['output'];
+  keyPrefix: Scalars['String']['output'];
+  /** DateTime */
+  lastUsedAt: Maybe<Scalars['DateTime']['output']>;
+  name: Scalars['String']['output'];
+  /** DateTime */
+  revokedAt: Maybe<Scalars['DateTime']['output']>;
+  scopes: Scalars['String']['output'];
+  user: Maybe<User>;
+  userId: Scalars['String']['output'];
+};
+
+
+export type ApiKeyUserArgs = {
+  where?: InputMaybe<UserFilters>;
+};
+
+export type ApiKeyFilters = {
+  OR?: InputMaybe<Array<ApiKeyFiltersOr>>;
+  createdAt?: InputMaybe<DateTimeFilter>;
+  expiresAt?: InputMaybe<DateTimeFilter>;
+  id?: InputMaybe<IdFilter>;
+  keyHash?: InputMaybe<StringFilter>;
+  keyPrefix?: InputMaybe<StringFilter>;
+  lastUsedAt?: InputMaybe<DateTimeFilter>;
+  name?: InputMaybe<StringFilter>;
+  revokedAt?: InputMaybe<DateTimeFilter>;
+  scopes?: InputMaybe<StringFilter>;
+  userId?: InputMaybe<IdFilter>;
+};
+
+export type ApiKeyFiltersOr = {
+  createdAt?: InputMaybe<DateTimeFilter>;
+  expiresAt?: InputMaybe<DateTimeFilter>;
+  id?: InputMaybe<IdFilter>;
+  keyHash?: InputMaybe<StringFilter>;
+  keyPrefix?: InputMaybe<StringFilter>;
+  lastUsedAt?: InputMaybe<DateTimeFilter>;
+  name?: InputMaybe<StringFilter>;
+  revokedAt?: InputMaybe<DateTimeFilter>;
+  scopes?: InputMaybe<StringFilter>;
+  userId?: InputMaybe<IdFilter>;
+};
+
+export type ApiKeyOrderBy = {
+  createdAt?: InputMaybe<InnerOrder>;
+  expiresAt?: InputMaybe<InnerOrder>;
+  id?: InputMaybe<InnerOrder>;
+  keyHash?: InputMaybe<InnerOrder>;
+  keyPrefix?: InputMaybe<InnerOrder>;
+  lastUsedAt?: InputMaybe<InnerOrder>;
+  name?: InputMaybe<InnerOrder>;
+  revokedAt?: InputMaybe<InnerOrder>;
+  scopes?: InputMaybe<InnerOrder>;
+  userId?: InputMaybe<InnerOrder>;
+};
+
 export type BooleanFilter = {
   OR?: InputMaybe<Array<BooleanFilterOr>>;
   eq?: InputMaybe<Scalars['Boolean']['input']>;
@@ -155,6 +219,29 @@ export type CreateActivityTypeInput = {
   /** DateTime */
   updatedAt?: InputMaybe<Scalars['DateTime']['input']>;
   userId: Scalars['String']['input'];
+};
+
+export type CreateApiKeyInput = {
+  /** DateTime */
+  createdAt?: InputMaybe<Scalars['DateTime']['input']>;
+  /** DateTime */
+  expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
+  id?: InputMaybe<Scalars['String']['input']>;
+  keyHash: Scalars['String']['input'];
+  keyPrefix: Scalars['String']['input'];
+  /** DateTime */
+  lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  name: Scalars['String']['input'];
+  /** DateTime */
+  revokedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  scopes: Scalars['String']['input'];
+  userId: Scalars['String']['input'];
+};
+
+export type CreateApiKeyResult = {
+  __typename?: 'CreateApiKeyResult';
+  apiKey: ApiKey;
+  token: Scalars['String']['output'];
 };
 
 export type CreateHabitArgs = {
@@ -580,6 +667,8 @@ export type Mutation = {
   __typename?: 'Mutation';
   createActivityType: Maybe<ActivityType>;
   createActivityTypes: Array<ActivityType>;
+  createApiKey: Maybe<ApiKey>;
+  createApiKeys: Array<ApiKey>;
   createHabit: Maybe<Habit>;
   createHabitCompletion: Maybe<HabitCompletion>;
   createHabitCompletions: Array<HabitCompletion>;
@@ -593,6 +682,7 @@ export type Mutation = {
   createUser: Maybe<User>;
   createUsers: Array<User>;
   deleteActivityTypes: Array<ActivityType>;
+  deleteApiKeys: Array<ApiKey>;
   deleteHabitCompletions: Array<HabitCompletion>;
   deleteHabits: Array<Habit>;
   deleteTimeBlocks: Array<TimeBlock>;
@@ -602,6 +692,7 @@ export type Mutation = {
   myCompleteHabit: HabitCompletion;
   myCompleteTodo: Todo;
   myCreateActivityType: ActivityType;
+  myCreateApiKey: CreateApiKeyResult;
   myCreateHabit: Habit;
   myCreateTimeBlock: TimeBlock;
   myCreateTodo: Todo;
@@ -613,6 +704,7 @@ export type Mutation = {
   myDeleteTodoList: Scalars['Boolean']['output'];
   myRegenerateIcalSecret: Scalars['String']['output'];
   myReschedule: Scalars['Boolean']['output'];
+  myRevokeApiKey: Scalars['Boolean']['output'];
   myUncompleteHabit: Scalars['Boolean']['output'];
   myUpdateActivityType: ActivityType;
   myUpdateHabit: Habit;
@@ -622,6 +714,7 @@ export type Mutation = {
   myUpdateTodoList: TodoList;
   requestMagicLink: RequestMagicLinkResult;
   updateActivityTypes: Array<ActivityType>;
+  updateApiKeys: Array<ApiKey>;
   updateHabitCompletions: Array<HabitCompletion>;
   updateHabits: Array<Habit>;
   updateTimeBlocks: Array<TimeBlock>;
@@ -639,6 +732,16 @@ export type MutationCreateActivityTypeArgs = {
 
 export type MutationCreateActivityTypesArgs = {
   values: Array<CreateActivityTypeInput>;
+};
+
+
+export type MutationCreateApiKeyArgs = {
+  values: CreateApiKeyInput;
+};
+
+
+export type MutationCreateApiKeysArgs = {
+  values: Array<CreateApiKeyInput>;
 };
 
 
@@ -707,6 +810,11 @@ export type MutationDeleteActivityTypesArgs = {
 };
 
 
+export type MutationDeleteApiKeysArgs = {
+  where?: InputMaybe<ApiKeyFilters>;
+};
+
+
 export type MutationDeleteHabitCompletionsArgs = {
   where?: InputMaybe<HabitCompletionFilters>;
 };
@@ -750,6 +858,11 @@ export type MutationMyCompleteTodoArgs = {
 
 export type MutationMyCreateActivityTypeArgs = {
   input: CreateActivityTypeArgs;
+};
+
+
+export type MutationMyCreateApiKeyArgs = {
+  input: MyCreateApiKeyInput;
 };
 
 
@@ -803,6 +916,11 @@ export type MutationMyRescheduleArgs = {
 };
 
 
+export type MutationMyRevokeApiKeyArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
 export type MutationMyUncompleteHabitArgs = {
   completionId: Scalars['ID']['input'];
 };
@@ -849,6 +967,12 @@ export type MutationUpdateActivityTypesArgs = {
 };
 
 
+export type MutationUpdateApiKeysArgs = {
+  set: UpdateApiKeyInput;
+  where?: InputMaybe<ApiKeyFilters>;
+};
+
+
 export type MutationUpdateHabitCompletionsArgs = {
   set: UpdateHabitCompletionInput;
   where?: InputMaybe<HabitCompletionFilters>;
@@ -889,6 +1013,12 @@ export type MutationVerifyMagicLinkArgs = {
   token: Scalars['String']['input'];
 };
 
+export type MyCreateApiKeyInput = {
+  expiresAt?: InputMaybe<Scalars['String']['input']>;
+  name: Scalars['String']['input'];
+  scopes: Array<Scalars['String']['input']>;
+};
+
 /** Order by direction */
 export enum OrderDirection {
   /** Ascending order */
@@ -902,12 +1032,15 @@ export type Query = {
   activityType: Maybe<ActivityType>;
   activityTypeStats: Array<ActivityTypeStats>;
   activityTypes: Array<ActivityType>;
+  apiKey: Maybe<ApiKey>;
+  apiKeys: Array<ApiKey>;
   habit: Maybe<Habit>;
   habitCompletion: Maybe<HabitCompletion>;
   habitCompletions: Array<HabitCompletion>;
   habitStats: Array<HabitStats>;
   habits: Array<Habit>;
   myActivityTypes: Array<ActivityType>;
+  myApiKeys: Array<ApiKey>;
   myHabitDetail: HabitDetail;
   myHabits: Array<Habit>;
   myProfile: Maybe<UserProfile>;
@@ -945,6 +1078,21 @@ export type QueryActivityTypesArgs = {
   offset?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<ActivityTypeOrderBy>;
   where?: InputMaybe<ActivityTypeFilters>;
+};
+
+
+export type QueryApiKeyArgs = {
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<ApiKeyOrderBy>;
+  where?: InputMaybe<ApiKeyFilters>;
+};
+
+
+export type QueryApiKeysArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<ApiKeyOrderBy>;
+  where?: InputMaybe<ApiKeyFilters>;
 };
 
 
@@ -1400,6 +1548,23 @@ export type UpdateActivityTypeInput = {
   userId?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type UpdateApiKeyInput = {
+  /** DateTime */
+  createdAt?: InputMaybe<Scalars['DateTime']['input']>;
+  /** DateTime */
+  expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
+  id?: InputMaybe<Scalars['String']['input']>;
+  keyHash?: InputMaybe<Scalars['String']['input']>;
+  keyPrefix?: InputMaybe<Scalars['String']['input']>;
+  /** DateTime */
+  lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  /** DateTime */
+  revokedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  scopes?: InputMaybe<Scalars['String']['input']>;
+  userId?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type UpdateHabitArgs = {
   activityTypeId?: InputMaybe<Scalars['ID']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
@@ -1532,6 +1697,7 @@ export type UpdateUserInput = {
 export type User = {
   __typename?: 'User';
   activityTypes: Array<ActivityType>;
+  apiKeys: Array<ApiKey>;
   /** DateTime */
   createdAt: Scalars['DateTime']['output'];
   email: Scalars['String']['output'];
@@ -1552,6 +1718,14 @@ export type UserActivityTypesArgs = {
   offset?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<ActivityTypeOrderBy>;
   where?: InputMaybe<ActivityTypeFilters>;
+};
+
+
+export type UserApiKeysArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<ApiKeyOrderBy>;
+  where?: InputMaybe<ApiKeyFilters>;
 };
 
 
@@ -1706,12 +1880,18 @@ export type ResolversTypes = {
   ActivityTypeFiltersOr: ActivityTypeFiltersOr;
   ActivityTypeOrderBy: ActivityTypeOrderBy;
   ActivityTypeStats: ResolverTypeWrapper<ActivityTypeStats>;
+  ApiKey: ResolverTypeWrapper<ApiKey>;
+  ApiKeyFilters: ApiKeyFilters;
+  ApiKeyFiltersOr: ApiKeyFiltersOr;
+  ApiKeyOrderBy: ApiKeyOrderBy;
   Boolean: ResolverTypeWrapper<Scalars['Boolean']['output']>;
   BooleanFilter: BooleanFilter;
   BooleanFilterOr: BooleanFilterOr;
   CompleteHabitArgs: CompleteHabitArgs;
   CreateActivityTypeArgs: CreateActivityTypeArgs;
   CreateActivityTypeInput: CreateActivityTypeInput;
+  CreateApiKeyInput: CreateApiKeyInput;
+  CreateApiKeyResult: ResolverTypeWrapper<CreateApiKeyResult>;
   CreateHabitArgs: CreateHabitArgs;
   CreateHabitCompletionInput: CreateHabitCompletionInput;
   CreateHabitInput: CreateHabitInput;
@@ -1746,6 +1926,7 @@ export type ResolversTypes = {
   InnerOrder: InnerOrder;
   Int: ResolverTypeWrapper<Scalars['Int']['output']>;
   Mutation: ResolverTypeWrapper<Record<PropertyKey, never>>;
+  MyCreateApiKeyInput: MyCreateApiKeyInput;
   OrderDirection: OrderDirection;
   Query: ResolverTypeWrapper<Record<PropertyKey, never>>;
   RequestMagicLinkResult: ResolverTypeWrapper<RequestMagicLinkResult>;
@@ -1770,6 +1951,7 @@ export type ResolversTypes = {
   TodoStatSummary: ResolverTypeWrapper<TodoStatSummary>;
   UpdateActivityTypeArgs: UpdateActivityTypeArgs;
   UpdateActivityTypeInput: UpdateActivityTypeInput;
+  UpdateApiKeyInput: UpdateApiKeyInput;
   UpdateHabitArgs: UpdateHabitArgs;
   UpdateHabitCompletionInput: UpdateHabitCompletionInput;
   UpdateHabitInput: UpdateHabitInput;
@@ -1795,12 +1977,18 @@ export type ResolversParentTypes = {
   ActivityTypeFiltersOr: ActivityTypeFiltersOr;
   ActivityTypeOrderBy: ActivityTypeOrderBy;
   ActivityTypeStats: ActivityTypeStats;
+  ApiKey: ApiKey;
+  ApiKeyFilters: ApiKeyFilters;
+  ApiKeyFiltersOr: ApiKeyFiltersOr;
+  ApiKeyOrderBy: ApiKeyOrderBy;
   Boolean: Scalars['Boolean']['output'];
   BooleanFilter: BooleanFilter;
   BooleanFilterOr: BooleanFilterOr;
   CompleteHabitArgs: CompleteHabitArgs;
   CreateActivityTypeArgs: CreateActivityTypeArgs;
   CreateActivityTypeInput: CreateActivityTypeInput;
+  CreateApiKeyInput: CreateApiKeyInput;
+  CreateApiKeyResult: CreateApiKeyResult;
   CreateHabitArgs: CreateHabitArgs;
   CreateHabitCompletionInput: CreateHabitCompletionInput;
   CreateHabitInput: CreateHabitInput;
@@ -1835,6 +2023,7 @@ export type ResolversParentTypes = {
   InnerOrder: InnerOrder;
   Int: Scalars['Int']['output'];
   Mutation: Record<PropertyKey, never>;
+  MyCreateApiKeyInput: MyCreateApiKeyInput;
   Query: Record<PropertyKey, never>;
   RequestMagicLinkResult: RequestMagicLinkResult;
   ScheduledItem: ScheduledItem;
@@ -1857,6 +2046,7 @@ export type ResolversParentTypes = {
   TodoStatSummary: TodoStatSummary;
   UpdateActivityTypeArgs: UpdateActivityTypeArgs;
   UpdateActivityTypeInput: UpdateActivityTypeInput;
+  UpdateApiKeyInput: UpdateApiKeyInput;
   UpdateHabitArgs: UpdateHabitArgs;
   UpdateHabitCompletionInput: UpdateHabitCompletionInput;
   UpdateHabitInput: UpdateHabitInput;
@@ -1894,6 +2084,25 @@ export type ActivityTypeStatsResolvers<ContextType = Context, ParentType extends
   completedTodos?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   totalHabits?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   totalTodos?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+};
+
+export type ApiKeyResolvers<ContextType = Context, ParentType extends ResolversParentTypes['ApiKey'] = ResolversParentTypes['ApiKey']> = {
+  createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  expiresAt?: Resolver<Maybe<ResolversTypes['DateTime']>, ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  keyHash?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  keyPrefix?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  lastUsedAt?: Resolver<Maybe<ResolversTypes['DateTime']>, ParentType, ContextType>;
+  name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  revokedAt?: Resolver<Maybe<ResolversTypes['DateTime']>, ParentType, ContextType>;
+  scopes?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  user?: Resolver<Maybe<ResolversTypes['User']>, ParentType, ContextType, Partial<ApiKeyUserArgs>>;
+  userId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+};
+
+export type CreateApiKeyResultResolvers<ContextType = Context, ParentType extends ResolversParentTypes['CreateApiKeyResult'] = ResolversParentTypes['CreateApiKeyResult']> = {
+  apiKey?: Resolver<ResolversTypes['ApiKey'], ParentType, ContextType>;
+  token?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 };
 
 export interface DateTimeScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes['DateTime'], any> {
@@ -1970,6 +2179,8 @@ export type HabitStatsResolvers<ContextType = Context, ParentType extends Resolv
 export type MutationResolvers<ContextType = Context, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = {
   createActivityType?: Resolver<Maybe<ResolversTypes['ActivityType']>, ParentType, ContextType, RequireFields<MutationCreateActivityTypeArgs, 'values'>>;
   createActivityTypes?: Resolver<Array<ResolversTypes['ActivityType']>, ParentType, ContextType, RequireFields<MutationCreateActivityTypesArgs, 'values'>>;
+  createApiKey?: Resolver<Maybe<ResolversTypes['ApiKey']>, ParentType, ContextType, RequireFields<MutationCreateApiKeyArgs, 'values'>>;
+  createApiKeys?: Resolver<Array<ResolversTypes['ApiKey']>, ParentType, ContextType, RequireFields<MutationCreateApiKeysArgs, 'values'>>;
   createHabit?: Resolver<Maybe<ResolversTypes['Habit']>, ParentType, ContextType, RequireFields<MutationCreateHabitArgs, 'values'>>;
   createHabitCompletion?: Resolver<Maybe<ResolversTypes['HabitCompletion']>, ParentType, ContextType, RequireFields<MutationCreateHabitCompletionArgs, 'values'>>;
   createHabitCompletions?: Resolver<Array<ResolversTypes['HabitCompletion']>, ParentType, ContextType, RequireFields<MutationCreateHabitCompletionsArgs, 'values'>>;
@@ -1983,6 +2194,7 @@ export type MutationResolvers<ContextType = Context, ParentType extends Resolver
   createUser?: Resolver<Maybe<ResolversTypes['User']>, ParentType, ContextType, RequireFields<MutationCreateUserArgs, 'values'>>;
   createUsers?: Resolver<Array<ResolversTypes['User']>, ParentType, ContextType, RequireFields<MutationCreateUsersArgs, 'values'>>;
   deleteActivityTypes?: Resolver<Array<ResolversTypes['ActivityType']>, ParentType, ContextType, Partial<MutationDeleteActivityTypesArgs>>;
+  deleteApiKeys?: Resolver<Array<ResolversTypes['ApiKey']>, ParentType, ContextType, Partial<MutationDeleteApiKeysArgs>>;
   deleteHabitCompletions?: Resolver<Array<ResolversTypes['HabitCompletion']>, ParentType, ContextType, Partial<MutationDeleteHabitCompletionsArgs>>;
   deleteHabits?: Resolver<Array<ResolversTypes['Habit']>, ParentType, ContextType, Partial<MutationDeleteHabitsArgs>>;
   deleteTimeBlocks?: Resolver<Array<ResolversTypes['TimeBlock']>, ParentType, ContextType, Partial<MutationDeleteTimeBlocksArgs>>;
@@ -1992,6 +2204,7 @@ export type MutationResolvers<ContextType = Context, ParentType extends Resolver
   myCompleteHabit?: Resolver<ResolversTypes['HabitCompletion'], ParentType, ContextType, RequireFields<MutationMyCompleteHabitArgs, 'input'>>;
   myCompleteTodo?: Resolver<ResolversTypes['Todo'], ParentType, ContextType, RequireFields<MutationMyCompleteTodoArgs, 'id'>>;
   myCreateActivityType?: Resolver<ResolversTypes['ActivityType'], ParentType, ContextType, RequireFields<MutationMyCreateActivityTypeArgs, 'input'>>;
+  myCreateApiKey?: Resolver<ResolversTypes['CreateApiKeyResult'], ParentType, ContextType, RequireFields<MutationMyCreateApiKeyArgs, 'input'>>;
   myCreateHabit?: Resolver<ResolversTypes['Habit'], ParentType, ContextType, RequireFields<MutationMyCreateHabitArgs, 'input'>>;
   myCreateTimeBlock?: Resolver<ResolversTypes['TimeBlock'], ParentType, ContextType, RequireFields<MutationMyCreateTimeBlockArgs, 'input'>>;
   myCreateTodo?: Resolver<ResolversTypes['Todo'], ParentType, ContextType, RequireFields<MutationMyCreateTodoArgs, 'input'>>;
@@ -2003,6 +2216,7 @@ export type MutationResolvers<ContextType = Context, ParentType extends Resolver
   myDeleteTodoList?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationMyDeleteTodoListArgs, 'id'>>;
   myRegenerateIcalSecret?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   myReschedule?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, Partial<MutationMyRescheduleArgs>>;
+  myRevokeApiKey?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationMyRevokeApiKeyArgs, 'id'>>;
   myUncompleteHabit?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationMyUncompleteHabitArgs, 'completionId'>>;
   myUpdateActivityType?: Resolver<ResolversTypes['ActivityType'], ParentType, ContextType, RequireFields<MutationMyUpdateActivityTypeArgs, 'input'>>;
   myUpdateHabit?: Resolver<ResolversTypes['Habit'], ParentType, ContextType, RequireFields<MutationMyUpdateHabitArgs, 'input'>>;
@@ -2012,6 +2226,7 @@ export type MutationResolvers<ContextType = Context, ParentType extends Resolver
   myUpdateTodoList?: Resolver<ResolversTypes['TodoList'], ParentType, ContextType, RequireFields<MutationMyUpdateTodoListArgs, 'input'>>;
   requestMagicLink?: Resolver<ResolversTypes['RequestMagicLinkResult'], ParentType, ContextType, RequireFields<MutationRequestMagicLinkArgs, 'email'>>;
   updateActivityTypes?: Resolver<Array<ResolversTypes['ActivityType']>, ParentType, ContextType, RequireFields<MutationUpdateActivityTypesArgs, 'set'>>;
+  updateApiKeys?: Resolver<Array<ResolversTypes['ApiKey']>, ParentType, ContextType, RequireFields<MutationUpdateApiKeysArgs, 'set'>>;
   updateHabitCompletions?: Resolver<Array<ResolversTypes['HabitCompletion']>, ParentType, ContextType, RequireFields<MutationUpdateHabitCompletionsArgs, 'set'>>;
   updateHabits?: Resolver<Array<ResolversTypes['Habit']>, ParentType, ContextType, RequireFields<MutationUpdateHabitsArgs, 'set'>>;
   updateTimeBlocks?: Resolver<Array<ResolversTypes['TimeBlock']>, ParentType, ContextType, RequireFields<MutationUpdateTimeBlocksArgs, 'set'>>;
@@ -2025,12 +2240,15 @@ export type QueryResolvers<ContextType = Context, ParentType extends ResolversPa
   activityType?: Resolver<Maybe<ResolversTypes['ActivityType']>, ParentType, ContextType, Partial<QueryActivityTypeArgs>>;
   activityTypeStats?: Resolver<Array<ResolversTypes['ActivityTypeStats']>, ParentType, ContextType, Partial<QueryActivityTypeStatsArgs>>;
   activityTypes?: Resolver<Array<ResolversTypes['ActivityType']>, ParentType, ContextType, Partial<QueryActivityTypesArgs>>;
+  apiKey?: Resolver<Maybe<ResolversTypes['ApiKey']>, ParentType, ContextType, Partial<QueryApiKeyArgs>>;
+  apiKeys?: Resolver<Array<ResolversTypes['ApiKey']>, ParentType, ContextType, Partial<QueryApiKeysArgs>>;
   habit?: Resolver<Maybe<ResolversTypes['Habit']>, ParentType, ContextType, Partial<QueryHabitArgs>>;
   habitCompletion?: Resolver<Maybe<ResolversTypes['HabitCompletion']>, ParentType, ContextType, Partial<QueryHabitCompletionArgs>>;
   habitCompletions?: Resolver<Array<ResolversTypes['HabitCompletion']>, ParentType, ContextType, Partial<QueryHabitCompletionsArgs>>;
   habitStats?: Resolver<Array<ResolversTypes['HabitStats']>, ParentType, ContextType, Partial<QueryHabitStatsArgs>>;
   habits?: Resolver<Array<ResolversTypes['Habit']>, ParentType, ContextType, Partial<QueryHabitsArgs>>;
   myActivityTypes?: Resolver<Array<ResolversTypes['ActivityType']>, ParentType, ContextType>;
+  myApiKeys?: Resolver<Array<ResolversTypes['ApiKey']>, ParentType, ContextType>;
   myHabitDetail?: Resolver<ResolversTypes['HabitDetail'], ParentType, ContextType, RequireFields<QueryMyHabitDetailArgs, 'habitId'>>;
   myHabits?: Resolver<Array<ResolversTypes['Habit']>, ParentType, ContextType, Partial<QueryMyHabitsArgs>>;
   myProfile?: Resolver<Maybe<ResolversTypes['UserProfile']>, ParentType, ContextType>;
@@ -2133,6 +2351,7 @@ export type TodoStatSummaryResolvers<ContextType = Context, ParentType extends R
 
 export type UserResolvers<ContextType = Context, ParentType extends ResolversParentTypes['User'] = ResolversParentTypes['User']> = {
   activityTypes?: Resolver<Array<ResolversTypes['ActivityType']>, ParentType, ContextType, Partial<UserActivityTypesArgs>>;
+  apiKeys?: Resolver<Array<ResolversTypes['ApiKey']>, ParentType, ContextType, Partial<UserApiKeysArgs>>;
   createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   email?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   habits?: Resolver<Array<ResolversTypes['Habit']>, ParentType, ContextType, Partial<UserHabitsArgs>>;
@@ -2160,6 +2379,8 @@ export type VerifyMagicLinkResultResolvers<ContextType = Context, ParentType ext
 export type Resolvers<ContextType = Context> = {
   ActivityType?: ActivityTypeResolvers<ContextType>;
   ActivityTypeStats?: ActivityTypeStatsResolvers<ContextType>;
+  ApiKey?: ApiKeyResolvers<ContextType>;
+  CreateApiKeyResult?: CreateApiKeyResultResolvers<ContextType>;
   DateTime?: GraphQLScalarType;
   Habit?: HabitResolvers<ContextType>;
   HabitCompletion?: HabitCompletionResolvers<ContextType>;

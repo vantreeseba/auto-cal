@@ -4,6 +4,7 @@ import { StepHabits } from '@/components/domain/onboarding/StepHabits';
 import { StepTimeBlocks } from '@/components/domain/onboarding/StepTimeBlocks';
 import { StepTodos } from '@/components/domain/onboarding/StepTodos';
 import { Button } from '@/components/ui/button';
+import { RouteError } from '@/components/ui/route-error';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@apollo/client/react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
@@ -34,6 +35,9 @@ export const Route = createFileRoute('/onboarding')({
     force: z.boolean().catch(false),
   }),
   component: OnboardingPage,
+  errorComponent: ({ error, reset }) => (
+    <RouteError error={error} reset={reset} />
+  ),
 });
 
 function OnboardingPage() {

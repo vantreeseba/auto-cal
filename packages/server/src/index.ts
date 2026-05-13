@@ -3,9 +3,12 @@ import path from 'node:path';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@as-integrations/express4';
 import { db } from '@auto-cal/db';
+import { apiKeys } from '@auto-cal/db/schema';
 import { seedDemoData, seedDemoUser } from '@auto-cal/db/seed';
 import cors from 'cors';
+import { eq } from 'drizzle-orm';
 import express from 'express';
+import { hashApiKey, isApiKey } from './api-keys.ts';
 import { verifyToken } from './auth.ts';
 import { createLoaders } from './context.ts';
 import type { Context } from './context.ts';
@@ -48,8 +51,42 @@ app.use(
       const payload = await verifyToken(rawToken);
       if (payload?.sub) return { db, userId: payload.sub, loaders };
 
-      // Fall back to raw UUID for backwards-compat with dev/seed
-      if (/^[0-9a-f-]{36}$/i.test(rawToken))
+      // Try API key auth
+      if (isApiKey(rawToken)) {
+        const hash = hashApiKey(rawToken);
+        const now = new Date();
+        const key = await db.query.apiKeys.findFirst({
+          where: {
+            keyHash: hash,
+            revokedAt: { isNull: true },
+          },
+        });
+        if (
+          key &&
+          (key.expiresAt === null ||
+            key.expiresAt === undefined ||
+            key.expiresAt > now)
+        ) {
+          // Fire-and-forget lastUsedAt update
+          db.update(apiKeys)
+            .set({ lastUsedAt: now })
+            .where(eq(apiKeys.id, key.id))
+            .catch(console.error);
+          return {
+            db,
+            userId: key.userId,
+            apiKey: { id: key.id, scopes: key.scopes },
+            loaders,
+          };
+        }
+      }
+
+      // Dev-only: accept raw UUID as Bearer token for the demo user.
+      // In production, only JWTs and API keys (acal_ prefix) are valid.
+      if (
+        process.env.NODE_ENV !== 'production' &&
+        /^[0-9a-f-]{36}$/i.test(rawToken)
+      )
         return { db, userId: rawToken, loaders };
 
       return { db, loaders };

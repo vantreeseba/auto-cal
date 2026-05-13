@@ -13,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Pencil, Plus } from 'lucide-react';
+import { Pencil, Plus, Tag } from 'lucide-react';
 import { useState } from 'react';
 import { ActivityTypeForm } from './ActivityTypeForm';
 
@@ -76,9 +76,21 @@ export function ActivityTypeList({ items, statsById }: ActivityTypeListProps) {
         </CardHeader>
         <CardContent>
           {items.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              No activity types yet. Create one to categorize your tasks!
-            </p>
+            <div className="flex flex-col items-center gap-3 py-10 text-center">
+              <div className="rounded-full bg-muted p-3">
+                <Tag className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="font-medium text-sm">No activity types yet</p>
+                <p className="text-sm text-muted-foreground">
+                  Activity types categorize your todos, habits, and time blocks
+                </p>
+              </div>
+              <Button size="sm" onClick={openCreate}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add activity type
+              </Button>
+            </div>
           )}
           <div className="space-y-2">
             {items.map((item) => {

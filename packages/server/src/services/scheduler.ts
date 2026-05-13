@@ -1,4 +1,5 @@
 import type { ActivityType, Habit, TimeBlock, Todo } from '@auto-cal/db';
+import { fromZonedTime } from 'date-fns-tz';
 
 /** A Todo plus the activityTypeId resolved from its list — what computeSchedule needs */
 export type TodoWithActivityType = Todo & { activityTypeId: string | null };
@@ -15,8 +16,8 @@ export type ScheduledItem = {
   estimatedLength: number;
   activityTypeId: string | null;
   activityType: ActivityType | null;
-  scheduledStart: string | null; // naive ISO "YYYY-MM-DDTHH:mm:ss" — no Z
-  scheduledEnd: string | null; // naive ISO "YYYY-MM-DDTHH:mm:ss" — no Z
+  scheduledStart: string | null; // UTC ISO string (e.g. "2026-05-04T09:00:00.000Z")
+  scheduledEnd: string | null; // UTC ISO string (e.g. "2026-05-04T10:00:00.000Z")
   isScheduled: boolean;
   isOverdue: boolean;
 };
@@ -62,9 +63,17 @@ function minutesToTimeStr(minutes: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
 }
 
-/** Build a naive ISO datetime string: "YYYY-MM-DDTHH:MM:SS" */
-function naiveDateTime(dateStr: string, minutes: number): string {
-  return `${dateStr}T${minutesToTimeStr(minutes)}`;
+/**
+ * Build a UTC ISO string from a local date + minutes-since-midnight, using the
+ * provided IANA timezone to interpret the local values.
+ */
+function localToUtcIso(
+  dateStr: string,
+  minutes: number,
+  timezone: string,
+): string {
+  const localStr = `${dateStr}T${minutesToTimeStr(minutes)}`;
+  return fromZonedTime(localStr, timezone).toISOString();
 }
 
 /**
@@ -166,14 +175,15 @@ function effectiveSlotStart(
 
 /**
  * Pure scheduling function — no DB calls, no side effects.
- * Produces naive datetime strings (no timezone suffix) so browsers
- * interpret them as local time.
+ * Returns UTC ISO strings for scheduledStart/scheduledEnd. The local time-block
+ * times are interpreted in `timezone` (IANA) and converted to UTC.
  *
  * @param weekStartStr    "YYYY-MM-DD" string for the Monday of the target week
  * @param timeBlocks      All user time blocks
  * @param todos           Incomplete todos with activityTypeId set
  * @param habits          Due habits with activityTypeId set
  * @param activityTypeMap Map<activityTypeId, ActivityType> for O(1) lookup
+ * @param timezone        IANA timezone string (e.g. "America/New_York"). Defaults to "UTC".
  */
 export function computeSchedule(
   weekStartStr: string,
@@ -181,6 +191,7 @@ export function computeSchedule(
   todos: TodoWithActivityType[],
   habits: Array<Habit & { instanceIndex: number }>,
   activityTypeMap: Map<string, ActivityType>,
+  timezone = 'UTC',
 ): ScheduledItem[] {
   // 1. Expand all time blocks into slots for this week
   const allSlots = timeBlocks.flatMap((b) => expandSlots(weekStartStr, b));
@@ -344,8 +355,12 @@ export function computeSchedule(
     results.push({
       ...task,
       activityType,
-      scheduledStart: naiveDateTime(chosenSlot.dateStr, taskStartMins),
-      scheduledEnd: naiveDateTime(chosenSlot.dateStr, taskEndMins),
+      scheduledStart: localToUtcIso(
+        chosenSlot.dateStr,
+        taskStartMins,
+        timezone,
+      ),
+      scheduledEnd: localToUtcIso(chosenSlot.dateStr, taskEndMins, timezone),
       isScheduled: true,
       isOverdue: task.isOverdue ?? false,
     });

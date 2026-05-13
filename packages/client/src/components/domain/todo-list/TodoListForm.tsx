@@ -104,21 +104,21 @@ export function TodoListForm({ list, open, onOpenChange }: TodoListFormProps) {
     CreateTodoListMutation,
     CreateTodoListMutationVariables
   >(CREATE_TODO_LIST, {
-    refetchQueries: ['GetMyTodoLists', 'GetTodoListsForSelect'],
+    refetchQueries: ['GetTodoListsPage', 'GetTodoListsForSelect'],
   });
 
   const [updateList] = useMutation<
     UpdateTodoListMutation,
     UpdateTodoListMutationVariables
   >(UPDATE_TODO_LIST, {
-    refetchQueries: ['GetMyTodoLists', 'GetTodoListsForSelect'],
+    refetchQueries: ['GetTodoListsPage', 'GetTodoListsForSelect'],
   });
 
   const [deleteList] = useMutation<
     DeleteTodoListMutation,
     DeleteTodoListMutationVariables
   >(DELETE_TODO_LIST, {
-    refetchQueries: ['GetMyTodoLists', 'GetTodoListsForSelect'],
+    refetchQueries: ['GetTodoListsPage', 'GetTodoListsForSelect'],
   });
 
   const form = useAppForm({

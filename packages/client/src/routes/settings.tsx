@@ -1,4 +1,5 @@
 import { graphql } from '@/__generated__/index.js';
+import { ApiKeyManager } from '@/components/domain/settings/ApiKeyManager';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -131,6 +132,8 @@ function SettingsPage() {
       </Card>
 
       {icalSecret && <ICalCard icalSecret={icalSecret} />}
+
+      <ApiKeyManager />
     </div>
   );
 }

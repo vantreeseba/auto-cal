@@ -216,6 +216,88 @@ enum OrderDirection {
   desc
 }
 
+input CreateApiKeyInput {
+  id: String
+  userId: String!
+  name: String!
+  keyHash: String!
+  keyPrefix: String!
+  scopes: String!
+
+  """DateTime"""
+  lastUsedAt: DateTime
+
+  """DateTime"""
+  expiresAt: DateTime
+
+  """DateTime"""
+  revokedAt: DateTime
+
+  """DateTime"""
+  createdAt: DateTime
+}
+
+input UpdateApiKeyInput {
+  id: String
+  userId: String
+  name: String
+  keyHash: String
+  keyPrefix: String
+  scopes: String
+
+  """DateTime"""
+  lastUsedAt: DateTime
+
+  """DateTime"""
+  expiresAt: DateTime
+
+  """DateTime"""
+  revokedAt: DateTime
+
+  """DateTime"""
+  createdAt: DateTime
+}
+
+input ApiKeyFilters {
+  id: IdFilter
+  userId: IdFilter
+  name: StringFilter
+  keyHash: StringFilter
+  keyPrefix: StringFilter
+  scopes: StringFilter
+  lastUsedAt: DateTimeFilter
+  expiresAt: DateTimeFilter
+  revokedAt: DateTimeFilter
+  createdAt: DateTimeFilter
+  OR: [ApiKeyFiltersOr!]
+}
+
+input ApiKeyFiltersOr {
+  id: IdFilter
+  userId: IdFilter
+  name: StringFilter
+  keyHash: StringFilter
+  keyPrefix: StringFilter
+  scopes: StringFilter
+  lastUsedAt: DateTimeFilter
+  expiresAt: DateTimeFilter
+  revokedAt: DateTimeFilter
+  createdAt: DateTimeFilter
+}
+
+input ApiKeyOrderBy {
+  id: InnerOrder
+  userId: InnerOrder
+  name: InnerOrder
+  keyHash: InnerOrder
+  keyPrefix: InnerOrder
+  scopes: InnerOrder
+  lastUsedAt: InnerOrder
+  expiresAt: InnerOrder
+  revokedAt: InnerOrder
+  createdAt: InnerOrder
+}
+
 input CreateHabitCompletionInput {
   id: String
   habitId: String!
@@ -744,6 +826,28 @@ type ActivityType {
   timeBlocks(where: TimeBlockFilters, orderBy: TimeBlockOrderBy, offset: Int, limit: Int): [TimeBlock!]!
 }
 
+type ApiKey {
+  id: String!
+  userId: String!
+  name: String!
+  keyHash: String!
+  keyPrefix: String!
+  scopes: String!
+
+  """DateTime"""
+  lastUsedAt: DateTime
+
+  """DateTime"""
+  expiresAt: DateTime
+
+  """DateTime"""
+  revokedAt: DateTime
+
+  """DateTime"""
+  createdAt: DateTime!
+  user(where: UserFilters): User
+}
+
 type HabitCompletion {
   id: String!
   habitId: String!
@@ -862,11 +966,14 @@ type User {
   todos(where: TodoFilters, orderBy: TodoOrderBy, offset: Int, limit: Int): [Todo!]!
   habits(where: HabitFilters, orderBy: HabitOrderBy, offset: Int, limit: Int): [Habit!]!
   timeBlocks(where: TimeBlockFilters, orderBy: TimeBlockOrderBy, offset: Int, limit: Int): [TimeBlock!]!
+  apiKeys(where: ApiKeyFilters, orderBy: ApiKeyOrderBy, offset: Int, limit: Int): [ApiKey!]!
 }
 
 type Query {
   activityTypes(offset: Int, limit: Int, orderBy: ActivityTypeOrderBy, where: ActivityTypeFilters): [ActivityType!]!
   activityType(offset: Int, orderBy: ActivityTypeOrderBy, where: ActivityTypeFilters): ActivityType
+  apiKeys(offset: Int, limit: Int, orderBy: ApiKeyOrderBy, where: ApiKeyFilters): [ApiKey!]!
+  apiKey(offset: Int, orderBy: ApiKeyOrderBy, where: ApiKeyFilters): ApiKey
   habitCompletions(offset: Int, limit: Int, orderBy: HabitCompletionOrderBy, where: HabitCompletionFilters): [HabitCompletion!]!
   habitCompletion(offset: Int, orderBy: HabitCompletionOrderBy, where: HabitCompletionFilters): HabitCompletion
   habits(offset: Int, limit: Int, orderBy: HabitOrderBy, where: HabitFilters): [Habit!]!
@@ -890,6 +997,7 @@ type Query {
   myHabitDetail(habitId: ID!, periods: Int): HabitDetail!
   myStats(startDate: String, endDate: String): StatsOverview!
   mySchedule(weekStart: String, timezone: String): [ScheduledItem!]!
+  myApiKeys: [ApiKey!]!
 }
 
 type Mutation {
@@ -897,6 +1005,10 @@ type Mutation {
   createActivityType(values: CreateActivityTypeInput!): ActivityType
   updateActivityTypes(set: UpdateActivityTypeInput!, where: ActivityTypeFilters): [ActivityType!]!
   deleteActivityTypes(where: ActivityTypeFilters): [ActivityType!]!
+  createApiKeys(values: [CreateApiKeyInput!]!): [ApiKey!]!
+  createApiKey(values: CreateApiKeyInput!): ApiKey
+  updateApiKeys(set: UpdateApiKeyInput!, where: ApiKeyFilters): [ApiKey!]!
+  deleteApiKeys(where: ApiKeyFilters): [ApiKey!]!
   createHabitCompletions(values: [CreateHabitCompletionInput!]!): [HabitCompletion!]!
   createHabitCompletion(values: CreateHabitCompletionInput!): HabitCompletion
   updateHabitCompletions(set: UpdateHabitCompletionInput!, where: HabitCompletionFilters): [HabitCompletion!]!
@@ -944,6 +1056,8 @@ type Mutation {
   myReschedule(weekStart: String): Boolean!
   requestMagicLink(email: String!): RequestMagicLinkResult!
   verifyMagicLink(token: String!): VerifyMagicLinkResult!
+  myCreateApiKey(input: MyCreateApiKeyInput!): CreateApiKeyResult!
+  myRevokeApiKey(id: ID!): Boolean!
 }
 
 type UserProfile {
@@ -1129,6 +1243,17 @@ input CompleteHabitArgs {
   habitId: ID!
   scheduledAt: String
   completedAt: String
+}
+
+type CreateApiKeyResult {
+  apiKey: ApiKey!
+  token: String!
+}
+
+input MyCreateApiKeyInput {
+  name: String!
+  scopes: [String!]!
+  expiresAt: String
 }
 
 type RequestMagicLinkResult {

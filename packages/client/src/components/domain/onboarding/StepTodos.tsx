@@ -81,7 +81,9 @@ export function StepTodos({ onBack, onFinish, onSkip }: StepTodosProps) {
   const [createTodo] = useMutation<
     CreateTodoMutation,
     CreateTodoMutationVariables
-  >(CREATE_TODO, { refetchQueries: ['GetMyTodosForOnboarding', 'GetMyTodos'] });
+  >(CREATE_TODO, {
+    refetchQueries: ['GetMyTodosForOnboarding', 'GetTodoListsPage'],
+  });
 
   const form = useAppForm({
     defaultValues: {

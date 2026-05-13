@@ -23,6 +23,16 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.users.id,
       to: r.timeBlocks.userId,
     }),
+    apiKeys: r.many.apiKeys({
+      from: r.users.id,
+      to: r.apiKeys.userId,
+    }),
+  },
+  apiKeys: {
+    user: r.one.users({
+      from: r.apiKeys.userId,
+      to: r.users.id,
+    }),
   },
   activityTypes: {
     user: r.one.users({

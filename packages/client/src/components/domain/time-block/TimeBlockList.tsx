@@ -92,12 +92,13 @@ export function TimeBlockList({ items, loading, error }: TimeBlockListProps) {
             <div>
               <p className="font-medium text-sm">No time blocks yet</p>
               <p className="text-sm text-muted-foreground">
-                Define when you work on different activities
+                Time blocks define when the scheduler can place your todos and
+                habits
               </p>
             </div>
             <Button size="sm" onClick={openCreate}>
               <Plus className="mr-2 h-4 w-4" />
-              Create time block
+              Add time block
             </Button>
           </div>
         )}

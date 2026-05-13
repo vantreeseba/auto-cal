@@ -208,6 +208,24 @@ context: async ({ req }): Promise<Context> => {
 },
 ```
 
+## API Keys
+
+Personal, per-user, revocable Bearer tokens for headless integrations.
+
+**Token format:** `acal_<base64url(32 random bytes)>` — the `acal_` prefix lets `isApiKey()` distinguish these from JWTs and UUIDs.
+
+**Hash stored, not token:** Only the SHA-256 hex of the full token is persisted in `api_keys.keyHash`. The raw token is returned once to the user on creation and never stored.
+
+**Generation and verification live in `packages/server/src/api-keys.ts`:**
+- `generateApiKey()` — creates a token + hash + 8-char display prefix
+- `isApiKey(raw)` — prefix detection
+- `hashApiKey(raw)` — SHA-256 hex
+- `constantTimeEqual(a, b)` — timing-safe comparison
+
+**Auth chain (in `index.ts`):** JWT → API key (if `isApiKey(raw)`) → UUID fallback. On a valid key hit, `lastUsedAt` is updated fire-and-forget and the context gains `apiKey: { id, scopes }`.
+
+**No-self-management guard:** `myCreateApiKey` and `myRevokeApiKey` both throw `'API keys cannot manage other keys'` when `context.apiKey` is set. API key holders cannot create or revoke keys — only interactive (JWT) sessions can.
+
 ## DataLoader (N+1 Prevention)
 
 Loaders are created per-request in context. Use them in type resolvers:
@@ -229,7 +247,7 @@ const todoActivityType = async (parent, _args, context: Context) => {
 
 ## iCal Endpoint
 
-`GET /ical?userId=<uuid>` — public, no auth token required. Returns a `.ics` feed for the current and next week. Naive local datetimes from the scheduler are converted to UTC using `fromZonedTime(datetime, user.timezone)` from `date-fns-tz`.
+`GET /ical?userId=<uuid>` — public, no auth token required. Returns a `.ics` feed for the current and next week. The scheduler is called with `user.timezone` so it emits UTC ISO strings directly; the iCal handler parses them with `new Date(item.scheduledStart)`.
 
 The URL is intentionally public (no secret). Users are warned to treat it like a password.
 
