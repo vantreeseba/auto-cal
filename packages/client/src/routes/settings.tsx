@@ -1,3 +1,4 @@
+import { ApiKeyManager } from '@/components/domain/settings/ApiKeyManager';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -107,6 +108,8 @@ function SettingsPage() {
       </Card>
 
       {userId && <ICalCard userId={userId} />}
+
+      <ApiKeyManager />
     </div>
   );
 }
