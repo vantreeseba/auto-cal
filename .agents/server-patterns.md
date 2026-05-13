@@ -213,7 +213,7 @@ activityType: async (parent, _args, context: Context) => {
 
 ## iCal Endpoint
 
-`GET /ical?userId=<uuid>` — public, no auth token required. Returns a `.ics` feed for the current and next week. Naive local datetimes from the scheduler are converted to UTC using `fromZonedTime(datetime, user.timezone)` from `date-fns-tz`.
+`GET /ical?userId=<uuid>` — public, no auth token required. Returns a `.ics` feed for the current and next week. The scheduler is called with `user.timezone` so it emits UTC ISO strings directly; the iCal handler parses them with `new Date(item.scheduledStart)`.
 
 The URL is intentionally public (no secret). Users are warned to treat it like a password.
 

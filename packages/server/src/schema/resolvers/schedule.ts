@@ -201,6 +201,7 @@ export function applyScheduleResolvers(
       userTodos,
       habitInstances,
       activityTypeMap,
+      args.timezone ?? 'UTC',
     );
 
     const todoCompletedAtMap = new Map(
@@ -211,8 +212,7 @@ export function applyScheduleResolvers(
       ...item,
       completedAt:
         item.kind === 'todo'
-          ? (todoCompletedAtMap.get(item.id)?.toISOString().replace('Z', '') ??
-            null)
+          ? (todoCompletedAtMap.get(item.id)?.toISOString() ?? null)
           : null,
     }));
 
@@ -229,8 +229,8 @@ export function applyScheduleResolvers(
         activityType: t.activityTypeId
           ? (activityTypeMap.get(t.activityTypeId) ?? null)
           : null,
-        scheduledStart: start.toISOString().replace('Z', ''),
-        scheduledEnd: end.toISOString().replace('Z', ''),
+        scheduledStart: start.toISOString(),
+        scheduledEnd: end.toISOString(),
         isScheduled: true,
         isOverdue: false,
         completedAt: null,
