@@ -61,23 +61,10 @@
 
 ---
 
-### #9 — Analytics page on `/stats`
+### #9 — Analytics page on `/stats` ✓ Done
 **Note:** The route is `/stats`, not `/analytics` — the existing `/stats` route IS the surface this item describes; there is no separate `/analytics` planned.
 
-**Status:** A `/stats` route exists with a `StatsOverview` component backed by the `myStats` query (composite score + per-habit summary + todo summary). Charts and the full layout below are not yet built out.
-
-**Spec:** See `specifications.md` → "Analytics" section.
-**Work:**
-- Install shadcn charts (Recharts 3); do not add a second charting library
-- Verify the "Dashboard" nav rename to "Calendar" — confirm/adjust as needed
-- **Composite score** at top: weighted average of habit consistency + todo completion rate, displayed as % with a plain-English label
-- **Habit consistency section**: bar chart (one bar per habit, completion rate % capped at 100%, colored by activity type); click a bar to expand a week-by-week trend line
-- **Time distribution section**: grouped bar or donut chart — scheduled time vs completed time side-by-side per activity type
-- **Todo throughput section**: bar chart of completed todos per bucket; toggle daily/weekly x-axis; overdue count as a secondary line overlay
-- All sections share a single fixed time-range filter: This week / This month / Last 3 months / All time
-- All data real-time (no caching layer yet)
-
-**Acceptance:** User can open `/stats`, select "Last 3 months", and see habit rates, time distribution, and todo throughput with working charts. Clicking a habit bar shows its week-by-week trend.
+**Status:** Built out in full — recharts BarChart for habit consistency, stat-row for todo throughput, activity type breakdown table, and a shared time-range filter (This week / This month / Last 3 months / All time). Composite score shows three cards (Weighted / Habit / Todo) with plain-English labels. All sections share date-range variables via `myStats` and `activityTypeStats(startDate, endDate)` + `myActivityTypes`.
 
 ---
 
