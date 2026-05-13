@@ -16,6 +16,7 @@ import { useEffect, useState } from 'react';
 const NAV_LINKS = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/todos', label: 'Todos' },
+  { to: '/todo-lists', label: 'Todo Lists' },
   { to: '/habits', label: 'Habits' },
   { to: '/time-blocks', label: 'Time Blocks' },
   { to: '/activity-types', label: 'Activity Types' },

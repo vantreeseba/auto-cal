@@ -94,12 +94,23 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
                   {' • '}
                 </span>
               )}
+              {todo.list && (
+                <span className="text-muted-foreground">
+                  {todo.list.name}
+                  {' • '}
+                </span>
+              )}
               <InlineLengthEdit
                 value={todo.estimatedLength}
                 saving={updatingLength}
                 onSave={handleSaveLength}
               />
               {' • '}Priority: {priorityLabel(todo.priority)}
+              {todo.dueAt ? (
+                <span className="ml-2 text-amber-700">
+                  Due {new Date(todo.dueAt as string).toLocaleDateString()}
+                </span>
+              ) : null}
               {!isCompleted && todo.activityType && !todo.scheduledAt && (
                 <Tooltip>
                   <TooltipTrigger asChild>

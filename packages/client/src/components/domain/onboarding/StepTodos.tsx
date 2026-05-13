@@ -3,7 +3,7 @@ import type {
   CreateTodoMutationVariables,
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
-import { ActivityTypeSelect } from '@/components/domain/activity-type/ActivityTypeSelect';
+import { TodoListSelect } from '@/components/domain/todo-list/TodoListSelect';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -38,6 +38,7 @@ const GET_TODOS = graphql(`
       id
       title
       priority
+      list { id name }
       activityType { id name color }
     }
   }
@@ -61,7 +62,7 @@ const PRIORITY_OPTIONS = [
 
 const schema = z.object({
   title: z.string().min(1, 'Title is required').max(200),
-  activityTypeId: z.string().uuid('Activity type is required'),
+  listId: z.string().uuid('List is required'),
   priority: z.number().int().min(0).max(100),
 });
 
@@ -85,7 +86,7 @@ export function StepTodos({ onBack, onFinish, onSkip }: StepTodosProps) {
   const form = useAppForm({
     defaultValues: {
       title: '',
-      activityTypeId: '',
+      listId: '',
       priority: 0,
     } as FormValues,
     validators: { onChange: schema },
@@ -94,7 +95,7 @@ export function StepTodos({ onBack, onFinish, onSkip }: StepTodosProps) {
         variables: {
           input: {
             title: value.title,
-            activityTypeId: value.activityTypeId,
+            listId: value.listId,
             priority: value.priority,
             estimatedLength: 30,
           },
@@ -110,14 +111,14 @@ export function StepTodos({ onBack, onFinish, onSkip }: StepTodosProps) {
         <CardTitle>Add your first todos</CardTitle>
         <CardDescription>
           Todos are one-time tasks the scheduler places into your time blocks.
-          This step is optional — you can add todos any time.
+          Each todo belongs to a list. This step is optional — you can add todos
+          any time.
         </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-6">
         <form.AppForm>
           <Form className="space-y-4">
-            {/* Title */}
             <form.AppField name="title">
               {(field) => (
                 <field.InputField
@@ -128,7 +129,6 @@ export function StepTodos({ onBack, onFinish, onSkip }: StepTodosProps) {
             </form.AppField>
 
             <div className="grid grid-cols-2 gap-4">
-              {/* Priority */}
               <form.AppField name="priority">
                 {(field) => (
                   <Field>
@@ -155,13 +155,12 @@ export function StepTodos({ onBack, onFinish, onSkip }: StepTodosProps) {
                 )}
               </form.AppField>
 
-              {/* Activity type */}
-              <form.AppField name="activityTypeId">
+              <form.AppField name="listId">
                 {(field) => (
                   <Field>
-                    <FieldLabel>Activity type</FieldLabel>
+                    <FieldLabel>List</FieldLabel>
                     <FieldControl>
-                      <ActivityTypeSelect
+                      <TodoListSelect
                         value={field.state.value || undefined}
                         onValueChange={(v) => field.handleChange(v ?? '')}
                         onBlur={field.handleBlur}
@@ -184,7 +183,6 @@ export function StepTodos({ onBack, onFinish, onSkip }: StepTodosProps) {
           </Form>
         </form.AppForm>
 
-        {/* Created list */}
         {todos.length > 0 && (
           <div className="space-y-2">
             <p className="text-sm font-medium text-muted-foreground">

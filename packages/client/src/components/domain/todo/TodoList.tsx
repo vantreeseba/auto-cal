@@ -74,11 +74,16 @@ export const TODO_LIST_FRAGMENT = graphql(`
     description
     priority
     estimatedLength
+    list {
+      id
+      name
+    }
     activityType {
       id
       name
       color
     }
+    dueAt
     scheduledAt
     completedAt
     createdAt
