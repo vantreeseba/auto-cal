@@ -4,7 +4,7 @@
 
 ## 1. Overview
 
-Auto Cal is a smart todo + habit scheduling app. Users create **todos** (one-shot tasks) and **habits** (repeated targets) which the scheduler places into user-defined **time blocks** by priority and activity type. Stats track habit consistency and todo throughput per activity type.
+Auto Cal is a smart todo + habit scheduling app. Users create **todo lists** (grouped by activity type), **todos** (one-shot tasks that belong to a list), and **habits** (repeated targets), which the scheduler places into user-defined **time blocks** by priority and activity type. Stats track habit consistency and todo throughput per activity type.
 
 The repo is a **npm workspace** monorepo (`workspaces: ["packages/*"]` in the root `package.json`). There is no `pnpm-workspace.yaml` and no `sst.config.ts`.
 
@@ -35,6 +35,7 @@ packages/db/src/
     ├── index.ts            # Re-exports all models
     ├── users.ts
     ├── activity_types.ts
+    ├── todo_lists.ts
     ├── todos.ts
     ├── habits.ts
     ├── time_blocks.ts
@@ -64,6 +65,7 @@ packages/server/src/
 │   ├── validators.test.ts
 │   └── resolvers/
 │       ├── index.ts          # extensionSDL + wires apply* functions
+│       ├── todo-lists.ts
 │       ├── todos.ts
 │       ├── habits.ts
 │       ├── time-blocks.ts
@@ -89,7 +91,9 @@ packages/client/src/
 ├── components/
 │   ├── ui/               # ShadCN primitives + custom (route-error, inline-length-edit)
 │   └── domain/
+│       ├── activity-type/
 │       ├── todo/
+│       ├── todo-list/
 │       ├── habit/
 │       └── time-block/
 ├── routes/               # File-based TanStack Router
@@ -100,6 +104,7 @@ packages/client/src/
 │   ├── onboarding.tsx
 │   ├── dashboard.tsx
 │   ├── todos.tsx
+│   ├── todo-lists.tsx
 │   ├── habits.tsx
 │   ├── habits.index.tsx
 │   ├── habits.$habitId.tsx
@@ -139,17 +144,31 @@ Full column definitions live in `packages/db/src/models/`. Summary:
 | color | text | notNull, default `'#6366f1'` (hex with `#`) |
 | createdAt / updatedAt | timestamp | |
 
+**`todo_lists`**
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid | PK |
+| userId | uuid | FK users (cascade delete) |
+| name | text | notNull |
+| description | text | nullable |
+| activityTypeId | uuid | FK activity_types (restrict) — notNull |
+| defaultPriority | integer | notNull, default 0 — seeded into new todos |
+| defaultEstimatedLength | integer | notNull, default 0 — seeded into new todos |
+| createdAt / updatedAt | timestamp | |
+
 **`todos`**
 
 | Column | Type | Notes |
 |--------|------|-------|
 | id | uuid | PK |
 | userId | uuid | FK users (cascade delete) |
+| listId | uuid | FK todo_lists (restrict) — notNull. Activity type derives from the list. |
 | title | text | notNull |
 | description | text | nullable |
 | priority | integer | notNull, default 0 |
 | estimatedLength | integer | notNull (minutes; 0 = unestimated) |
-| activityTypeId | uuid | FK activity_types (set null) — currently nullable, scheduler skips items without one |
+| dueAt | timestamp | nullable — hard deadline (separate from `scheduledAt`) |
 | scheduledAt | timestamp | nullable |
 | completedAt | timestamp | nullable |
 | manuallyScheduled | boolean | notNull, default false |
@@ -165,7 +184,7 @@ Full column definitions live in `packages/db/src/models/`. Summary:
 | description | text | nullable |
 | priority | integer | notNull, default 0 |
 | estimatedLength | integer | notNull |
-| activityTypeId | uuid | FK activity_types (set null) — nullable |
+| activityTypeId | uuid | FK activity_types (restrict) — notNull |
 | frequencyCount | integer | notNull (e.g. 3) |
 | frequencyUnit | text | notNull, `'week' \| 'month'` (typed via `$type<FrequencyUnit>`) |
 | createdAt / updatedAt | timestamp | |
@@ -176,7 +195,7 @@ Full column definitions live in `packages/db/src/models/`. Summary:
 |--------|------|-------|
 | id | uuid | PK |
 | userId | uuid | FK users (cascade delete) |
-| activityTypeId | uuid | FK activity_types (set null) — nullable |
+| activityTypeId | uuid | FK activity_types (restrict) — notNull |
 | daysOfWeek | integer[] | notNull (0=Sun … 6=Sat) |
 | startTime | text | `'HH:mm'` |
 | endTime | text | `'HH:mm'` |
@@ -193,7 +212,7 @@ Full column definitions live in `packages/db/src/models/`. Summary:
 | completedAt | timestamp | nullable — set for actual completions; null = tentative |
 | createdAt | timestamp | |
 
-Conventions: all PKs use `uuid`+`defaultRandom`; user-owned tables cascade-delete; optional FKs use `onDelete: 'set null'`; timestamps are `timestamp` (not `timestamptz`). Types are inferred via `$inferSelect` / `$inferInsert` — never duplicated.
+Conventions: all PKs use `uuid`+`defaultRandom`; user-owned tables cascade-delete; required references to activity-type / list use `onDelete: 'restrict'`; timestamps are `timestamp` (not `timestamptz`). Types are inferred via `$inferSelect` / `$inferInsert` — never duplicated.
 
 ---
 
@@ -207,7 +226,8 @@ The base schema is auto-generated from Drizzle by `@vantreeseba/drizzle-graphql`
 |-------|-------|
 | `myProfile` | Returns `UserProfile` (id, email, timezone) |
 | `myActivityTypes` | All activity types for the user |
-| `myTodos(activityTypeId, completed, orderBy)` | Filterable; orderBy via `TodoOrderBy` |
+| `myTodoLists` | All todo lists for the user |
+| `myTodos(listId, completed, orderBy)` | Filterable; orderBy via `TodoOrderBy` |
 | `myHabits(activityTypeId)` | |
 | `myTimeBlocks(activityTypeId, containsDay)` | |
 | `mySchedule(weekStart, timezone)` | Live-recomputed schedule for the week (see `scheduling.md`) |
@@ -222,6 +242,7 @@ The base schema is auto-generated from Drizzle by `@vantreeseba/drizzle-graphql`
 |--------|-----------|
 | Profile | `myUpdateProfile` |
 | Activity types | `myCreateActivityType`, `myUpdateActivityType`, `myDeleteActivityType` |
+| Todo lists | `myCreateTodoList`, `myUpdateTodoList`, `myDeleteTodoList` |
 | Todos | `myCreateTodo`, `myUpdateTodo`, `myCompleteTodo`, `myDeleteTodo` |
 | Habits | `myCreateHabit`, `myUpdateHabit`, `myDeleteHabit`, `myCompleteHabit` |
 | Time blocks | `myCreateTimeBlock`, `myUpdateTimeBlock`, `myDeleteTimeBlock` |
@@ -240,7 +261,9 @@ The base schema is auto-generated from Drizzle by `@vantreeseba/drizzle-graphql`
 
 ### Field resolvers
 
-`activityType` is field-resolved on `Todo`, `Habit`, and `TimeBlock` via a per-request `DataLoader` (`context.loaders.activityType`) to prevent N+1.
+`activityType` is field-resolved on `Habit` and `TimeBlock` via a per-request `DataLoader` (`context.loaders.activityType`) to prevent N+1.
+
+`Todo.activityType` is resolved indirectly: the field-resolver loads the todo's `list` via `context.loaders.todoList`, then loads that list's activity type via the same `activityType` loader. `Todo.list` is provided by drizzle-graphql via the `todos → todoLists` relation.
 
 ---
 
@@ -254,6 +277,7 @@ The base schema is auto-generated from Drizzle by `@vantreeseba/drizzle-graphql`
 | `/onboarding` | `onboarding.tsx` | 4-step wizard (activity types → time blocks → habits → todos) |
 | `/dashboard` | `dashboard.tsx` | Calendar + schedule sidebar |
 | `/todos` | `todos.tsx` | Todo list |
+| `/todo-lists` | `todo-lists.tsx` | Todo list CRUD (lists, not todos) |
 | `/habits` | `habits.tsx` + `habits.index.tsx` | Habit list |
 | `/habits/$habitId` | `habits.$habitId.tsx` | Habit detail (rates, periods) |
 | `/time-blocks` | `time-blocks.tsx` | Time block CRUD |

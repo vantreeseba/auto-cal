@@ -1,6 +1,7 @@
-import type { ActivityType, Habit, TimeBlock, Todo } from '@auto-cal/db';
+import type { ActivityType, Habit, TimeBlock } from '@auto-cal/db';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  type TodoWithActivityType,
   computeSchedule,
   startOfISOWeek,
   startOfISOWeekStr,
@@ -47,15 +48,19 @@ function makeBlock(overrides: Partial<TimeBlock> = {}): TimeBlock {
   };
 }
 
-function makeTodo(overrides: Partial<Todo> = {}): Todo {
+function makeTodo(
+  overrides: Partial<TodoWithActivityType> = {},
+): TodoWithActivityType {
   return {
     id: 'todo-1',
     userId: 'u1',
+    listId: 'list-default',
     title: 'Test todo',
     description: null,
     priority: 1,
     estimatedLength: 60,
     activityTypeId: WORK.id,
+    dueAt: null,
     scheduledAt: null,
     completedAt: null,
     manuallyScheduled: false,
@@ -172,8 +177,8 @@ describe('computeSchedule', () => {
       AT_MAP,
     );
     expect(result?.isScheduled).toBe(true);
-    expect(result?.scheduledStart).toBe('2026-05-04T09:00:00');
-    expect(result?.scheduledEnd).toBe('2026-05-04T10:00:00');
+    expect(result?.scheduledStart).toBe('2026-05-04T09:00:00.000Z');
+    expect(result?.scheduledEnd).toBe('2026-05-04T10:00:00.000Z');
     expect(result?.activityType?.name).toBe('Work');
   });
 
@@ -261,10 +266,10 @@ describe('computeSchedule', () => {
     );
     expect(result.every((r) => r.isScheduled)).toBe(true);
     expect(result.find((r) => r.id === 'todo-1')?.scheduledStart).toBe(
-      '2026-05-04T09:00:00',
+      '2026-05-04T09:00:00.000Z',
     );
     expect(result.find((r) => r.id === 'todo-2')?.scheduledStart).toBe(
-      '2026-05-05T09:00:00',
+      '2026-05-05T09:00:00.000Z',
     );
   });
 
@@ -280,10 +285,10 @@ describe('computeSchedule', () => {
     );
     expect(result.every((r) => r.isScheduled)).toBe(true);
     expect(result.find((r) => r.id === 'todo-1')?.scheduledStart).toBe(
-      '2026-05-04T09:00:00',
+      '2026-05-04T09:00:00.000Z',
     );
     expect(result.find((r) => r.id === 'todo-2')?.scheduledStart).toBe(
-      '2026-05-04T10:00:00',
+      '2026-05-04T10:00:00.000Z',
     );
   });
 
@@ -350,7 +355,7 @@ describe('computeSchedule', () => {
     );
     expect(result?.isScheduled).toBe(true);
     expect(result?.kind).toBe('habit');
-    expect(result?.scheduledStart).toBe('2026-05-04T07:00:00');
+    expect(result?.scheduledStart).toBe('2026-05-04T07:00:00.000Z');
   });
 
   it('spreads two habit instances across different days when possible', () => {

@@ -5,11 +5,12 @@ import type {
   HabitCompletion,
   TimeBlock,
   Todo,
+  TodoList,
 } from '@auto-cal/db';
-import { fromZonedTime } from 'date-fns-tz';
 import type { Request, Response } from 'express';
 import ical from 'ical-generator';
 import {
+  type TodoWithActivityType,
   computeSchedule,
   startOfISOWeek,
   startOfISOWeekStr,
@@ -43,25 +44,31 @@ export async function icalHandler(req: Request, res: Response): Promise<void> {
   const timezone = user.timezone || 'UTC';
   const weekStartStr = startOfISOWeekStr(new Date());
 
-  const [timeBlocks, todos, habits, activityTypes]: [
+  const [timeBlocks, rawTodos, todoLists, habits, activityTypes]: [
     TimeBlock[],
     Todo[],
+    TodoList[],
     Habit[],
     ActivityType[],
   ] = await Promise.all([
     db.query.timeBlocks.findMany({ where: { userId } }),
     db.query.todos.findMany({
-      where: {
-        userId,
-        completedAt: { isNull: true },
-        activityTypeId: { isNotNull: true },
-      },
+      where: { userId, completedAt: { isNull: true } },
     }),
+    db.query.todoLists.findMany({ where: { userId } }),
     db.query.habits.findMany({
       where: { userId, activityTypeId: { isNotNull: true } },
     }),
     db.query.activityTypes.findMany({ where: { userId } }),
   ]);
+
+  const listActivityTypeMap = new Map(
+    todoLists.map((l) => [l.id, l.activityTypeId]),
+  );
+  const todos: TodoWithActivityType[] = rawTodos.map((t) => ({
+    ...t,
+    activityTypeId: listActivityTypeMap.get(t.listId) ?? null,
+  }));
 
   const activityTypeMap = new Map<string, ActivityType>(
     activityTypes.map((at) => [at.id, at]),
@@ -134,6 +141,7 @@ export async function icalHandler(req: Request, res: Response): Promise<void> {
       todos,
       habitInstances,
       activityTypeMap,
+      timezone,
     );
 
     for (const item of items) {
@@ -142,9 +150,9 @@ export async function icalHandler(req: Request, res: Response): Promise<void> {
 
       cal.createEvent({
         id: `${item.id}-${ws}@auto-cal`,
-        // scheduledStart/End are naive local datetimes — convert to UTC for iCal
-        start: fromZonedTime(item.scheduledStart, timezone),
-        end: fromZonedTime(item.scheduledEnd, timezone),
+        // scheduledStart/End are UTC ISO strings — parse directly
+        start: new Date(item.scheduledStart),
+        end: new Date(item.scheduledEnd),
         summary: item.title,
         description: [
           `Type: ${item.kind === 'todo' ? 'Todo' : 'Habit'}`,

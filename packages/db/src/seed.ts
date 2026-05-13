@@ -4,6 +4,7 @@ import {
   db,
   habits,
   timeBlocks,
+  todoLists,
   todos,
   users,
 } from './index.ts';
@@ -64,6 +65,47 @@ export async function seedDemoData(): Promise<void> {
 
   console.log('Activity types created.');
 
+  // Todo lists — one per activity type for the demo
+  const insertedLists = (await db
+    .insert(todoLists)
+    .values([
+      {
+        userId: DEMO_USER_ID,
+        name: 'Work',
+        description: 'Day-job tasks and deliverables',
+        activityTypeId: work.id,
+        defaultPriority: 50,
+        defaultEstimatedLength: 60,
+      },
+      {
+        userId: DEMO_USER_ID,
+        name: 'Fitness',
+        description: 'Exercise-related one-off todos',
+        activityTypeId: exercise.id,
+        defaultPriority: 30,
+        defaultEstimatedLength: 30,
+      },
+      {
+        userId: DEMO_USER_ID,
+        name: 'Learning',
+        description: 'Books, courses, and study tasks',
+        activityTypeId: learning.id,
+        defaultPriority: 40,
+        defaultEstimatedLength: 60,
+      },
+    ])
+    .returning()) as Array<{ id: string; name: string }>;
+
+  const workList = insertedLists.find((l) => l.name === 'Work');
+  const fitnessList = insertedLists.find((l) => l.name === 'Fitness');
+  const learningList = insertedLists.find((l) => l.name === 'Learning');
+
+  if (!workList || !fitnessList || !learningList) {
+    throw new Error('Failed to insert todo lists');
+  }
+
+  console.log('Todo lists created.');
+
   // Time blocks (Mon-Fri = [1,2,3,4,5], weekdays)
   await db.insert(timeBlocks).values([
     {
@@ -116,7 +158,7 @@ export async function seedDemoData(): Promise<void> {
   await db.insert(todos).values([
     {
       userId: DEMO_USER_ID,
-      activityTypeId: work.id,
+      listId: workList.id,
       title: 'Write Q2 project proposal',
       description:
         'Outline goals, timeline, and resource requirements for the Q2 roadmap.',
@@ -125,7 +167,7 @@ export async function seedDemoData(): Promise<void> {
     },
     {
       userId: DEMO_USER_ID,
-      activityTypeId: work.id,
+      listId: workList.id,
       title: 'Review pull requests',
       description: 'Review and merge outstanding PRs from the team.',
       priority: 60,
@@ -133,14 +175,14 @@ export async function seedDemoData(): Promise<void> {
     },
     {
       userId: DEMO_USER_ID,
-      activityTypeId: work.id,
+      listId: workList.id,
       title: 'Update project documentation',
       priority: 40,
       estimatedLength: 60,
     },
     {
       userId: DEMO_USER_ID,
-      activityTypeId: learning.id,
+      listId: learningList.id,
       title: 'Complete TypeScript generics chapter',
       description:
         'Finish reading and take notes on generics from the TS handbook.',
@@ -149,7 +191,7 @@ export async function seedDemoData(): Promise<void> {
     },
     {
       userId: DEMO_USER_ID,
-      activityTypeId: exercise.id,
+      listId: fitnessList.id,
       title: 'Sign up for 5K run',
       description:
         'Register for the local spring 5K and add it to the calendar.',

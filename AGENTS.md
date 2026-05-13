@@ -1,6 +1,6 @@
 # Project: Auto Cal
 
-Auto Cal is a smart todo and habit scheduling application. Users create todos (single-time tasks) and habits (repeated tasks) that are automatically scheduled within user-defined time blocks based on priority and activity type.
+Auto Cal is a smart todo and habit scheduling application. Users create todo lists (grouped by activity type), todos (single-time tasks belonging to a list), and habits (repeated tasks) that are automatically scheduled within user-defined time blocks based on priority and activity type.
 
 Monorepo: `packages/db` (Drizzle + PGLite), `packages/server` (Express + Apollo), `packages/client` (React + Vite).
 
@@ -15,7 +15,7 @@ npm run dev:client       # React client only (localhost:3000)
 # Quality
 npm run typecheck        # tsc --noEmit across all packages
 npm run lint             # biome check .
-npm run lint:fix         # biome check --apply .
+npm run lint:fix         # biome check --write .
 
 # Database
 npm run db:generate      # drizzle-kit generate (after schema changes)
@@ -23,8 +23,9 @@ npm run db:migrate       # drizzle-kit migrate
 npm run db:studio        # Drizzle Studio GUI
 
 # GraphQL
-npm run codegen          # generate TS types from operations (server must be running)
-npm run codegen:server   # generate server-side resolver types
+npm run codegen          # runs codegen:server then codegen:client
+npm run codegen:server   # server resolver types (reads schema.graphql)
+npm run codegen:client   # client typed operations (reads schema.graphql)
 
 # Build
 npm run build            # codegen + vite + tsc (run before docker build)
@@ -78,6 +79,10 @@ try {
 }
 ```
 
+## Running Commands
+
+Prefer scripts defined in `package.json` (e.g. `npm run db:generate`, `npm run typecheck`) over ad-hoc tool invocations (`npx drizzle-kit ...`, `npx tsc ...`). The scripts wrap env loading, workspace targeting, and flag conventions — bypassing them tends to break on env vars or surface different errors than the rest of the team sees.
+
 ## Agent File Convention
 
 All files related to project structure, tasks, planning, and feature tracking live in `.agents/`. Agents must read from and write to `.agents/` for any such files — never create them at the repo root.
@@ -94,3 +99,4 @@ Always add new `.agents/` files to the reference list below.
 - [`.agents/scheduling.md`](.agents/scheduling.md) — Scheduling algorithm, writeback service, pre-placement lock, habit instance generation
 - [`.agents/deployment.md`](.agents/deployment.md) — Docker setup, environment variables, PGLite vs Postgres switching
 - [`.agents/todo.md`](.agents/todo.md) — Open feature requests, issues, and deferred work items
+- [`.agents/plan-19-api-keys.md`](.agents/plan-19-api-keys.md) — Plan for personal API keys (Home Assistant and similar external integrations)

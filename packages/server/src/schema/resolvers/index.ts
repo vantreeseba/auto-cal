@@ -6,12 +6,14 @@ import {
 } from 'graphql';
 import type { Context } from '../../context.ts';
 import { applyActivityTypeResolvers } from './activity-types.ts';
+import { applyApiKeyResolvers } from './api-keys.ts';
 import { applyAuthResolvers } from './auth.ts';
 import { applyHabitResolvers } from './habits.ts';
 import { applyProfileResolvers } from './profile.ts';
 import { applyScheduleResolvers } from './schedule.ts';
 import { applyStatsResolvers } from './stats.ts';
 import { applyTimeBlockResolvers } from './time-blocks.ts';
+import { applyTodoListResolvers } from './todo-lists.ts';
 import { applyTodoResolvers } from './todos.ts';
 
 const extensionSDL = `
@@ -115,22 +117,41 @@ const extensionSDL = `
     color: String
   }
 
+  input CreateTodoListArgs {
+    name: String!
+    description: String
+    activityTypeId: ID!
+    defaultPriority: Int
+    defaultEstimatedLength: Int
+  }
+
+  input UpdateTodoListArgs {
+    id: ID!
+    name: String
+    description: String
+    activityTypeId: ID
+    defaultPriority: Int
+    defaultEstimatedLength: Int
+  }
+
   input CreateTodoArgs {
+    listId: ID!
     title: String!
     description: String
     priority: Int
     estimatedLength: Int
-    activityTypeId: ID!
+    dueAt: String
     scheduledAt: String
   }
 
   input UpdateTodoArgs {
     id: ID!
+    listId: ID
     title: String
     description: String
     priority: Int
     estimatedLength: Int
-    activityTypeId: ID
+    dueAt: String
     scheduledAt: String
     manuallyScheduled: Boolean
     completedAt: String
@@ -180,10 +201,26 @@ const extensionSDL = `
     completedAt: String
   }
 
+  type CreateApiKeyResult {
+    apiKey: ApiKey!
+    token: String!
+  }
+
+  input MyCreateApiKeyInput {
+    name: String!
+    scopes: [String!]!
+    expiresAt: String
+  }
+
+  extend type Todo {
+    activityType: ActivityType
+  }
+
   extend type Query {
     myProfile: UserProfile
     myActivityTypes: [ActivityType!]!
-    myTodos(activityTypeId: ID, completed: Boolean, orderBy: TodoOrderBy): [Todo!]!
+    myTodoLists: [TodoList!]!
+    myTodos(listId: ID, completed: Boolean, orderBy: TodoOrderBy): [Todo!]!
     myHabits(activityTypeId: ID): [Habit!]!
     myTimeBlocks(activityTypeId: ID, containsDay: Int): [TimeBlock!]!
     activityTypeStats(startDate: String, endDate: String): [ActivityTypeStats!]!
@@ -191,6 +228,7 @@ const extensionSDL = `
     myHabitDetail(habitId: ID!, periods: Int): HabitDetail!
     myStats(startDate: String, endDate: String): StatsOverview!
     mySchedule(weekStart: String, timezone: String): [ScheduledItem!]!
+    myApiKeys: [ApiKey!]!
   }
 
   extend type Mutation {
@@ -198,6 +236,9 @@ const extensionSDL = `
     myCreateActivityType(input: CreateActivityTypeArgs!): ActivityType!
     myUpdateActivityType(input: UpdateActivityTypeArgs!): ActivityType!
     myDeleteActivityType(id: ID!): Boolean!
+    myCreateTodoList(input: CreateTodoListArgs!): TodoList!
+    myUpdateTodoList(input: UpdateTodoListArgs!): TodoList!
+    myDeleteTodoList(id: ID!): Boolean!
     myCreateTodo(input: CreateTodoArgs!): Todo!
     myUpdateTodo(input: UpdateTodoArgs!): Todo!
     myCompleteTodo(id: ID!, completedAt: String): Todo!
@@ -213,6 +254,8 @@ const extensionSDL = `
     myReschedule(weekStart: String): Boolean!
     requestMagicLink(email: String!): RequestMagicLinkResult!
     verifyMagicLink(token: String!): VerifyMagicLinkResult!
+    myCreateApiKey(input: MyCreateApiKeyInput!): CreateApiKeyResult!
+    myRevokeApiKey(id: ID!): Boolean!
   }
 
   type RequestMagicLinkResult {
@@ -236,14 +279,17 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
 
   applyProfileResolvers(queryFields, mutationFields);
   applyActivityTypeResolvers(queryFields, mutationFields);
+  applyTodoListResolvers(queryFields, mutationFields);
   applyTodoResolvers(queryFields, mutationFields);
   applyHabitResolvers(queryFields, mutationFields);
   applyTimeBlockResolvers(queryFields, mutationFields);
   applyStatsResolvers(queryFields);
   applyScheduleResolvers(queryFields, mutationFields);
   applyAuthResolvers(mutationFields);
+  applyApiKeyResolvers(queryFields, mutationFields);
 
-  // Field resolvers: activityType on Todo, Habit, TimeBlock
+  // Field resolvers: activityType on Habit and TimeBlock load directly from
+  // their activityTypeId. Todo.activityType derives from its list.
   type RowWithActivityTypeId = { activityTypeId: string };
 
   function resolveActivityType(
@@ -254,10 +300,6 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     return context.loaders.activityType.load(parent.activityTypeId);
   }
 
-  const todoType = extended.getType('Todo') as GraphQLObjectType;
-  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  todoType.getFields().activityType!.resolve = resolveActivityType;
-
   const habitType = extended.getType('Habit') as GraphQLObjectType;
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
   habitType.getFields().activityType!.resolve = resolveActivityType;
@@ -265,6 +307,18 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   const timeBlockType = extended.getType('TimeBlock') as GraphQLObjectType;
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
   timeBlockType.getFields().activityType!.resolve = resolveActivityType;
+
+  const todoType = extended.getType('Todo') as GraphQLObjectType;
+  // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
+  todoType.getFields().activityType!.resolve = async (
+    parent: { listId: string },
+    _args: unknown,
+    context: Context,
+  ) => {
+    const list = await context.loaders.todoList.load(parent.listId);
+    if (!list) return null;
+    return context.loaders.activityType.load(list.activityTypeId);
+  };
 
   return extended;
 }

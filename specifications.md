@@ -5,21 +5,28 @@
 The purpose of this application is to allow users to create todo's and habits.
 Those are then automatically scheduled based on priority within a time block the user creates.
 Time blocks are sections of time (5pm-7pm) that are labeled for certain kinds of activities.
-Habits and tasks are tagged with an activity type.
+Habits are tagged with an activity type. Todos belong to a **todo list** that carries
+the activity type (and default priority / duration) on their behalf.
 
-The app will use the "tags" to schedule the tasks and habits within a time block.
+The app will use the activity types to schedule the tasks and habits within a time block.
 If new tasks or habits are generated that are higher priority, it will reschedule all
 tasks/habits to fit.
 
 
+A **todo list** has a name, description, activity type, default priority, and default
+estimated length. New todos seeded into a list pick up the list's defaults as form
+starting values; the todo persists its own copy so later edits to the list don't cascade.
+
 Todo's are a single time task that needs to be completed.
-They have a title, description, priority, estimated length, and "activity type".
+They belong to a list and have a title, description, priority, estimated length,
+and an optional due date. The activity type is inherited from the list.
 
 Habits are repeated tasks that should be completed X times per week or month.
 They have a title, description, priority, estimated length and activity type.
 
 The app should track how well habits are being done.
-The app should track the number of completed todo's by activity type.
+The app should track the number of completed todo's by activity type (resolved
+through the todo's list).
 
 ---
 
@@ -130,11 +137,15 @@ The app should track the number of completed todo's by activity type.
   scheduler runs in the background to backfill it.
 
 ### Activity type requirement
-- Activity type is **required** on todos and habits. Without one the scheduler cannot
-  match the item to a time block.
+- Activity type is **required** on habits, time blocks, and **todo lists**. Todos do
+  not carry an activity type directly — they inherit it through their list, which is
+  itself required. Without an activity type the scheduler cannot match an item to a
+  time block.
 - Users may still manually drag an item to a calendar slot regardless of activity type,
   but it will not be auto-scheduled.
-- The UI should enforce activity type selection before a todo or habit can be saved.
+- The UI should enforce list selection on a todo (which transitively requires an
+  activity type via the list), and activity type selection on a habit / time block /
+  todo list, before save.
 
 ### No time blocks — onboarding gate
 - If a user has no time blocks, the scheduler cannot place any items.

@@ -1,9 +1,10 @@
-import type { ActivityType, DB } from '@auto-cal/db';
+import type { ActivityType, ApiKeyScope, DB, TodoList } from '@auto-cal/db';
 import DataLoader from 'dataloader';
 
 export interface Context {
   db: DB;
   userId?: string; // undefined = not authenticated
+  apiKey?: { id: string; scopes: ApiKeyScope[] };
   loaders: ReturnType<typeof createLoaders>;
 }
 
@@ -13,6 +14,13 @@ export function createLoaders(db: DB) {
       const rows = (await db.query.activityTypes.findMany({
         where: { id: { in: [...ids] } },
       })) as ActivityType[];
+      const byId = new Map(rows.map((r) => [r.id, r]));
+      return ids.map((id) => byId.get(id) ?? null);
+    }),
+    todoList: new DataLoader<string, TodoList | null>(async (ids) => {
+      const rows = (await db.query.todoLists.findMany({
+        where: { id: { in: [...ids] } },
+      })) as TodoList[];
       const byId = new Map(rows.map((r) => [r.id, r]));
       return ids.map((id) => byId.get(id) ?? null);
     }),

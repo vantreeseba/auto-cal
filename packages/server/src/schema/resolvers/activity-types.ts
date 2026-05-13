@@ -2,6 +2,7 @@ import {
   type ActivityType,
   type Habit,
   type Todo,
+  type TodoList,
   activityTypes,
 } from '@auto-cal/db/schema';
 import { eq } from 'drizzle-orm';
@@ -43,19 +44,20 @@ export function applyActivityTypeResolvers(
     const start = args.startDate ? new Date(args.startDate) : null;
     const end = args.endDate ? new Date(args.endDate) : null;
 
-    const [userActivityTypes, allTodos, allHabits]: [
+    const [userActivityTypes, allTodos, allTodoLists, allHabits]: [
       ActivityType[],
       Todo[],
+      TodoList[],
       Habit[],
     ] = await Promise.all([
       context.db.query.activityTypes.findMany({
         where: { userId: context.userId },
       }),
       context.db.query.todos.findMany({
-        where: {
-          userId: context.userId,
-          activityTypeId: { isNotNull: true },
-        },
+        where: { userId: context.userId },
+      }),
+      context.db.query.todoLists.findMany({
+        where: { userId: context.userId },
       }),
       context.db.query.habits.findMany({
         where: {
@@ -65,12 +67,17 @@ export function applyActivityTypeResolvers(
       }),
     ]);
 
+    const listActivityTypeMap = new Map(
+      allTodoLists.map((l) => [l.id, l.activityTypeId]),
+    );
+
     const todosByType = new Map<string, typeof allTodos>();
     for (const todo of allTodos) {
-      if (!todo.activityTypeId) continue;
-      const bucket = todosByType.get(todo.activityTypeId) ?? [];
+      const activityTypeId = listActivityTypeMap.get(todo.listId);
+      if (!activityTypeId) continue;
+      const bucket = todosByType.get(activityTypeId) ?? [];
       bucket.push(todo);
-      todosByType.set(todo.activityTypeId, bucket);
+      todosByType.set(activityTypeId, bucket);
     }
 
     const habitsByType = new Map<string, number>();

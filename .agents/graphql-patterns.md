@@ -65,14 +65,29 @@ queryFields.myNewThing!.resolve = async (_parent, args, context: Context) => {
 type Todo {
   id: String!
   userId: String!
+  listId: String!
   title: String!
   description: String
   priority: Int!
   estimatedLength: Int!
-  activityTypeId: String
+  dueAt: DateTime
   scheduledAt: DateTime
   completedAt: DateTime
   manuallyScheduled: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  list: TodoList         # drizzle-graphql relation field
+  activityType: ActivityType  # field-resolved via the todo's list
+}
+
+type TodoList {
+  id: String!
+  userId: String!
+  name: String!
+  description: String
+  activityTypeId: String!
+  defaultPriority: Int!
+  defaultEstimatedLength: Int!
   createdAt: DateTime!
   updatedAt: DateTime!
   activityType: ActivityType
@@ -154,10 +169,18 @@ query MySchedule($weekStart: String, $timezone: String) {
   }
 }
 
-query MyTodos($activityTypeId: ID, $completed: Boolean, $orderBy: TodoOrderBy) {
-  myTodos(activityTypeId: $activityTypeId, completed: $completed, orderBy: $orderBy) {
+query MyTodos($listId: ID, $completed: Boolean, $orderBy: TodoOrderBy) {
+  myTodos(listId: $listId, completed: $completed, orderBy: $orderBy) {
     id title description priority estimatedLength
-    scheduledAt completedAt manuallyScheduled
+    dueAt scheduledAt completedAt manuallyScheduled
+    list { id name }
+    activityType { id name color }
+  }
+}
+
+query MyTodoLists {
+  myTodoLists {
+    id name description defaultPriority defaultEstimatedLength
     activityType { id name color }
   }
 }
@@ -254,17 +277,30 @@ Sortable fields: `priority`, `scheduledAt`, `completedAt`, `estimatedLength`, `c
 
 ```graphql
 mutation CreateTodo($input: CreateTodoArgs!) {
-  myCreateTodo(input: $input) { id title priority scheduledAt }
+  # CreateTodoArgs: listId (required), title (required), description,
+  # priority, estimatedLength, dueAt, scheduledAt
+  myCreateTodo(input: $input) { id title priority dueAt scheduledAt }
 }
 
 mutation UpdateTodo($input: UpdateTodoArgs!) {
-  # UpdateTodoArgs accepts: id (required), title, description, priority,
-  # estimatedLength, activityTypeId, scheduledAt, manuallyScheduled, completedAt
-  myUpdateTodo(input: $input) { id title priority scheduledAt completedAt manuallyScheduled }
+  # UpdateTodoArgs: id (required), listId, title, description, priority,
+  # estimatedLength, dueAt, scheduledAt, manuallyScheduled, completedAt
+  myUpdateTodo(input: $input) { id title priority dueAt scheduledAt completedAt manuallyScheduled }
 }
 
 mutation CompleteTodo($id: ID!) {
   myCompleteTodo(id: $id) { id completedAt }
+}
+
+mutation CreateTodoList($input: CreateTodoListArgs!) {
+  # CreateTodoListArgs: name (required), description, activityTypeId (required),
+  # defaultPriority, defaultEstimatedLength
+  myCreateTodoList(input: $input) { id name }
+}
+
+mutation DeleteTodoList($id: ID!) {
+  # Server-side guard: rejects if any todos still reference the list (FK is RESTRICT).
+  myDeleteTodoList(id: $id)
 }
 
 mutation RequestMagicLink($email: String!) {
