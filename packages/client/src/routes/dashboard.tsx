@@ -1,13 +1,12 @@
 import { graphql } from '@/__generated__/index.js';
 import { CalendarView } from '@/components/domain/dashboard/CalendarView';
 import { ScheduleView } from '@/components/domain/dashboard/ScheduleView';
-import { Button } from '@/components/ui/button';
+import { WeekNavigator } from '@/components/domain/dashboard/WeekNavigator';
 import { RouteError } from '@/components/ui/route-error';
 import { gql } from '@apollo/client';
 import { useMutation, useQuery, useReadQuery } from '@apollo/client/react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { addDays, addMonths, addWeeks, format, startOfMonth } from 'date-fns';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect } from 'react';
 import { z } from 'zod';
 
@@ -203,60 +202,24 @@ function DashboardPage() {
             Your schedule at a glance
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Today — always rendered so nav arrows don't shift on navigate */}
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={isCurrent(date, view)}
-            className="disabled:opacity-40"
-            onClick={() =>
-              setDate(
-                view === 'week'
-                  ? toMonday(new Date())
-                  : view === 'month'
-                    ? startOfMonth(new Date())
-                    : new Date(),
-              )
-            }
-          >
-            Today
-          </Button>
-
-          {/* View switcher */}
-          <div className="flex rounded-md border p-0.5 gap-0.5">
-            {(['day', 'week', 'month'] as const).map((v) => (
-              <Button
-                key={v}
-                size="sm"
-                variant={view === v ? 'default' : 'ghost'}
-                className="h-7 px-2.5 text-xs capitalize"
-                onClick={() => handleViewChange(v)}
-              >
-                {v}
-              </Button>
-            ))}
-          </div>
-
-          {/* Date navigation */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setDate(navigateDate(date, view, -1))}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="min-w-[160px] text-center text-sm font-medium">
-            {dateLabel(date, view)}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setDate(navigateDate(date, view, 1))}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+        <WeekNavigator
+          date={date}
+          view={view}
+          dateLabel={dateLabel(date, view)}
+          isCurrent={isCurrent(date, view)}
+          onPrev={() => setDate(navigateDate(date, view, -1))}
+          onNext={() => setDate(navigateDate(date, view, 1))}
+          onToday={() =>
+            setDate(
+              view === 'week'
+                ? toMonday(new Date())
+                : view === 'month'
+                  ? startOfMonth(new Date())
+                  : new Date(),
+            )
+          }
+          onViewChange={handleViewChange}
+        />
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">

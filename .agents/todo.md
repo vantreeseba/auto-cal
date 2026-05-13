@@ -6,12 +6,6 @@
 
 ## Recommended starting points
 
-If you're unsure what to work on, these are the highest-leverage next steps:
-
-1. **#7 — Weekly navigation on dashboard** — obvious UX gap any user will hit immediately (half day)
-2. **#1 — Wire magic-link email delivery** — auth flow is otherwise live; this unblocks real users
-3. **#3 — Finish UTC migration** — closes out the naive-datetime stopgap
-
 ---
 
 ## P0 — Core correctness / blocking
@@ -52,17 +46,6 @@ If you're unsure what to work on, these are the highest-leverage next steps:
 - Option B: expose a `myUnscheduleTodo(id: ID!)` mutation that sets `scheduledAt = null`, then let the next writeback pick it up
 
 **Acceptance:** User can trigger a re-schedule of a todo that is already placed in a future slot.
-
----
-
-### #7 — Weekly/daily navigation on the dashboard
-**Problem:** The dashboard always shows the current week with no way to browse forward or backward.  
-**Work:**
-- Add prev/next week controls to `CalendarView` and `ScheduleView`
-- Pass the selected `weekStart` to the `mySchedule` query
-- Persist the selected week in the URL (`?week=2026-04-27`) using TanStack Router search params
-
-**Acceptance:** User can navigate to past and future weeks; the URL is shareable.
 
 ---
 
