@@ -1,6 +1,6 @@
 # Project: Auto Cal
 
-Auto Cal is a smart todo and habit scheduling application. Users create todos (single-time tasks) and habits (repeated tasks) that are automatically scheduled within user-defined time blocks based on priority and activity type.
+Auto Cal is a smart todo and habit scheduling application. Users create todo lists (grouped by activity type), todos (single-time tasks belonging to a list), and habits (repeated tasks) that are automatically scheduled within user-defined time blocks based on priority and activity type.
 
 Monorepo: `packages/db` (Drizzle + PGLite), `packages/server` (Express + Apollo), `packages/client` (React + Vite).
 
@@ -15,7 +15,7 @@ npm run dev:client       # React client only (localhost:3000)
 # Quality
 npm run typecheck        # tsc --noEmit across all packages
 npm run lint             # biome check .
-npm run lint:fix         # biome check --apply .
+npm run lint:fix         # biome check --write .
 
 # Database
 npm run db:generate      # drizzle-kit generate (after schema changes)
@@ -77,6 +77,10 @@ try {
   throw new Error('Failed to complete operation', { cause });
 }
 ```
+
+## Running Commands
+
+Prefer scripts defined in `package.json` (e.g. `npm run db:generate`, `npm run typecheck`) over ad-hoc tool invocations (`npx drizzle-kit ...`, `npx tsc ...`). The scripts wrap env loading, workspace targeting, and flag conventions — bypassing them tends to break on env vars or surface different errors than the rest of the team sees.
 
 ## Agent File Convention
 
