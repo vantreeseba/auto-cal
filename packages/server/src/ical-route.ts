@@ -7,7 +7,6 @@ import type {
   Todo,
   TodoList,
 } from '@auto-cal/db';
-import { fromZonedTime } from 'date-fns-tz';
 import type { Request, Response } from 'express';
 import ical from 'ical-generator';
 import {
@@ -142,6 +141,7 @@ export async function icalHandler(req: Request, res: Response): Promise<void> {
       todos,
       habitInstances,
       activityTypeMap,
+      timezone,
     );
 
     for (const item of items) {
@@ -150,9 +150,9 @@ export async function icalHandler(req: Request, res: Response): Promise<void> {
 
       cal.createEvent({
         id: `${item.id}-${ws}@auto-cal`,
-        // scheduledStart/End are naive local datetimes — convert to UTC for iCal
-        start: fromZonedTime(item.scheduledStart, timezone),
-        end: fromZonedTime(item.scheduledEnd, timezone),
+        // scheduledStart/End are UTC ISO strings — parse directly
+        start: new Date(item.scheduledStart),
+        end: new Date(item.scheduledEnd),
         summary: item.title,
         description: [
           `Type: ${item.kind === 'todo' ? 'Todo' : 'Habit'}`,

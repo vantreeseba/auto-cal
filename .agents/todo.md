@@ -35,21 +35,11 @@ If you're unsure what to work on, these are the highest-leverage next steps:
 
 ---
 
-### #3 — Finish UTC migration (partially shipped)
-**Status:** Partially done.
-- `users.timezone` column exists (IANA string, default `'UTC'`)
-- `mySchedule` accepts a `timezone` argument; client syncs the browser timezone via `myUpdateProfile` on dashboard mount
-- iCal endpoint converts naive datetimes to UTC via `fromZonedTime(datetime, user.timezone)` from `date-fns-tz`
-
-**What's left:** The GraphQL API still returns naive datetime strings (`YYYY-MM-DDTHH:mm:ss`, no `Z`) and relies on the browser interpreting them as local time. This is the stopgap that needs to go away.
-
-**Work:**
-- Switch the scheduler / `mySchedule` to emit UTC ISO strings (`Z` suffix or explicit offset)
-- Verify `scheduledAt` / `completedAt` are stored as true UTC in the DB (not naive)
-- Convert UTC → user.timezone client-side using `date-fns-tz` or `Intl.DateTimeFormat`
-- Update `CalendarView` and `ScheduleView` to do the conversion at render time
-
-**Acceptance:** Two browsers in different timezones, hitting the same backend, both render the schedule in their respective local times correctly. The naive-string convention is gone from the API surface.
+### #3 — Finish UTC migration ✓ Done
+- `computeSchedule` now accepts a `timezone` parameter (IANA string) and emits UTC ISO strings (`Z` suffix) for `scheduledStart`/`scheduledEnd` using `fromZonedTime` from `date-fns-tz`.
+- `mySchedule` passes `args.timezone` to `computeSchedule`; pinned todo and `completedAt` datetimes use `.toISOString()` directly.
+- `ical-route.ts` passes `user.timezone` to `computeSchedule` and parses the result with `new Date(...)`.
+- `CalendarView` and `ScheduleView` use `new Date(utcString)` which parses correctly; react-big-calendar renders in browser local time.
 
 ---
 

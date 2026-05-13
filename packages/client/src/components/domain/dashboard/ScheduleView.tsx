@@ -65,7 +65,8 @@ function groupByDay(
   const map = new Map<string, ScheduledItem_ScheduleViewFragment[]>();
   for (const item of items) {
     if (!item.scheduledStart) continue;
-    const dayKey = item.scheduledStart.slice(0, 10); // "YYYY-MM-DD"
+    // Parse as UTC ISO string and format to local "YYYY-MM-DD" for grouping
+    const dayKey = format(new Date(item.scheduledStart), 'yyyy-MM-dd');
     const existing = map.get(dayKey) ?? [];
     existing.push(item);
     map.set(dayKey, existing);
@@ -73,8 +74,10 @@ function groupByDay(
   for (const [key, dayItems] of map) {
     map.set(
       key,
-      dayItems.sort((a, b) =>
-        (a.scheduledStart ?? '').localeCompare(b.scheduledStart ?? ''),
+      dayItems.sort(
+        (a, b) =>
+          new Date(a.scheduledStart ?? 0).getTime() -
+          new Date(b.scheduledStart ?? 0).getTime(),
       ),
     );
   }
