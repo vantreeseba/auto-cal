@@ -167,14 +167,3 @@
 
 **Acceptance:** A real Postgres deployment runs the full app without surprises; PGLite remains the no-config dev default.
 
----
-
-### #18 — Error boundary + empty state UI polish (substantially done)
-**Status:**
-- `RouteError` (`packages/client/src/components/ui/route-error.tsx`) is wired as `errorComponent` on the major routes (todos, stats, habits, habits.index, activity-types, etc.). A generic `ErrorBoundary` class component also exists.
-- `TodoList` has an empty state ("No todos yet — Add your first todo to get started").
-
-**What's left:**
-- Audit which routes still lack `errorComponent` and add `RouteError` to them.
-- Verify `HabitList`, `TimeBlockList`, and `ActivityTypeList` have parity empty states with the `TodoList` treatment.
-- Map GraphQL error codes to user-friendly messages in the Apollo error handler (currently `errorLink` only handles the auth case).
