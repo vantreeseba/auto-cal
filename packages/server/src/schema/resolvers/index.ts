@@ -21,7 +21,6 @@ const extensionSDL = `
     id: ID!
     email: String!
     timezone: String!
-    icalSecret: String!
   }
 
   type ActivityTypeStats {
@@ -234,7 +233,6 @@ const extensionSDL = `
 
   extend type Mutation {
     myUpdateProfile(timezone: String!): Boolean!
-    myRegenerateIcalSecret: String!
     myCreateActivityType(input: CreateActivityTypeArgs!): ActivityType!
     myUpdateActivityType(input: UpdateActivityTypeArgs!): ActivityType!
     myDeleteActivityType(id: ID!): Boolean!

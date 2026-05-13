@@ -66,8 +66,6 @@ type Documents = {
     "\n  mutation UpdateProfile($timezone: String!) {\n    myUpdateProfile(timezone: $timezone)\n  }\n": typeof types.UpdateProfileDocument,
     "\n  query GetMyHabits {\n    myHabits {\n      ...Habit_HabitList\n    }\n  }\n": typeof types.GetMyHabitsDocument,
     "\n  query CheckOnboarded {\n    myActivityTypes {\n      id\n    }\n  }\n": typeof types.CheckOnboardedDocument,
-    "\n  query GetProfileForSettings {\n    myProfile {\n      id\n      icalSecret\n    }\n  }\n": typeof types.GetProfileForSettingsDocument,
-    "\n  mutation RegenerateIcalSecret {\n    myRegenerateIcalSecret\n  }\n": typeof types.RegenerateIcalSecretDocument,
     "\n  query GetMyStats($startDate: String, $endDate: String) {\n    myStats(startDate: $startDate, endDate: $endDate) {\n      weightedScore\n      habitScore\n      todoScore\n      habits {\n        habitId\n        title\n        completionRate\n        completions\n        target\n        frequencyUnit\n        frequencyCount\n        activityType {\n          id\n          color\n        }\n      }\n      todos {\n        total\n        completed\n        overdue\n        completionRate\n      }\n    }\n  }\n": typeof types.GetMyStatsDocument,
     "\n  query GetActivityTypeStatsWithRange($startDate: String, $endDate: String) {\n    activityTypeStats(startDate: $startDate, endDate: $endDate) {\n      activityTypeId\n      activityTypeName\n      totalTodos\n      completedTodos\n      totalHabits\n    }\n    myActivityTypes {\n      id\n      name\n      color\n    }\n  }\n": typeof types.GetActivityTypeStatsWithRangeDocument,
     "\n  query GetMyTimeBlocks {\n    myTimeBlocks {\n      ...TimeBlock_TimeBlockList\n    }\n  }\n": typeof types.GetMyTimeBlocksDocument,
@@ -126,8 +124,6 @@ const documents: Documents = {
     "\n  mutation UpdateProfile($timezone: String!) {\n    myUpdateProfile(timezone: $timezone)\n  }\n": types.UpdateProfileDocument,
     "\n  query GetMyHabits {\n    myHabits {\n      ...Habit_HabitList\n    }\n  }\n": types.GetMyHabitsDocument,
     "\n  query CheckOnboarded {\n    myActivityTypes {\n      id\n    }\n  }\n": types.CheckOnboardedDocument,
-    "\n  query GetProfileForSettings {\n    myProfile {\n      id\n      icalSecret\n    }\n  }\n": types.GetProfileForSettingsDocument,
-    "\n  mutation RegenerateIcalSecret {\n    myRegenerateIcalSecret\n  }\n": types.RegenerateIcalSecretDocument,
     "\n  query GetMyStats($startDate: String, $endDate: String) {\n    myStats(startDate: $startDate, endDate: $endDate) {\n      weightedScore\n      habitScore\n      todoScore\n      habits {\n        habitId\n        title\n        completionRate\n        completions\n        target\n        frequencyUnit\n        frequencyCount\n        activityType {\n          id\n          color\n        }\n      }\n      todos {\n        total\n        completed\n        overdue\n        completionRate\n      }\n    }\n  }\n": types.GetMyStatsDocument,
     "\n  query GetActivityTypeStatsWithRange($startDate: String, $endDate: String) {\n    activityTypeStats(startDate: $startDate, endDate: $endDate) {\n      activityTypeId\n      activityTypeName\n      totalTodos\n      completedTodos\n      totalHabits\n    }\n    myActivityTypes {\n      id\n      name\n      color\n    }\n  }\n": types.GetActivityTypeStatsWithRangeDocument,
     "\n  query GetMyTimeBlocks {\n    myTimeBlocks {\n      ...TimeBlock_TimeBlockList\n    }\n  }\n": types.GetMyTimeBlocksDocument,
@@ -356,14 +352,6 @@ export function graphql(source: "\n  query GetMyHabits {\n    myHabits {\n      
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  query CheckOnboarded {\n    myActivityTypes {\n      id\n    }\n  }\n"): (typeof documents)["\n  query CheckOnboarded {\n    myActivityTypes {\n      id\n    }\n  }\n"];
-/**
- * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
- */
-export function graphql(source: "\n  query GetProfileForSettings {\n    myProfile {\n      id\n      icalSecret\n    }\n  }\n"): (typeof documents)["\n  query GetProfileForSettings {\n    myProfile {\n      id\n      icalSecret\n    }\n  }\n"];
-/**
- * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
- */
-export function graphql(source: "\n  mutation RegenerateIcalSecret {\n    myRegenerateIcalSecret\n  }\n"): (typeof documents)["\n  mutation RegenerateIcalSecret {\n    myRegenerateIcalSecret\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

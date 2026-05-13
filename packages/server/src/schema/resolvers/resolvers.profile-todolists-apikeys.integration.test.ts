@@ -62,7 +62,7 @@ describe('profile, todo-list, and api-key resolvers', () => {
         testSchema,
         db,
         userId,
-        'query { myProfile { id email icalSecret } }',
+        'query { myProfile { id email } }',
       );
       expect(result.errors).toBeUndefined();
       const profile = result.data?.myProfile as { id: string; email: string };
@@ -109,33 +109,6 @@ describe('profile, todo-list, and api-key resolvers', () => {
         'mutation { myUpdateProfile(timezone: "Not/ATimezone") }',
       );
       expect(result.errors?.[0]?.message).toMatch(/invalid timezone/i);
-    });
-  });
-
-  // ─── myRegenerateIcalSecret ───────────────────────────────────────────────────
-
-  describe('myRegenerateIcalSecret', () => {
-    it('throws when not authenticated', async () => {
-      const result = await gql(
-        testSchema,
-        db,
-        '',
-        'mutation { myRegenerateIcalSecret }',
-      );
-      expect(result.errors?.[0]?.message).toMatch(/not authenticated/i);
-    });
-
-    it('returns a new UUID secret', async () => {
-      const { id: userId } = await seedUser(db, 'regen-secret@example.com');
-      const result = await gql(
-        testSchema,
-        db,
-        userId,
-        'mutation { myRegenerateIcalSecret }',
-      );
-      expect(result.errors).toBeUndefined();
-      const newSecret = result.data?.myRegenerateIcalSecret as string;
-      expect(newSecret).toMatch(/^[0-9a-f-]{36}$/i);
     });
   });
 

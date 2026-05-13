@@ -87,7 +87,6 @@ function makeUser(overrides: Partial<User> = {}): User {
     id: 'user-1',
     email: 'test@example.com',
     timezone: 'UTC',
-    icalSecret: VALID_SECRET,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
