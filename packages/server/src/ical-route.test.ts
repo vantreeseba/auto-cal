@@ -184,6 +184,7 @@ function makeCompletion(habitId = 'habit-1'): HabitCompletion {
 }
 
 function setupEmptyDb(user: User = makeUser()) {
+  vi.mocked(db.query.apiKeys.findFirst).mockResolvedValue(makeApiKey());
   vi.mocked(db.query.users.findFirst).mockResolvedValue(user);
   vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([]);
   vi.mocked(db.query.todos.findMany).mockResolvedValue([]);
@@ -220,36 +221,15 @@ describe('icalHandler', () => {
       expect(res.statusCode).toBe(400);
     });
 
-    it('returns 400 when secret contains invalid characters', async () => {
+    it('returns 400 when secret is a UUID (no longer accepted)', async () => {
       const res = makeRes();
-      await icalHandler(
-        makeReq({ secret: 'g1b2c3d4-e5f6-7890-abcd-ef1234567890' }),
-        res,
-      );
+      await icalHandler(makeReq({ secret: VALID_SECRET }), res);
       expect(res.statusCode).toBe(400);
     });
 
     it('does not query the database on invalid secret', async () => {
       await icalHandler(makeReq({ secret: 'bad' }), makeRes());
       expect(db.query.users.findFirst).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('user lookup', () => {
-    it('returns 404 when user is not found', async () => {
-      vi.mocked(db.query.users.findFirst).mockResolvedValue(undefined);
-      const res = makeRes();
-      await icalHandler(makeReq({ secret: VALID_SECRET }), res);
-      expect(res.statusCode).toBe(404);
-      expect(res.body).toBe('User not found');
-    });
-
-    it('queries by the provided secret', async () => {
-      vi.mocked(db.query.users.findFirst).mockResolvedValue(undefined);
-      await icalHandler(makeReq({ secret: VALID_SECRET }), makeRes());
-      expect(db.query.users.findFirst).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { icalSecret: VALID_SECRET } }),
-      );
     });
   });
 
@@ -318,7 +298,7 @@ describe('icalHandler', () => {
     it('returns correct Content-Type and Content-Disposition headers', async () => {
       setupEmptyDb();
       const res = makeRes();
-      await icalHandler(makeReq({ secret: VALID_SECRET }), res);
+      await icalHandler(makeReq({ secret: VALID_API_KEY }), res);
       expect(res.headers['Content-Type']).toBe('text/calendar; charset=utf-8');
       expect(res.headers['Content-Disposition']).toBe(
         'inline; filename="auto-cal.ics"',
@@ -328,7 +308,7 @@ describe('icalHandler', () => {
     it('returns a valid iCal envelope', async () => {
       setupEmptyDb();
       const res = makeRes();
-      await icalHandler(makeReq({ secret: VALID_SECRET }), res);
+      await icalHandler(makeReq({ secret: VALID_API_KEY }), res);
       expect(res.body).toContain('BEGIN:VCALENDAR');
       expect(res.body).toContain('END:VCALENDAR');
     });
@@ -336,18 +316,19 @@ describe('icalHandler', () => {
     it('produces no events when user has no todos or habits', async () => {
       setupEmptyDb();
       const res = makeRes();
-      await icalHandler(makeReq({ secret: VALID_SECRET }), res);
+      await icalHandler(makeReq({ secret: VALID_API_KEY }), res);
       expect(res.body).not.toContain('BEGIN:VEVENT');
     });
 
     it('skips habitCompletions queries when user has no habits', async () => {
       setupEmptyDb();
-      await icalHandler(makeReq({ secret: VALID_SECRET }), makeRes());
+      await icalHandler(makeReq({ secret: VALID_API_KEY }), makeRes());
       expect(db.query.habitCompletions.findMany).not.toHaveBeenCalled();
     });
 
     it('generates events for todos that fit in a time block', async () => {
       const user = makeUser();
+      vi.mocked(db.query.apiKeys.findFirst).mockResolvedValue(makeApiKey());
       vi.mocked(db.query.users.findFirst).mockResolvedValue(user);
       vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([
         makeTimeBlock(),
@@ -362,7 +343,7 @@ describe('icalHandler', () => {
       ]);
 
       const res = makeRes();
-      await icalHandler(makeReq({ secret: VALID_SECRET }), res);
+      await icalHandler(makeReq({ secret: VALID_API_KEY }), res);
       expect(res.body).toContain('BEGIN:VEVENT');
       expect(res.body).toContain('Write tests');
     });
@@ -371,6 +352,7 @@ describe('icalHandler', () => {
       const user = makeUser();
       const todoList = makeTodoList({ activityTypeId: 'at-work' });
       const todo = makeTodo({ listId: 'list-1' });
+      vi.mocked(db.query.apiKeys.findFirst).mockResolvedValue(makeApiKey());
       vi.mocked(db.query.users.findFirst).mockResolvedValue(user);
       vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([
         makeTimeBlock(),
@@ -383,12 +365,13 @@ describe('icalHandler', () => {
       ]);
 
       const res = makeRes();
-      await icalHandler(makeReq({ secret: VALID_SECRET }), res);
+      await icalHandler(makeReq({ secret: VALID_API_KEY }), res);
       expect(res.body).toContain('BEGIN:VEVENT');
     });
 
     it('generates events for habits with a remaining deficit', async () => {
       const habit = makeHabit({ frequencyCount: 3, frequencyUnit: 'week' });
+      vi.mocked(db.query.apiKeys.findFirst).mockResolvedValue(makeApiKey());
       vi.mocked(db.query.users.findFirst).mockResolvedValue(makeUser());
       vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([
         makeTimeBlock(),
@@ -402,7 +385,7 @@ describe('icalHandler', () => {
       vi.mocked(db.query.habitCompletions.findMany).mockResolvedValue([]);
 
       const res = makeRes();
-      await icalHandler(makeReq({ secret: VALID_SECRET }), res);
+      await icalHandler(makeReq({ secret: VALID_API_KEY }), res);
       expect(res.body).toContain('BEGIN:VEVENT');
       expect(res.body).toContain('Morning run');
     });
@@ -410,6 +393,7 @@ describe('icalHandler', () => {
     it('suppresses habit events when deficit is zero', async () => {
       const habit = makeHabit({ frequencyCount: 2, frequencyUnit: 'week' });
       const completions = [makeCompletion(), makeCompletion()];
+      vi.mocked(db.query.apiKeys.findFirst).mockResolvedValue(makeApiKey());
       vi.mocked(db.query.users.findFirst).mockResolvedValue(makeUser());
       vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([
         makeTimeBlock(),
@@ -425,12 +409,13 @@ describe('icalHandler', () => {
       );
 
       const res = makeRes();
-      await icalHandler(makeReq({ secret: VALID_SECRET }), res);
+      await icalHandler(makeReq({ secret: VALID_API_KEY }), res);
       expect(res.body).not.toContain('BEGIN:VEVENT');
     });
 
     it('queries habit completions for both week and month windows', async () => {
       const habit = makeHabit();
+      vi.mocked(db.query.apiKeys.findFirst).mockResolvedValue(makeApiKey());
       vi.mocked(db.query.users.findFirst).mockResolvedValue(makeUser());
       vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([
         makeTimeBlock(),
@@ -443,7 +428,7 @@ describe('icalHandler', () => {
       ]);
       vi.mocked(db.query.habitCompletions.findMany).mockResolvedValue([]);
 
-      await icalHandler(makeReq({ secret: VALID_SECRET }), makeRes());
+      await icalHandler(makeReq({ secret: VALID_API_KEY }), makeRes());
       // Called twice per week loop iteration (week + month window), across 2 weeks = 4 total
       expect(db.query.habitCompletions.findMany).toHaveBeenCalledTimes(4);
     });
@@ -451,12 +436,13 @@ describe('icalHandler', () => {
     it('accepts a non-UTC user timezone without error', async () => {
       setupEmptyDb(makeUser({ timezone: 'America/New_York' }));
       const res = makeRes();
-      await icalHandler(makeReq({ secret: VALID_SECRET }), res);
+      await icalHandler(makeReq({ secret: VALID_API_KEY }), res);
       expect(res.body).toContain('BEGIN:VCALENDAR');
     });
 
     it('uses monthCounts for habits with monthly frequency', async () => {
       const habit = makeHabit({ frequencyCount: 2, frequencyUnit: 'month' });
+      vi.mocked(db.query.apiKeys.findFirst).mockResolvedValue(makeApiKey());
       vi.mocked(db.query.users.findFirst).mockResolvedValue(makeUser());
       vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([
         makeTimeBlock(),
@@ -471,7 +457,7 @@ describe('icalHandler', () => {
       vi.mocked(db.query.habitCompletions.findMany).mockResolvedValue([]);
 
       const res = makeRes();
-      await icalHandler(makeReq({ secret: VALID_SECRET }), res);
+      await icalHandler(makeReq({ secret: VALID_API_KEY }), res);
       expect(res.body).toContain('BEGIN:VEVENT');
       expect(res.body).toContain('Morning run');
     });
@@ -479,6 +465,7 @@ describe('icalHandler', () => {
     it('omits the Activity line from event description when activityType is unknown', async () => {
       // Pass an empty activityTypes list so the scheduler cannot resolve the type
       const todoList = makeTodoList({ activityTypeId: 'at-work' });
+      vi.mocked(db.query.apiKeys.findFirst).mockResolvedValue(makeApiKey());
       vi.mocked(db.query.users.findFirst).mockResolvedValue(makeUser());
       vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([
         makeTimeBlock(),
@@ -489,7 +476,7 @@ describe('icalHandler', () => {
       vi.mocked(db.query.activityTypes.findMany).mockResolvedValue([]);
 
       const res = makeRes();
-      await icalHandler(makeReq({ secret: VALID_SECRET }), res);
+      await icalHandler(makeReq({ secret: VALID_API_KEY }), res);
       expect(res.body).toContain('BEGIN:VEVENT');
       expect(res.body).not.toContain('Activity:');
     });
@@ -501,6 +488,7 @@ describe('icalHandler', () => {
         id: 'at-exercise',
         name: 'Exercise',
       });
+      vi.mocked(db.query.apiKeys.findFirst).mockResolvedValue(makeApiKey());
       vi.mocked(db.query.users.findFirst).mockResolvedValue(makeUser());
       vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([
         mismatchedBlock,
@@ -516,7 +504,7 @@ describe('icalHandler', () => {
       ]);
 
       const res = makeRes();
-      await icalHandler(makeReq({ secret: VALID_SECRET }), res);
+      await icalHandler(makeReq({ secret: VALID_API_KEY }), res);
       expect(res.body).not.toContain('BEGIN:VEVENT');
     });
   });
