@@ -38,7 +38,12 @@ describe('todo resolvers', () => {
       const otherList = await seedTodoList(db, otherId, otherAt.id);
       await seedTodo(db, otherId, otherList.id, { title: 'Theirs' });
 
-      const result = await gql(testSchema, db, userId, 'query { myTodos { title } }');
+      const result = await gql(
+        testSchema,
+        db,
+        userId,
+        'query { myTodos { title } }',
+      );
       expect(result.errors).toBeUndefined();
       const items = result.data?.myTodos as Array<{ title: string }>;
       expect(items.every((i) => i.title !== 'Theirs')).toBe(true);
@@ -53,7 +58,9 @@ describe('todo resolvers', () => {
       await seedTodo(db, userId, list2.id, { title: 'In list 2' });
 
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'query($id: ID) { myTodos(listId: $id) { title } }',
         { id: list1.id },
       );
@@ -67,10 +74,18 @@ describe('todo resolvers', () => {
       const { id: userId } = await seedUser(db, 'todos-completed@example.com');
       const at = await seedActivityType(db, userId);
       const list = await seedTodoList(db, userId, at.id);
-      await seedTodo(db, userId, list.id, { title: 'Done', completedAt: new Date() });
+      await seedTodo(db, userId, list.id, {
+        title: 'Done',
+        completedAt: new Date(),
+      });
       await seedTodo(db, userId, list.id, { title: 'Pending' });
 
-      const result = await gql(testSchema, db, userId, 'query { myTodos(completed: true) { title } }');
+      const result = await gql(
+        testSchema,
+        db,
+        userId,
+        'query { myTodos(completed: true) { title } }',
+      );
       expect(result.errors).toBeUndefined();
       const items = result.data?.myTodos as Array<{ title: string }>;
       expect(items.every((i) => i.title === 'Done')).toBe(true);
@@ -84,23 +99,33 @@ describe('todo resolvers', () => {
       await seedTodo(db, userId, list.id, { title: 'High', priority: 10 });
 
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'query($o: TodoOrderBy) { myTodos(orderBy: $o) { title priority } }',
         { o: { priority: { direction: 'asc', priority: 1 } } },
       );
       expect(result.errors).toBeUndefined();
-      const items = result.data?.myTodos as Array<{ title: string; priority: number }>;
+      const items = result.data?.myTodos as Array<{
+        title: string;
+        priority: number;
+      }>;
       expect(items[0]?.priority).toBeLessThanOrEqual(items[1]?.priority ?? 999);
     });
 
     it('falls back to default order when orderBy has no entries', async () => {
-      const { id: userId } = await seedUser(db, 'todos-orderby-empty@example.com');
+      const { id: userId } = await seedUser(
+        db,
+        'todos-orderby-empty@example.com',
+      );
       const at = await seedActivityType(db, userId);
       const list = await seedTodoList(db, userId, at.id);
       await seedTodo(db, userId, list.id, { title: 'Todo' });
 
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'query($o: TodoOrderBy) { myTodos(orderBy: $o) { id } }',
         { o: {} },
       );
@@ -111,10 +136,18 @@ describe('todo resolvers', () => {
       const { id: userId } = await seedUser(db, 'todos-incomplete@example.com');
       const at = await seedActivityType(db, userId);
       const list = await seedTodoList(db, userId, at.id);
-      await seedTodo(db, userId, list.id, { title: 'Done', completedAt: new Date() });
+      await seedTodo(db, userId, list.id, {
+        title: 'Done',
+        completedAt: new Date(),
+      });
       await seedTodo(db, userId, list.id, { title: 'Pending' });
 
-      const result = await gql(testSchema, db, userId, 'query { myTodos(completed: false) { title } }');
+      const result = await gql(
+        testSchema,
+        db,
+        userId,
+        'query { myTodos(completed: false) { title } }',
+      );
       expect(result.errors).toBeUndefined();
       const items = result.data?.myTodos as Array<{ title: string }>;
       expect(items.every((i) => i.title === 'Pending')).toBe(true);
@@ -125,23 +158,42 @@ describe('todo resolvers', () => {
 
   describe('myCreateTodo', () => {
     it('throws when list not found', async () => {
-      const { id: userId } = await seedUser(db, 'create-todo-nlist@example.com');
+      const { id: userId } = await seedUser(
+        db,
+        'create-todo-nlist@example.com',
+      );
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'mutation($input: CreateTodoArgs!) { myCreateTodo(input: $input) { id } }',
-        { input: { listId: '00000000-0000-0000-0000-000000000000', title: 'X', estimatedLength: 30 } },
+        {
+          input: {
+            listId: '00000000-0000-0000-0000-000000000000',
+            title: 'X',
+            estimatedLength: 30,
+          },
+        },
       );
       expect(result.errors?.[0]?.message).toMatch(/not found/i);
     });
 
     it('throws Forbidden when list belongs to another user', async () => {
-      const { id: userId } = await seedUser(db, 'create-todo-forbidden@example.com');
-      const { id: otherId } = await seedUser(db, 'create-todo-other@example.com');
+      const { id: userId } = await seedUser(
+        db,
+        'create-todo-forbidden@example.com',
+      );
+      const { id: otherId } = await seedUser(
+        db,
+        'create-todo-other@example.com',
+      );
       const otherAt = await seedActivityType(db, otherId);
       const otherList = await seedTodoList(db, otherId, otherAt.id);
 
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'mutation($input: CreateTodoArgs!) { myCreateTodo(input: $input) { id } }',
         { input: { listId: otherList.id, title: 'Hack', estimatedLength: 30 } },
       );
@@ -149,17 +201,32 @@ describe('todo resolvers', () => {
     });
 
     it('creates a todo with optional dueAt and scheduledAt', async () => {
-      const { id: userId } = await seedUser(db, 'create-todo-dates@example.com');
+      const { id: userId } = await seedUser(
+        db,
+        'create-todo-dates@example.com',
+      );
       const at = await seedActivityType(db, userId);
       const list = await seedTodoList(db, userId, at.id);
 
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'mutation($input: CreateTodoArgs!) { myCreateTodo(input: $input) { id title dueAt } }',
-        { input: { listId: list.id, title: 'With dates', estimatedLength: 60, dueAt: '2025-12-31T00:00:00' } },
+        {
+          input: {
+            listId: list.id,
+            title: 'With dates',
+            estimatedLength: 60,
+            dueAt: '2025-12-31T00:00:00',
+          },
+        },
       );
       expect(result.errors).toBeUndefined();
-      const todo = result.data?.myCreateTodo as { title: string; dueAt: string };
+      const todo = result.data?.myCreateTodo as {
+        title: string;
+        dueAt: string;
+      };
       expect(todo.title).toBe('With dates');
       expect(todo.dueAt).not.toBeNull();
     });
@@ -169,31 +236,47 @@ describe('todo resolvers', () => {
 
   describe('myUpdateTodo', () => {
     it('updates title and priority', async () => {
-      const { id: userId } = await seedUser(db, 'update-todo-basic@example.com');
+      const { id: userId } = await seedUser(
+        db,
+        'update-todo-basic@example.com',
+      );
       const at = await seedActivityType(db, userId);
       const list = await seedTodoList(db, userId, at.id);
-      const todo = await seedTodo(db, userId, list.id, { title: 'Old', priority: 1 });
+      const todo = await seedTodo(db, userId, list.id, {
+        title: 'Old',
+        priority: 1,
+      });
 
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'mutation($input: UpdateTodoArgs!) { myUpdateTodo(input: $input) { id title priority } }',
         { input: { id: todo.id, title: 'New', priority: 5 } },
       );
       expect(result.errors).toBeUndefined();
-      const updated = result.data?.myUpdateTodo as { title: string; priority: number };
+      const updated = result.data?.myUpdateTodo as {
+        title: string;
+        priority: number;
+      };
       expect(updated.title).toBe('New');
       expect(updated.priority).toBe(5);
     });
 
     it('moves todo to a different list', async () => {
-      const { id: userId } = await seedUser(db, 'update-todo-movelist@example.com');
+      const { id: userId } = await seedUser(
+        db,
+        'update-todo-movelist@example.com',
+      );
       const at = await seedActivityType(db, userId);
       const list1 = await seedTodoList(db, userId, at.id);
       const list2 = await seedTodoList(db, userId, at.id);
       const todo = await seedTodo(db, userId, list1.id);
 
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'mutation($input: UpdateTodoArgs!) { myUpdateTodo(input: $input) { id } }',
         { input: { id: todo.id, listId: list2.id } },
       );
@@ -201,24 +284,38 @@ describe('todo resolvers', () => {
     });
 
     it('clears dueAt when set to null', async () => {
-      const { id: userId } = await seedUser(db, 'update-todo-nulldue@example.com');
+      const { id: userId } = await seedUser(
+        db,
+        'update-todo-nulldue@example.com',
+      );
       const at = await seedActivityType(db, userId);
       const list = await seedTodoList(db, userId, at.id);
-      const todo = await seedTodo(db, userId, list.id, { dueAt: new Date('2025-12-31') });
+      const todo = await seedTodo(db, userId, list.id, {
+        dueAt: new Date('2025-12-31'),
+      });
 
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'mutation($input: UpdateTodoArgs!) { myUpdateTodo(input: $input) { id dueAt } }',
         { input: { id: todo.id, dueAt: null } },
       );
       expect(result.errors).toBeUndefined();
-      expect((result.data?.myUpdateTodo as { dueAt: unknown }).dueAt).toBeNull();
+      expect(
+        (result.data?.myUpdateTodo as { dueAt: unknown }).dueAt,
+      ).toBeNull();
     });
 
     it('throws when todo not found', async () => {
-      const { id: userId } = await seedUser(db, 'update-todo-notfound@example.com');
+      const { id: userId } = await seedUser(
+        db,
+        'update-todo-notfound@example.com',
+      );
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'mutation($input: UpdateTodoArgs!) { myUpdateTodo(input: $input) { id } }',
         { input: { id: '00000000-0000-0000-0000-000000000000', title: 'X' } },
       );
@@ -226,14 +323,22 @@ describe('todo resolvers', () => {
     });
 
     it('throws Forbidden when todo belongs to another user', async () => {
-      const { id: userId } = await seedUser(db, 'update-todo-forbidden@example.com');
-      const { id: otherId } = await seedUser(db, 'update-todo-other@example.com');
+      const { id: userId } = await seedUser(
+        db,
+        'update-todo-forbidden@example.com',
+      );
+      const { id: otherId } = await seedUser(
+        db,
+        'update-todo-other@example.com',
+      );
       const otherAt = await seedActivityType(db, otherId);
       const otherList = await seedTodoList(db, otherId, otherAt.id);
       const otherTodo = await seedTodo(db, otherId, otherList.id);
 
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'mutation($input: UpdateTodoArgs!) { myUpdateTodo(input: $input) { id } }',
         { input: { id: otherTodo.id, title: 'Hack' } },
       );
@@ -241,22 +346,38 @@ describe('todo resolvers', () => {
     });
 
     it('throws when target list not found during move', async () => {
-      const { id: userId } = await seedUser(db, 'update-todo-movebadlist@example.com');
+      const { id: userId } = await seedUser(
+        db,
+        'update-todo-movebadlist@example.com',
+      );
       const at = await seedActivityType(db, userId);
       const list = await seedTodoList(db, userId, at.id);
       const todo = await seedTodo(db, userId, list.id);
 
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'mutation($input: UpdateTodoArgs!) { myUpdateTodo(input: $input) { id } }',
-        { input: { id: todo.id, listId: '00000000-0000-0000-0000-000000000000' } },
+        {
+          input: {
+            id: todo.id,
+            listId: '00000000-0000-0000-0000-000000000000',
+          },
+        },
       );
       expect(result.errors?.[0]?.message).toMatch(/not found/i);
     });
 
     it("throws Forbidden when moving to another user's list", async () => {
-      const { id: userId } = await seedUser(db, 'update-todo-moveforbidden@example.com');
-      const { id: otherId } = await seedUser(db, 'update-todo-moveother@example.com');
+      const { id: userId } = await seedUser(
+        db,
+        'update-todo-moveforbidden@example.com',
+      );
+      const { id: otherId } = await seedUser(
+        db,
+        'update-todo-moveother@example.com',
+      );
       const at = await seedActivityType(db, userId);
       const list = await seedTodoList(db, userId, at.id);
       const todo = await seedTodo(db, userId, list.id);
@@ -264,7 +385,9 @@ describe('todo resolvers', () => {
       const otherList = await seedTodoList(db, otherId, otherAt.id);
 
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'mutation($input: UpdateTodoArgs!) { myUpdateTodo(input: $input) { id } }',
         { input: { id: todo.id, listId: otherList.id } },
       );
@@ -276,14 +399,19 @@ describe('todo resolvers', () => {
 
   describe('myCompleteTodo', () => {
     it('accepts an explicit completedAt timestamp', async () => {
-      const { id: userId } = await seedUser(db, 'complete-todo-explicit@example.com');
+      const { id: userId } = await seedUser(
+        db,
+        'complete-todo-explicit@example.com',
+      );
       const at = await seedActivityType(db, userId);
       const list = await seedTodoList(db, userId, at.id);
       const todo = await seedTodo(db, userId, list.id);
 
       const ts = '2025-06-01T10:00:00.000Z';
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'mutation($id: ID!, $at: String) { myCompleteTodo(id: $id, completedAt: $at) { completedAt } }',
         { id: todo.id, at: ts },
       );
@@ -293,23 +421,36 @@ describe('todo resolvers', () => {
     });
 
     it('throws when todo not found', async () => {
-      const { id: userId } = await seedUser(db, 'complete-todo-notfound@example.com');
+      const { id: userId } = await seedUser(
+        db,
+        'complete-todo-notfound@example.com',
+      );
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'mutation { myCompleteTodo(id: "00000000-0000-0000-0000-000000000000") { id } }',
       );
       expect(result.errors?.[0]?.message).toMatch(/not found/i);
     });
 
     it('throws Forbidden when todo belongs to another user', async () => {
-      const { id: userId } = await seedUser(db, 'complete-todo-forbidden@example.com');
-      const { id: otherId } = await seedUser(db, 'complete-todo-other@example.com');
+      const { id: userId } = await seedUser(
+        db,
+        'complete-todo-forbidden@example.com',
+      );
+      const { id: otherId } = await seedUser(
+        db,
+        'complete-todo-other@example.com',
+      );
       const otherAt = await seedActivityType(db, otherId);
       const otherList = await seedTodoList(db, otherId, otherAt.id);
       const otherTodo = await seedTodo(db, otherId, otherList.id);
 
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'mutation($id: ID!) { myCompleteTodo(id: $id) { id } }',
         { id: otherTodo.id },
       );
@@ -327,7 +468,9 @@ describe('todo resolvers', () => {
       const todo = await seedTodo(db, userId, list.id);
 
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'mutation($id: ID!) { myDeleteTodo(id: $id) }',
         { id: todo.id },
       );
@@ -336,23 +479,36 @@ describe('todo resolvers', () => {
     });
 
     it('throws when todo not found', async () => {
-      const { id: userId } = await seedUser(db, 'delete-todo-notfound@example.com');
+      const { id: userId } = await seedUser(
+        db,
+        'delete-todo-notfound@example.com',
+      );
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'mutation { myDeleteTodo(id: "00000000-0000-0000-0000-000000000000") }',
       );
       expect(result.errors?.[0]?.message).toMatch(/not found/i);
     });
 
     it('throws Forbidden when todo belongs to another user', async () => {
-      const { id: userId } = await seedUser(db, 'delete-todo-forbidden@example.com');
-      const { id: otherId } = await seedUser(db, 'delete-todo-other@example.com');
+      const { id: userId } = await seedUser(
+        db,
+        'delete-todo-forbidden@example.com',
+      );
+      const { id: otherId } = await seedUser(
+        db,
+        'delete-todo-other@example.com',
+      );
       const otherAt = await seedActivityType(db, otherId);
       const otherList = await seedTodoList(db, otherId, otherAt.id);
       const otherTodo = await seedTodo(db, otherId, otherList.id);
 
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'mutation($id: ID!) { myDeleteTodo(id: $id) }',
         { id: otherTodo.id },
       );

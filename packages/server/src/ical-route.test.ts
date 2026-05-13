@@ -194,7 +194,10 @@ describe('icalHandler', () => {
 
     it('returns 400 when secret contains invalid characters', async () => {
       const res = makeRes();
-      await icalHandler(makeReq({ secret: 'g1b2c3d4-e5f6-7890-abcd-ef1234567890' }), res);
+      await icalHandler(
+        makeReq({ secret: 'g1b2c3d4-e5f6-7890-abcd-ef1234567890' }),
+        res,
+      );
       expect(res.statusCode).toBe(400);
     });
 
@@ -228,7 +231,9 @@ describe('icalHandler', () => {
       const res = makeRes();
       await icalHandler(makeReq({ secret: VALID_SECRET }), res);
       expect(res.headers['Content-Type']).toBe('text/calendar; charset=utf-8');
-      expect(res.headers['Content-Disposition']).toBe('inline; filename="auto-cal.ics"');
+      expect(res.headers['Content-Disposition']).toBe(
+        'inline; filename="auto-cal.ics"',
+      );
     });
 
     it('returns a valid iCal envelope', async () => {
@@ -255,11 +260,17 @@ describe('icalHandler', () => {
     it('generates events for todos that fit in a time block', async () => {
       const user = makeUser();
       vi.mocked(db.query.users.findFirst).mockResolvedValue(user);
-      vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([makeTimeBlock()]);
+      vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([
+        makeTimeBlock(),
+      ]);
       vi.mocked(db.query.todos.findMany).mockResolvedValue([makeTodo()]);
-      vi.mocked(db.query.todoLists.findMany).mockResolvedValue([makeTodoList()]);
+      vi.mocked(db.query.todoLists.findMany).mockResolvedValue([
+        makeTodoList(),
+      ]);
       vi.mocked(db.query.habits.findMany).mockResolvedValue([]);
-      vi.mocked(db.query.activityTypes.findMany).mockResolvedValue([makeActivityType()]);
+      vi.mocked(db.query.activityTypes.findMany).mockResolvedValue([
+        makeActivityType(),
+      ]);
 
       const res = makeRes();
       await icalHandler(makeReq({ secret: VALID_SECRET }), res);
@@ -272,11 +283,15 @@ describe('icalHandler', () => {
       const todoList = makeTodoList({ activityTypeId: 'at-work' });
       const todo = makeTodo({ listId: 'list-1' });
       vi.mocked(db.query.users.findFirst).mockResolvedValue(user);
-      vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([makeTimeBlock()]);
+      vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([
+        makeTimeBlock(),
+      ]);
       vi.mocked(db.query.todos.findMany).mockResolvedValue([todo]);
       vi.mocked(db.query.todoLists.findMany).mockResolvedValue([todoList]);
       vi.mocked(db.query.habits.findMany).mockResolvedValue([]);
-      vi.mocked(db.query.activityTypes.findMany).mockResolvedValue([makeActivityType()]);
+      vi.mocked(db.query.activityTypes.findMany).mockResolvedValue([
+        makeActivityType(),
+      ]);
 
       const res = makeRes();
       await icalHandler(makeReq({ secret: VALID_SECRET }), res);
@@ -286,11 +301,15 @@ describe('icalHandler', () => {
     it('generates events for habits with a remaining deficit', async () => {
       const habit = makeHabit({ frequencyCount: 3, frequencyUnit: 'week' });
       vi.mocked(db.query.users.findFirst).mockResolvedValue(makeUser());
-      vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([makeTimeBlock()]);
+      vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([
+        makeTimeBlock(),
+      ]);
       vi.mocked(db.query.todos.findMany).mockResolvedValue([]);
       vi.mocked(db.query.todoLists.findMany).mockResolvedValue([]);
       vi.mocked(db.query.habits.findMany).mockResolvedValue([habit]);
-      vi.mocked(db.query.activityTypes.findMany).mockResolvedValue([makeActivityType()]);
+      vi.mocked(db.query.activityTypes.findMany).mockResolvedValue([
+        makeActivityType(),
+      ]);
       vi.mocked(db.query.habitCompletions.findMany).mockResolvedValue([]);
 
       const res = makeRes();
@@ -303,12 +322,18 @@ describe('icalHandler', () => {
       const habit = makeHabit({ frequencyCount: 2, frequencyUnit: 'week' });
       const completions = [makeCompletion(), makeCompletion()];
       vi.mocked(db.query.users.findFirst).mockResolvedValue(makeUser());
-      vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([makeTimeBlock()]);
+      vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([
+        makeTimeBlock(),
+      ]);
       vi.mocked(db.query.todos.findMany).mockResolvedValue([]);
       vi.mocked(db.query.todoLists.findMany).mockResolvedValue([]);
       vi.mocked(db.query.habits.findMany).mockResolvedValue([habit]);
-      vi.mocked(db.query.activityTypes.findMany).mockResolvedValue([makeActivityType()]);
-      vi.mocked(db.query.habitCompletions.findMany).mockResolvedValue(completions);
+      vi.mocked(db.query.activityTypes.findMany).mockResolvedValue([
+        makeActivityType(),
+      ]);
+      vi.mocked(db.query.habitCompletions.findMany).mockResolvedValue(
+        completions,
+      );
 
       const res = makeRes();
       await icalHandler(makeReq({ secret: VALID_SECRET }), res);
@@ -318,11 +343,15 @@ describe('icalHandler', () => {
     it('queries habit completions for both week and month windows', async () => {
       const habit = makeHabit();
       vi.mocked(db.query.users.findFirst).mockResolvedValue(makeUser());
-      vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([makeTimeBlock()]);
+      vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([
+        makeTimeBlock(),
+      ]);
       vi.mocked(db.query.todos.findMany).mockResolvedValue([]);
       vi.mocked(db.query.todoLists.findMany).mockResolvedValue([]);
       vi.mocked(db.query.habits.findMany).mockResolvedValue([habit]);
-      vi.mocked(db.query.activityTypes.findMany).mockResolvedValue([makeActivityType()]);
+      vi.mocked(db.query.activityTypes.findMany).mockResolvedValue([
+        makeActivityType(),
+      ]);
       vi.mocked(db.query.habitCompletions.findMany).mockResolvedValue([]);
 
       await icalHandler(makeReq({ secret: VALID_SECRET }), makeRes());
@@ -340,11 +369,15 @@ describe('icalHandler', () => {
     it('uses monthCounts for habits with monthly frequency', async () => {
       const habit = makeHabit({ frequencyCount: 2, frequencyUnit: 'month' });
       vi.mocked(db.query.users.findFirst).mockResolvedValue(makeUser());
-      vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([makeTimeBlock()]);
+      vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([
+        makeTimeBlock(),
+      ]);
       vi.mocked(db.query.todos.findMany).mockResolvedValue([]);
       vi.mocked(db.query.todoLists.findMany).mockResolvedValue([]);
       vi.mocked(db.query.habits.findMany).mockResolvedValue([habit]);
-      vi.mocked(db.query.activityTypes.findMany).mockResolvedValue([makeActivityType()]);
+      vi.mocked(db.query.activityTypes.findMany).mockResolvedValue([
+        makeActivityType(),
+      ]);
       // 0 completions this month → 2 deficit → events generated
       vi.mocked(db.query.habitCompletions.findMany).mockResolvedValue([]);
 
@@ -358,7 +391,9 @@ describe('icalHandler', () => {
       // Pass an empty activityTypes list so the scheduler cannot resolve the type
       const todoList = makeTodoList({ activityTypeId: 'at-work' });
       vi.mocked(db.query.users.findFirst).mockResolvedValue(makeUser());
-      vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([makeTimeBlock()]);
+      vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([
+        makeTimeBlock(),
+      ]);
       vi.mocked(db.query.todos.findMany).mockResolvedValue([makeTodo()]);
       vi.mocked(db.query.todoLists.findMany).mockResolvedValue([todoList]);
       vi.mocked(db.query.habits.findMany).mockResolvedValue([]);
@@ -373,13 +408,23 @@ describe('icalHandler', () => {
     it('produces no events when todos have no matching time block', async () => {
       // Todo is Work activity type but time block is for a different type
       const mismatchedBlock = makeTimeBlock({ activityTypeId: 'at-exercise' });
-      const exerciseType = makeActivityType({ id: 'at-exercise', name: 'Exercise' });
+      const exerciseType = makeActivityType({
+        id: 'at-exercise',
+        name: 'Exercise',
+      });
       vi.mocked(db.query.users.findFirst).mockResolvedValue(makeUser());
-      vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([mismatchedBlock]);
+      vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([
+        mismatchedBlock,
+      ]);
       vi.mocked(db.query.todos.findMany).mockResolvedValue([makeTodo()]);
-      vi.mocked(db.query.todoLists.findMany).mockResolvedValue([makeTodoList()]);
+      vi.mocked(db.query.todoLists.findMany).mockResolvedValue([
+        makeTodoList(),
+      ]);
       vi.mocked(db.query.habits.findMany).mockResolvedValue([]);
-      vi.mocked(db.query.activityTypes.findMany).mockResolvedValue([makeActivityType(), exerciseType]);
+      vi.mocked(db.query.activityTypes.findMany).mockResolvedValue([
+        makeActivityType(),
+        exerciseType,
+      ]);
 
       const res = makeRes();
       await icalHandler(makeReq({ secret: VALID_SECRET }), res);

@@ -6,7 +6,14 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { relations } from '@auto-cal/db/relations';
 import * as schema from '@auto-cal/db/schema';
-import { activityTypes, habits, timeBlocks, todoLists, todos, users } from '@auto-cal/db/schema';
+import {
+  activityTypes,
+  habits,
+  timeBlocks,
+  todoLists,
+  todos,
+  users,
+} from '@auto-cal/db/schema';
 import { PGlite } from '@electric-sql/pglite';
 import { buildSchema } from '@vantreeseba/drizzle-graphql';
 import { drizzle } from 'drizzle-orm/pglite';
@@ -16,7 +23,10 @@ import { createLoaders } from '../../context.ts';
 import { applyCustomResolvers } from './index.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const migrationsFolder = resolve(__dirname, '../../../../../packages/db/drizzle');
+const migrationsFolder = resolve(
+  __dirname,
+  '../../../../../packages/db/drizzle',
+);
 
 export async function createTestDb() {
   const client = new PGlite('memory://');
@@ -63,7 +73,11 @@ export async function seedUser(db: TestDb, email = 'test@example.com') {
   return user;
 }
 
-export async function seedActivityType(db: TestDb, userId: string, name = 'Work') {
+export async function seedActivityType(
+  db: TestDb,
+  userId: string,
+  name = 'Work',
+) {
   const [at] = await db
     .insert(activityTypes)
     .values({ userId, name, color: '#6366f1' })
@@ -72,7 +86,11 @@ export async function seedActivityType(db: TestDb, userId: string, name = 'Work'
   return at;
 }
 
-export async function seedTimeBlock(db: TestDb, userId: string, activityTypeId: string) {
+export async function seedTimeBlock(
+  db: TestDb,
+  userId: string,
+  activityTypeId: string,
+) {
   const [tb] = await db
     .insert(timeBlocks)
     .values({
@@ -88,7 +106,11 @@ export async function seedTimeBlock(db: TestDb, userId: string, activityTypeId: 
   return tb;
 }
 
-export async function seedTodoList(db: TestDb, userId: string, activityTypeId: string) {
+export async function seedTodoList(
+  db: TestDb,
+  userId: string,
+  activityTypeId: string,
+) {
   const [list] = await db
     .insert(todoLists)
     .values({ userId, name: 'Test List', activityTypeId })
@@ -97,16 +119,33 @@ export async function seedTodoList(db: TestDb, userId: string, activityTypeId: s
   return list;
 }
 
-export async function seedTodo(db: TestDb, userId: string, listId: string, overrides: Partial<typeof todos.$inferInsert> = {}) {
+export async function seedTodo(
+  db: TestDb,
+  userId: string,
+  listId: string,
+  overrides: Partial<typeof todos.$inferInsert> = {},
+) {
   const [todo] = await db
     .insert(todos)
-    .values({ userId, listId, title: 'Test todo', estimatedLength: 30, priority: 1, ...overrides })
+    .values({
+      userId,
+      listId,
+      title: 'Test todo',
+      estimatedLength: 30,
+      priority: 1,
+      ...overrides,
+    })
     .returning();
   if (!todo) throw new Error('Failed to create todo');
   return todo;
 }
 
-export async function seedHabit(db: TestDb, userId: string, activityTypeId: string, overrides: Partial<typeof habits.$inferInsert> = {}) {
+export async function seedHabit(
+  db: TestDb,
+  userId: string,
+  activityTypeId: string,
+  overrides: Partial<typeof habits.$inferInsert> = {},
+) {
   const [habit] = await db
     .insert(habits)
     .values({

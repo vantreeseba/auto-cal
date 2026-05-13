@@ -49,6 +49,7 @@
         "**/dist/**",
         "**/drizzle/**",
         "**/pgdata/**",
+        "**/coverage/**",
         "**/routeTree.gen.ts"
       ],
       "linter": { "enabled": false },

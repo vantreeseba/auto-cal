@@ -35,7 +35,12 @@ describe('stats resolvers', () => {
 
   describe('myStats', () => {
     it('throws when not authenticated', async () => {
-      const result = await gql(testSchema, db, '', 'query { myStats { weightedScore } }');
+      const result = await gql(
+        testSchema,
+        db,
+        '',
+        'query { myStats { weightedScore } }',
+      );
       expect(result.errors?.[0]?.message).toMatch(/not authenticated/i);
     });
 
@@ -53,8 +58,13 @@ describe('stats resolvers', () => {
     it('returns habit score based on completions', async () => {
       const { id: userId } = await seedUser(db, 'stats-habitscore@example.com');
       const at = await seedActivityType(db, userId);
-      const habit = await seedHabit(db, userId, at.id, { frequencyCount: 2, frequencyUnit: 'week' });
-      await db.insert(habitCompletions).values({ habitId: habit.id, completedAt: new Date() });
+      const habit = await seedHabit(db, userId, at.id, {
+        frequencyCount: 2,
+        frequencyUnit: 'week',
+      });
+      await db
+        .insert(habitCompletions)
+        .values({ habitId: habit.id, completedAt: new Date() });
 
       const result = await gql(testSchema, db, userId, STATS_QUERY);
       expect(result.errors).toBeUndefined();
@@ -67,10 +77,16 @@ describe('stats resolvers', () => {
     it('returns 1.0 habitScore when target is zero (no elapsed time)', async () => {
       const { id: userId } = await seedUser(db, 'stats-zerotarget@example.com');
       const at = await seedActivityType(db, userId);
-      await seedHabit(db, userId, at.id, { frequencyCount: 3, frequencyUnit: 'week' });
+      await seedHabit(db, userId, at.id, {
+        frequencyCount: 3,
+        frequencyUnit: 'week',
+      });
 
       const now = new Date().toISOString().slice(0, 10);
-      const result = await gql(testSchema, db, userId, STATS_QUERY, { start: now, end: now });
+      const result = await gql(testSchema, db, userId, STATS_QUERY, {
+        start: now,
+        end: now,
+      });
       expect(result.errors).toBeUndefined();
       const stats = result.data?.myStats as Record<string, unknown>;
       const summaries = stats.habits as Array<{ completionRate: number }>;
@@ -84,16 +100,40 @@ describe('stats resolvers', () => {
       const now = new Date();
       const future = new Date(Date.now() + 86_400_000);
       await db.insert(todos).values([
-        { userId, listId: list.id, title: 'Done', estimatedLength: 30, scheduledAt: now, completedAt: now },
-        { userId, listId: list.id, title: 'Overdue', estimatedLength: 30, scheduledAt: new Date(Date.now() - 86_400_000) },
-        { userId, listId: list.id, title: 'Pending', estimatedLength: 30, scheduledAt: future },
+        {
+          userId,
+          listId: list.id,
+          title: 'Done',
+          estimatedLength: 30,
+          scheduledAt: now,
+          completedAt: now,
+        },
+        {
+          userId,
+          listId: list.id,
+          title: 'Overdue',
+          estimatedLength: 30,
+          scheduledAt: new Date(Date.now() - 86_400_000),
+        },
+        {
+          userId,
+          listId: list.id,
+          title: 'Pending',
+          estimatedLength: 30,
+          scheduledAt: future,
+        },
       ]);
 
       const farFuture = new Date(Date.now() + 30 * 86_400_000).toISOString();
-      const result = await gql(testSchema, db, userId, STATS_QUERY, { end: farFuture });
+      const result = await gql(testSchema, db, userId, STATS_QUERY, {
+        end: farFuture,
+      });
       expect(result.errors).toBeUndefined();
-      const todosData = (result.data?.myStats as Record<string, unknown>).todos as {
-        total: number; completed: number; overdue: number;
+      const todosData = (result.data?.myStats as Record<string, unknown>)
+        .todos as {
+        total: number;
+        completed: number;
+        overdue: number;
       };
       expect(todosData.total).toBe(3);
       expect(todosData.completed).toBe(1);
@@ -103,11 +143,23 @@ describe('stats resolvers', () => {
     it('produces a weighted score when both habit and todo data are present', async () => {
       const { id: userId } = await seedUser(db, 'stats-weighted@example.com');
       const at = await seedActivityType(db, userId);
-      const habit = await seedHabit(db, userId, at.id, { frequencyCount: 1, frequencyUnit: 'week' });
-      await db.insert(habitCompletions).values({ habitId: habit.id, completedAt: new Date() });
+      const habit = await seedHabit(db, userId, at.id, {
+        frequencyCount: 1,
+        frequencyUnit: 'week',
+      });
+      await db
+        .insert(habitCompletions)
+        .values({ habitId: habit.id, completedAt: new Date() });
       const list = await seedTodoList(db, userId, at.id);
       const now = new Date();
-      await db.insert(todos).values({ userId, listId: list.id, title: 'Done', estimatedLength: 30, scheduledAt: now, completedAt: now });
+      await db.insert(todos).values({
+        userId,
+        listId: list.id,
+        title: 'Done',
+        estimatedLength: 30,
+        scheduledAt: now,
+        completedAt: now,
+      });
 
       const result = await gql(testSchema, db, userId, STATS_QUERY);
       expect(result.errors).toBeUndefined();
@@ -119,25 +171,36 @@ describe('stats resolvers', () => {
       const { id: userId } = await seedUser(db, 'stats-datefilter@example.com');
       const at = await seedActivityType(db, userId);
       const list = await seedTodoList(db, userId, at.id);
-      await db.insert(todos).values({ userId, listId: list.id, title: 'Old', estimatedLength: 30, scheduledAt: new Date('2020-01-01') });
+      await db.insert(todos).values({
+        userId,
+        listId: list.id,
+        title: 'Old',
+        estimatedLength: 30,
+        scheduledAt: new Date('2020-01-01'),
+      });
 
       const result = await gql(testSchema, db, userId, STATS_QUERY, {
         start: '2025-01-01T00:00:00',
         end: new Date().toISOString(),
       });
       expect(result.errors).toBeUndefined();
-      const todosData = (result.data?.myStats as Record<string, unknown>).todos as { total: number };
+      const todosData = (result.data?.myStats as Record<string, unknown>)
+        .todos as { total: number };
       expect(todosData.total).toBe(0);
     });
 
     it('uses monthly frequencyUnit for habit rate calculation', async () => {
       const { id: userId } = await seedUser(db, 'stats-monthly@example.com');
       const at = await seedActivityType(db, userId);
-      await seedHabit(db, userId, at.id, { frequencyCount: 4, frequencyUnit: 'month' });
+      await seedHabit(db, userId, at.id, {
+        frequencyCount: 4,
+        frequencyUnit: 'month',
+      });
 
       const result = await gql(testSchema, db, userId, STATS_QUERY);
       expect(result.errors).toBeUndefined();
-      const summaries = (result.data?.myStats as Record<string, unknown>).habits as Array<{ frequencyUnit: string }>;
+      const summaries = (result.data?.myStats as Record<string, unknown>)
+        .habits as Array<{ frequencyUnit: string }>;
       expect(summaries[0]?.frequencyUnit).toBe('month');
     });
   });

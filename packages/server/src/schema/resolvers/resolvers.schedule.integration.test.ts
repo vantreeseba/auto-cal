@@ -27,13 +27,23 @@ describe('schedule resolvers', () => {
 
   describe('mySchedule', () => {
     it('throws when not authenticated', async () => {
-      const result = await gql(testSchema, db, '', 'query { mySchedule { id } }');
+      const result = await gql(
+        testSchema,
+        db,
+        '',
+        'query { mySchedule { id } }',
+      );
       expect(result.errors?.[0]?.message).toMatch(/not authenticated/i);
     });
 
     it('returns empty array with no data', async () => {
       const { id: userId } = await seedUser(db, 'sched-empty@example.com');
-      const result = await gql(testSchema, db, userId, 'query { mySchedule { id } }');
+      const result = await gql(
+        testSchema,
+        db,
+        userId,
+        'query { mySchedule { id } }',
+      );
       expect(result.errors).toBeUndefined();
       expect(result.data?.mySchedule).toEqual([]);
     });
@@ -46,7 +56,9 @@ describe('schedule resolvers', () => {
       await seedTodo(db, userId, list.id);
 
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'query { mySchedule { id kind title isScheduled scheduledStart scheduledEnd } }',
       );
       expect(result.errors).toBeUndefined();
@@ -57,7 +69,9 @@ describe('schedule resolvers', () => {
     it('accepts a weekStart param and uses that ISO week', async () => {
       const { id: userId } = await seedUser(db, 'sched-weekstart@example.com');
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'query($ws: String) { mySchedule(weekStart: $ws) { id } }',
         { ws: '2025-01-06' },
       );
@@ -68,7 +82,9 @@ describe('schedule resolvers', () => {
     it('rejects a malformed weekStart', async () => {
       const { id: userId } = await seedUser(db, 'sched-bad-ws@example.com');
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'query { mySchedule(weekStart: "not-a-date") { id } }',
       );
       expect(result.errors).toBeDefined();
@@ -77,7 +93,9 @@ describe('schedule resolvers', () => {
     it('rejects an invalid calendar date as weekStart', async () => {
       const { id: userId } = await seedUser(db, 'sched-bad-date@example.com');
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'query { mySchedule(weekStart: "2025-13-99") { id } }',
       );
       expect(result.errors).toBeDefined();
@@ -87,14 +105,22 @@ describe('schedule resolvers', () => {
       const { id: userId } = await seedUser(db, 'sched-habits@example.com');
       const at = await seedActivityType(db, userId);
       await seedTimeBlock(db, userId, at.id);
-      await seedHabit(db, userId, at.id, { frequencyCount: 2, frequencyUnit: 'week' });
+      await seedHabit(db, userId, at.id, {
+        frequencyCount: 2,
+        frequencyUnit: 'week',
+      });
 
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'query { mySchedule { id kind title isScheduled } }',
       );
       expect(result.errors).toBeUndefined();
-      const items = result.data?.mySchedule as Array<{ kind: string; isScheduled: boolean }>;
+      const items = result.data?.mySchedule as Array<{
+        kind: string;
+        isScheduled: boolean;
+      }>;
       expect(items.some((i) => i.kind === 'habit' && i.isScheduled)).toBe(true);
     });
 
@@ -102,10 +128,20 @@ describe('schedule resolvers', () => {
       const { id: userId } = await seedUser(db, 'sched-nodeficit@example.com');
       const at = await seedActivityType(db, userId);
       await seedTimeBlock(db, userId, at.id);
-      const habit = await seedHabit(db, userId, at.id, { frequencyCount: 1, frequencyUnit: 'week' });
-      await db.insert(habitCompletions).values({ habitId: habit.id, completedAt: new Date() });
+      const habit = await seedHabit(db, userId, at.id, {
+        frequencyCount: 1,
+        frequencyUnit: 'week',
+      });
+      await db
+        .insert(habitCompletions)
+        .values({ habitId: habit.id, completedAt: new Date() });
 
-      const result = await gql(testSchema, db, userId, 'query { mySchedule { id kind } }');
+      const result = await gql(
+        testSchema,
+        db,
+        userId,
+        'query { mySchedule { id kind } }',
+      );
       expect(result.errors).toBeUndefined();
       const items = result.data?.mySchedule as Array<{ kind: string }>;
       expect(items.every((i) => i.kind !== 'habit')).toBe(true);
@@ -116,21 +152,31 @@ describe('schedule resolvers', () => {
       const at = await seedActivityType(db, userId);
       const list = await seedTodoList(db, userId, at.id);
       const future = new Date(Date.now() + 86_400_000);
-      await seedTodo(db, userId, list.id, { manuallyScheduled: true, scheduledAt: future });
+      await seedTodo(db, userId, list.id, {
+        manuallyScheduled: true,
+        scheduledAt: future,
+      });
 
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'query { mySchedule { id isScheduled scheduledStart } }',
       );
       expect(result.errors).toBeUndefined();
-      const items = result.data?.mySchedule as Array<{ isScheduled: boolean; scheduledStart: string }>;
+      const items = result.data?.mySchedule as Array<{
+        isScheduled: boolean;
+        scheduledStart: string;
+      }>;
       expect(items.some((i) => i.isScheduled && i.scheduledStart)).toBe(true);
     });
 
     it('updates user timezone when timezone arg is provided', async () => {
       const { id: userId } = await seedUser(db, 'sched-timezone@example.com');
       const result = await gql(
-        testSchema, db, userId,
+        testSchema,
+        db,
+        userId,
         'query { mySchedule(timezone: "America/Chicago") { id } }',
       );
       expect(result.errors).toBeUndefined();
@@ -141,9 +187,17 @@ describe('schedule resolvers', () => {
       const at = await seedActivityType(db, userId);
       const list = await seedTodoList(db, userId, at.id);
       const past = new Date(Date.now() - 86_400_000);
-      const todo = await seedTodo(db, userId, list.id, { manuallyScheduled: true, scheduledAt: past });
+      const todo = await seedTodo(db, userId, list.id, {
+        manuallyScheduled: true,
+        scheduledAt: past,
+      });
 
-      const result = await gql(testSchema, db, userId, 'query { mySchedule { id isScheduled } }');
+      const result = await gql(
+        testSchema,
+        db,
+        userId,
+        'query { mySchedule { id isScheduled } }',
+      );
       expect(result.errors).toBeUndefined();
       const items = result.data?.mySchedule as Array<{ id: string }>;
       expect(items.some((i) => i.id === todo.id)).toBe(true);
@@ -160,7 +214,12 @@ describe('schedule resolvers', () => {
 
     it('returns true', async () => {
       const { id: userId } = await seedUser(db, 'reschedule@example.com');
-      const result = await gql(testSchema, db, userId, 'mutation { myReschedule }');
+      const result = await gql(
+        testSchema,
+        db,
+        userId,
+        'mutation { myReschedule }',
+      );
       expect(result.errors).toBeUndefined();
       expect(result.data?.myReschedule).toBe(true);
     });
