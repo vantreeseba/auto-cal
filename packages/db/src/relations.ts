@@ -7,6 +7,10 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.users.id,
       to: r.activityTypes.userId,
     }),
+    todoLists: r.many.todoLists({
+      from: r.users.id,
+      to: r.todoLists.userId,
+    }),
     todos: r.many.todos({
       from: r.users.id,
       to: r.todos.userId,
@@ -25,9 +29,9 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.activityTypes.userId,
       to: r.users.id,
     }),
-    todos: r.many.todos({
+    todoLists: r.many.todoLists({
       from: r.activityTypes.id,
-      to: r.todos.activityTypeId,
+      to: r.todoLists.activityTypeId,
     }),
     habits: r.many.habits({
       from: r.activityTypes.id,
@@ -38,14 +42,28 @@ export const relations = defineRelations(schema, (r) => ({
       to: r.timeBlocks.activityTypeId,
     }),
   },
+  todoLists: {
+    user: r.one.users({
+      from: r.todoLists.userId,
+      to: r.users.id,
+    }),
+    activityType: r.one.activityTypes({
+      from: r.todoLists.activityTypeId,
+      to: r.activityTypes.id,
+    }),
+    todos: r.many.todos({
+      from: r.todoLists.id,
+      to: r.todos.listId,
+    }),
+  },
   todos: {
     user: r.one.users({
       from: r.todos.userId,
       to: r.users.id,
     }),
-    activityType: r.one.activityTypes({
-      from: r.todos.activityTypeId,
-      to: r.activityTypes.id,
+    list: r.one.todoLists({
+      from: r.todos.listId,
+      to: r.todoLists.id,
     }),
   },
   habits: {
