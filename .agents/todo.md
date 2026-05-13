@@ -16,7 +16,7 @@
 - JWT sign/verify via `jose` in `packages/server/src/auth.ts`
 - Login flow (`/login`) and verify route (`/auth/verify`) live in the client
 - Apollo client attaches `Bearer <token>` from `localStorage.auth_token`; expired-auth errors redirect to `/login`
-- Server context extracts JWT first, falls back to raw UUID for dev/seed (see #25)
+- Server context extracts JWT first, falls back to raw UUID for dev/seed (dev-only, guarded by `NODE_ENV !== 'production'`)
 
 **What's left:** The magic link is logged to the server console but no email is actually sent. In dev the `requestMagicLink` mutation also returns the link in the response; in prod the response has `magicLink: null`.
 
@@ -126,16 +126,6 @@
 - Update the Settings page to show/regenerate the secret
 
 **Acceptance:** The iCal URL contains a random secret that can be rotated without changing the user ID.
-
----
-
-### #25 — Remove UUID Bearer token fallback in production
-**Problem:** The server accepts a raw UUID as a Bearer token for dev convenience (DEMO_USER_ID). This means anyone who knows a user's UUID can authenticate as them in production.
-**Work:**
-- Guard the UUID fallback with `if (process.env.NODE_ENV !== 'production')` in `packages/server/src/index.ts`
-- OR remove it entirely once the demo user flow is replaced by real auth
-
-**Acceptance:** In production, only valid JWTs are accepted as Bearer tokens.
 
 ---
 
