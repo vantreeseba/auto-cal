@@ -1,10 +1,22 @@
-import type { GetMyStatsQuery } from '@/__generated__/graphql.js';
+import type {
+  GetActivityTypeStatsWithRangeQuery,
+  GetMyStatsQuery,
+} from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RouteError } from '@/components/ui/route-error';
 import { useQuery } from '@apollo/client/react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
+import {
+  Bar,
+  BarChart,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 
 const GET_MY_STATS = graphql(`
   query GetMyStats($startDate: String, $endDate: String) {
@@ -35,18 +47,34 @@ const GET_MY_STATS = graphql(`
   }
 `);
 
-type DateRangeKey = 'week' | 'two_weeks' | 'month' | 'three_months' | 'all';
+const GET_ACTIVITY_TYPE_STATS_WITH_RANGE = graphql(`
+  query GetActivityTypeStatsWithRange($startDate: String, $endDate: String) {
+    activityTypeStats(startDate: $startDate, endDate: $endDate) {
+      activityTypeId
+      activityTypeName
+      totalTodos
+      completedTodos
+      totalHabits
+    }
+    myActivityTypes {
+      id
+      name
+      color
+    }
+  }
+`);
+
+type DateRangeKey = 'week' | 'month' | 'three_months' | 'all';
 
 const DATE_RANGES: Array<{
   key: DateRangeKey;
   label: string;
   days: number | null;
 }> = [
-  { key: 'week', label: 'Last Week', days: 7 },
-  { key: 'two_weeks', label: 'Last 2 Weeks', days: 14 },
-  { key: 'month', label: 'Last Month', days: 30 },
-  { key: 'three_months', label: 'Last 3 Months', days: 90 },
-  { key: 'all', label: 'All Time', days: null },
+  { key: 'week', label: 'This week', days: 7 },
+  { key: 'month', label: 'This month', days: 30 },
+  { key: 'three_months', label: 'Last 3 months', days: 90 },
+  { key: 'all', label: 'All time', days: null },
 ];
 
 function getDateRange(key: DateRangeKey): {
@@ -62,6 +90,18 @@ function getDateRange(key: DateRangeKey): {
   return { startDate: start.toISOString(), endDate };
 }
 
+function scoreLabel(pct: number): string {
+  if (pct >= 80) return 'On track';
+  if (pct >= 50) return 'Needs attention';
+  return 'Off track';
+}
+
+function scoreColor(pct: number): string {
+  if (pct >= 80) return 'text-green-600 dark:text-green-400';
+  if (pct >= 50) return 'text-amber-500 dark:text-amber-400';
+  return 'text-destructive';
+}
+
 export const Route = createFileRoute('/stats')({
   component: StatsPage,
   errorComponent: ({ error, reset }) => (
@@ -72,144 +112,133 @@ export const Route = createFileRoute('/stats')({
 type StatsData = NonNullable<GetMyStatsQuery['myStats']>;
 type HabitRow = StatsData['habits'][number];
 type TodoRow = StatsData['todos'];
+type ActivityTypeStatRow =
+  GetActivityTypeStatsWithRangeQuery['activityTypeStats'][number];
+type ActivityTypeRow =
+  GetActivityTypeStatsWithRangeQuery['myActivityTypes'][number];
 
-function ScoreRing({ score }: { score: number | null | undefined }) {
-  const radius = 54;
-  const circumference = 2 * Math.PI * radius;
+// ─── Score cards ─────────────────────────────────────────────────────────────
 
+function ScoreCard({
+  label,
+  score,
+  note,
+}: {
+  label: string;
+  score: number | null | undefined;
+  note?: string;
+}) {
   if (score == null) {
     return (
-      <div className="relative inline-flex items-center justify-center">
-        {/* biome-ignore lint/a11y/noSvgWithoutTitle: decorative ring, aria-hidden hides from screen readers */}
-        <svg width="128" height="128" className="-rotate-90" aria-hidden>
-          <circle
-            cx="64"
-            cy="64"
-            r={radius}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="10"
-            className="text-muted"
-          />
-        </svg>
-        <span className="absolute text-sm text-muted-foreground">No data</span>
-      </div>
+      <Card className="flex-1 min-w-0">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            {label}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-2xl font-bold text-muted-foreground">—</p>
+          <p className="text-xs text-muted-foreground mt-1">No data yet</p>
+        </CardContent>
+      </Card>
     );
   }
 
   const pct = Math.round(score * 100);
-  const offset = circumference * (1 - Math.min(score, 1));
-  const color = pct >= 80 ? '#22c55e' : pct >= 50 ? '#f59e0b' : '#ef4444';
-
   return (
-    <div className="relative inline-flex items-center justify-center">
-      {/* biome-ignore lint/a11y/noSvgWithoutTitle: decorative ring, aria-hidden hides from screen readers */}
-      <svg width="128" height="128" className="-rotate-90" aria-hidden>
-        <circle
-          cx="64"
-          cy="64"
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="10"
-          className="text-muted"
-        />
-        <circle
-          cx="64"
-          cy="64"
-          r={radius}
-          fill="none"
-          stroke={color}
-          strokeWidth="10"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          style={{ transition: 'stroke-dashoffset 0.5s ease' }}
-        />
-      </svg>
-      <span className="absolute text-3xl font-bold">{pct}%</span>
-    </div>
+    <Card className="flex-1 min-w-0">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          {label}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className={`text-3xl font-bold ${scoreColor(pct)}`}>{pct}%</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          {scoreLabel(pct)}
+          {note && (
+            <span className="ml-1 text-muted-foreground/70">{note}</span>
+          )}
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 
-function HabitsSection({
-  habits,
-  habitScore,
-}: { habits: HabitRow[]; habitScore: number | null | undefined }) {
+// ─── Habit consistency bar chart ─────────────────────────────────────────────
+
+function HabitConsistencySection({ habits }: { habits: HabitRow[] }) {
+  const chartData = habits.map((h) => ({
+    name: h.title.length > 14 ? `${h.title.slice(0, 13).trimEnd()}…` : h.title,
+    fullName: h.title,
+    value: Math.min(Math.round(h.completionRate * 100), 100),
+    color: h.activityType?.color ?? '#94a3b8',
+  }));
+
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center justify-between">
-          <span>Habits</span>
-          {habitScore != null && (
-            <span className="text-muted-foreground font-normal text-sm">
-              {Math.round(habitScore * 100)}% avg completion
-            </span>
-          )}
-        </CardTitle>
+        <CardTitle className="text-base">Habit consistency</CardTitle>
       </CardHeader>
       <CardContent>
         {habits.length === 0 ? (
           <p className="text-sm text-muted-foreground">No habits yet.</p>
         ) : (
-          <div className="space-y-4">
-            {habits.map((h) => {
-              const pct = Math.round(h.completionRate * 100);
-              const met = h.completionRate >= 1.0;
-              return (
-                <div key={h.habitId} className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="font-medium">{h.title}</span>
-                    <span
-                      className={
-                        met
-                          ? 'text-green-600 font-medium'
-                          : 'text-muted-foreground'
-                      }
-                    >
-                      {pct}%
-                    </span>
-                  </div>
-                  <div className="h-2 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-300"
-                      style={{
-                        width: `${pct}%`,
-                        backgroundColor: met
-                          ? (h.activityType?.color ?? '#22c55e')
-                          : '#94a3b8',
-                      }}
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {h.completions} completions · target: {h.frequencyCount}×
-                    per {h.frequencyUnit}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
+          <ResponsiveContainer
+            width="100%"
+            height={Math.max(180, habits.length * 40)}
+          >
+            <BarChart
+              data={chartData}
+              margin={{ top: 4, right: 16, left: 0, bottom: 4 }}
+            >
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 11 }}
+                interval={0}
+                tickLine={false}
+              />
+              <YAxis
+                domain={[0, 100]}
+                tickFormatter={(v) => `${v}%`}
+                tick={{ fontSize: 11 }}
+                tickLine={false}
+                axisLine={false}
+                width={36}
+              />
+              <Tooltip
+                formatter={(value, _name, item) => [
+                  `${value ?? 0}%`,
+                  (item.payload as { fullName?: string })?.fullName ?? '',
+                ]}
+                contentStyle={{
+                  fontSize: 12,
+                  borderRadius: 6,
+                }}
+              />
+              <Bar dataKey="value" name="Completion" radius={[4, 4, 0, 0]}>
+                {chartData.map((entry) => (
+                  <Cell key={entry.fullName} fill={entry.color} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         )}
       </CardContent>
     </Card>
   );
 }
 
-function TodosSection({
+// ─── Todo throughput ──────────────────────────────────────────────────────────
+
+function TodoThroughputSection({
   todos,
   todoScore,
 }: { todos: TodoRow; todoScore: number | null | undefined }) {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center justify-between">
-          <span>Todos</span>
-          {todoScore != null && (
-            <span className="text-muted-foreground font-normal text-sm">
-              {Math.round(todoScore * 100)}% completion
-            </span>
-          )}
-        </CardTitle>
+        <CardTitle className="text-base">Todo throughput</CardTitle>
       </CardHeader>
       <CardContent>
         {todos.total === 0 ? (
@@ -217,31 +246,30 @@ function TodosSection({
             No todos due in this period.
           </p>
         ) : (
-          <div className="space-y-4">
-            <div className="flex gap-8">
-              <div>
-                <p className="text-2xl font-bold">
-                  {todos.completed}
-                  <span className="text-muted-foreground text-base font-normal">
-                    /{todos.total}
-                  </span>
-                </p>
-                <p className="text-xs text-muted-foreground">completed</p>
-              </div>
-              {todos.overdue > 0 && (
-                <div>
-                  <p className="text-2xl font-bold text-destructive">
-                    {todos.overdue}
-                  </p>
-                  <p className="text-xs text-muted-foreground">overdue</p>
-                </div>
-              )}
+          <div className="flex flex-wrap gap-6">
+            <div>
+              <p className="text-2xl font-bold">{todos.total}</p>
+              <p className="text-xs text-muted-foreground">Total</p>
             </div>
-            <div className="h-2 rounded-full bg-muted overflow-hidden">
-              <div
-                className="h-full rounded-full bg-primary transition-all duration-300"
-                style={{ width: `${Math.round((todoScore ?? 0) * 100)}%` }}
-              />
+            <div>
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                {todos.completed}
+              </p>
+              <p className="text-xs text-muted-foreground">Completed</p>
+            </div>
+            {todos.overdue > 0 && (
+              <div>
+                <p className="text-2xl font-bold text-destructive">
+                  {todos.overdue}
+                </p>
+                <p className="text-xs text-muted-foreground">Overdue</p>
+              </div>
+            )}
+            <div>
+              <p className="text-2xl font-bold">
+                {todoScore != null ? `${Math.round(todoScore * 100)}%` : '—'}
+              </p>
+              <p className="text-xs text-muted-foreground">Completion rate</p>
             </div>
           </div>
         )}
@@ -249,6 +277,86 @@ function TodosSection({
     </Card>
   );
 }
+
+// ─── Activity type breakdown ──────────────────────────────────────────────────
+
+function ActivityTypeBreakdownSection({
+  stats,
+  activityTypes,
+}: {
+  stats: ActivityTypeStatRow[];
+  activityTypes: ActivityTypeRow[];
+}) {
+  const colorById = new Map(activityTypes.map((at) => [at.id, at.color]));
+
+  const rows = stats.filter((s) => s.totalTodos > 0 || s.totalHabits > 0);
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Activity type breakdown</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {rows.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No data for this period.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-muted-foreground text-xs border-b border-border">
+                  <th className="pb-2 font-medium">Activity type</th>
+                  <th className="pb-2 font-medium text-right">Todos</th>
+                  <th className="pb-2 font-medium text-right">Completed</th>
+                  <th className="pb-2 font-medium text-right">Habits</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/50">
+                {rows.map((row) => {
+                  const color = colorById.get(row.activityTypeId) ?? '#94a3b8';
+                  const completionPct =
+                    row.totalTodos > 0
+                      ? Math.round((row.completedTodos / row.totalTodos) * 100)
+                      : null;
+                  return (
+                    <tr key={row.activityTypeId} className="py-2">
+                      <td className="py-2">
+                        <span className="flex items-center gap-2">
+                          <span
+                            className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: color }}
+                          />
+                          <span className="font-medium">
+                            {row.activityTypeName}
+                          </span>
+                        </span>
+                      </td>
+                      <td className="py-2 text-right">{row.totalTodos}</td>
+                      <td className="py-2 text-right">
+                        <span>
+                          {row.completedTodos}
+                          {completionPct !== null && (
+                            <span className="text-muted-foreground ml-1">
+                              ({completionPct}%)
+                            </span>
+                          )}
+                        </span>
+                      </td>
+                      <td className="py-2 text-right">{row.totalHabits}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 function StatsPage() {
   const [range, setRange] = useState<DateRangeKey>('month');
@@ -260,10 +368,20 @@ function StatsPage() {
     fetchPolicy: 'cache-and-network',
   });
 
+  const { data: activityData, loading: activityLoading } = useQuery(
+    GET_ACTIVITY_TYPE_STATS_WITH_RANGE,
+    {
+      variables,
+      fetchPolicy: 'cache-and-network',
+    },
+  );
+
   const stats: StatsData | undefined = data?.myStats;
+  const isLoading = loading || activityLoading;
 
   return (
     <div className="container mx-auto flex-1 overflow-y-auto px-4 py-6 space-y-6">
+      {/* Time-range filter */}
       <div className="flex gap-1 flex-wrap">
         {DATE_RANGES.map((r) => (
           <button
@@ -281,7 +399,7 @@ function StatsPage() {
         ))}
       </div>
 
-      {loading && (
+      {isLoading && (
         <p className="text-muted-foreground text-sm">Loading stats…</p>
       )}
       {error && (
@@ -290,38 +408,34 @@ function StatsPage() {
 
       {stats && (
         <>
-          <Card>
-            <CardContent className="pt-6 flex flex-col items-center gap-6 sm:flex-row sm:justify-around">
-              <div className="flex flex-col items-center gap-2">
-                <ScoreRing score={stats.weightedScore} />
-                <p className="text-sm font-medium text-muted-foreground">
-                  Overall Score
-                </p>
-              </div>
-              <div className="flex gap-10 sm:flex-col sm:gap-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold">
-                    {stats.habitScore != null
-                      ? `${Math.round(stats.habitScore * 100)}%`
-                      : '—'}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Habits (50%)</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold">
-                    {stats.todoScore != null
-                      ? `${Math.round(stats.todoScore * 100)}%`
-                      : '—'}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Todos (50%)</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* 1. Composite score */}
+          <div className="flex gap-4 flex-wrap sm:flex-nowrap">
+            <ScoreCard
+              label="Weighted score"
+              score={stats.weightedScore}
+              note="(habit 50% + todo 50%)"
+            />
+            <ScoreCard label="Habit score" score={stats.habitScore} />
+            <ScoreCard label="Todo score" score={stats.todoScore} />
+          </div>
 
-          <HabitsSection habits={stats.habits} habitScore={stats.habitScore} />
-          <TodosSection todos={stats.todos} todoScore={stats.todoScore} />
+          {/* 2. Habit consistency bar chart */}
+          <HabitConsistencySection habits={stats.habits} />
+
+          {/* 3. Todo throughput */}
+          <TodoThroughputSection
+            todos={stats.todos}
+            todoScore={stats.todoScore}
+          />
         </>
+      )}
+
+      {/* 4. Activity type breakdown — separate query */}
+      {activityData && (
+        <ActivityTypeBreakdownSection
+          stats={activityData.activityTypeStats}
+          activityTypes={activityData.myActivityTypes}
+        />
       )}
     </div>
   );
