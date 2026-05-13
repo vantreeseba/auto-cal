@@ -23,8 +23,9 @@ npm run db:migrate       # drizzle-kit migrate
 npm run db:studio        # Drizzle Studio GUI
 
 # GraphQL
-npm run codegen          # generate TS types from operations (server must be running)
-npm run codegen:server   # generate server-side resolver types
+npm run codegen          # runs codegen:server then codegen:client
+npm run codegen:server   # server resolver types (reads schema.graphql)
+npm run codegen:client   # client typed operations (reads schema.graphql)
 
 # Build
 npm run build            # codegen + vite + tsc (run before docker build)
@@ -98,3 +99,4 @@ Always add new `.agents/` files to the reference list below.
 - [`.agents/scheduling.md`](.agents/scheduling.md) — Scheduling algorithm, writeback service, pre-placement lock, habit instance generation
 - [`.agents/deployment.md`](.agents/deployment.md) — Docker setup, environment variables, PGLite vs Postgres switching
 - [`.agents/todo.md`](.agents/todo.md) — Open feature requests, issues, and deferred work items
+- [`.agents/plan-19-api-keys.md`](.agents/plan-19-api-keys.md) — Plan for personal API keys (Home Assistant and similar external integrations)
