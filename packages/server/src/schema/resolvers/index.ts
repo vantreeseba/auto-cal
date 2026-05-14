@@ -318,8 +318,17 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
     new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(GraphQLString)));
 
   const todoType = extended.getType('Todo') as GraphQLObjectType;
+  const todoFields = todoType.getFields();
+
+  // biome-ignore lint/style/noNonNullAssertion: field exists on Todo type
+  todoFields.list!.resolve = (
+    parent: { listId: string },
+    _args: unknown,
+    context: Context,
+  ) => context.loaders.todoList.load(parent.listId);
+
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
-  todoType.getFields().activityType!.resolve = async (
+  todoFields.activityType!.resolve = async (
     parent: { listId: string },
     _args: unknown,
     context: Context,
