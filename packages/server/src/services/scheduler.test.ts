@@ -1,6 +1,12 @@
 import type { ActivityType, Habit, TimeBlock } from '@auto-cal/db';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  makeActivityType,
+  makeHabit as baseMakeHabit,
+  makeTimeBlock,
+  makeTodo as baseMakeTodo,
+} from '../test-mocks.ts';
+import {
   type TodoWithActivityType,
   computeSchedule,
   startOfISOWeek,
@@ -10,23 +16,17 @@ import {
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
-const WORK: ActivityType = {
+const WORK: ActivityType = makeActivityType({
   id: 'at-work',
-  userId: 'u1',
   name: 'Work',
   color: '#6366f1',
-  createdAt: new Date(),
-  updatedAt: new Date(),
-};
+});
 
-const EXERCISE: ActivityType = {
+const EXERCISE: ActivityType = makeActivityType({
   id: 'at-exercise',
-  userId: 'u1',
   name: 'Exercise',
   color: '#22c55e',
-  createdAt: new Date(),
-  updatedAt: new Date(),
-};
+});
 
 const AT_MAP = new Map<string, ActivityType>([
   [WORK.id, WORK],
@@ -34,40 +34,21 @@ const AT_MAP = new Map<string, ActivityType>([
 ]);
 
 function makeBlock(overrides: Partial<TimeBlock> = {}): TimeBlock {
-  return {
-    id: 'tb-1',
-    userId: 'u1',
+  return makeTimeBlock({
     activityTypeId: WORK.id,
-    daysOfWeek: [1, 2, 3, 4, 5], // Mon–Fri
-    startTime: '09:00',
-    endTime: '17:00',
-    priority: 0,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    daysOfWeek: [1, 2, 3, 4, 5],
     ...overrides,
-  };
+  });
 }
 
 function makeTodo(
   overrides: Partial<TodoWithActivityType> = {},
 ): TodoWithActivityType {
   return {
-    id: 'todo-1',
-    userId: 'u1',
-    listId: 'list-default',
-    title: 'Test todo',
-    description: null,
-    priority: 1,
-    estimatedLength: 60,
+    ...baseMakeTodo(),
     activityTypeId: WORK.id,
-    dueAt: null,
-    scheduledAt: null,
-    completedAt: null,
-    manuallyScheduled: false,
-    createdAt: new Date(),
-    updatedAt: new Date(),
     ...overrides,
-  };
+  } as TodoWithActivityType;
 }
 
 function makeHabit(
@@ -75,17 +56,7 @@ function makeHabit(
 ): Habit & { instanceIndex: number } {
   const { instanceIndex = 0, ...rest } = overrides;
   return {
-    id: 'habit-1',
-    userId: 'u1',
-    title: 'Test habit',
-    description: null,
-    priority: 1,
-    estimatedLength: 30,
-    activityTypeId: EXERCISE.id,
-    frequencyCount: 3,
-    frequencyUnit: 'week' as const,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    ...baseMakeHabit({ activityTypeId: EXERCISE.id }),
     instanceIndex,
     ...rest,
   };

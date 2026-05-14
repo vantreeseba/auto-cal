@@ -1,17 +1,17 @@
-import type {
-  ActivityType,
-  Habit,
-  HabitCompletion,
-  TimeBlock,
-  Todo,
-  TodoList,
-  User,
-} from '@auto-cal/db';
 import { db } from '@auto-cal/db';
-import type { ApiKey } from '@auto-cal/db';
 import type { Request, Response } from 'express';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { icalHandler } from './ical-route.ts';
+import {
+  makeActivityType,
+  makeApiKey,
+  makeHabit,
+  makeHabitCompletion,
+  makeTimeBlock,
+  makeTodo,
+  makeTodoList,
+  makeUser,
+} from './test-mocks.ts';
 
 const { mockUpdate } = vi.hoisted(() => {
   const mockWhere = vi.fn().mockReturnValue({ catch: vi.fn() });
@@ -65,124 +65,7 @@ function makeRes() {
   return res as typeof res & Response;
 }
 
-function makeApiKey(overrides: Partial<ApiKey> = {}): ApiKey {
-  return {
-    id: 'key-1',
-    userId: 'user-1',
-    name: 'Test key',
-    keyHash: 'fakehash',
-    keyPrefix: 'dGVzdGt',
-    // drizzle infers .array().$type<T[]> as T[][] at the type level
-    scopes: ['read'] as unknown as ('read' | 'write')[][],
-    lastUsedAt: null,
-    expiresAt: null,
-    revokedAt: null,
-    createdAt: new Date(),
-    ...overrides,
-  };
-}
-
-function makeUser(overrides: Partial<User> = {}): User {
-  return {
-    id: 'user-1',
-    email: 'test@example.com',
-    timezone: 'UTC',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    ...overrides,
-  };
-}
-
-function makeTimeBlock(overrides: Partial<TimeBlock> = {}): TimeBlock {
-  return {
-    id: 'tb-1',
-    userId: 'user-1',
-    activityTypeId: 'at-work',
-    daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
-    startTime: '09:00',
-    endTime: '17:00',
-    priority: 0,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    ...overrides,
-  };
-}
-
-function makeActivityType(overrides: Partial<ActivityType> = {}): ActivityType {
-  return {
-    id: 'at-work',
-    userId: 'user-1',
-    name: 'Work',
-    color: '#6366f1',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    ...overrides,
-  };
-}
-
-function makeTodoList(overrides: Partial<TodoList> = {}): TodoList {
-  return {
-    id: 'list-1',
-    userId: 'user-1',
-    name: 'Work Tasks',
-    description: null,
-    activityTypeId: 'at-work',
-    defaultPriority: 0,
-    defaultEstimatedLength: 0,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    ...overrides,
-  };
-}
-
-function makeTodo(overrides: Partial<Todo> = {}): Todo {
-  return {
-    id: 'todo-1',
-    userId: 'user-1',
-    listId: 'list-1',
-    title: 'Write tests',
-    description: null,
-    priority: 1,
-    estimatedLength: 60,
-    dueAt: null,
-    scheduledAt: null,
-    completedAt: null,
-    manuallyScheduled: false,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    ...overrides,
-  };
-}
-
-function makeHabit(overrides: Partial<Habit> = {}): Habit {
-  return {
-    id: 'habit-1',
-    userId: 'user-1',
-    title: 'Morning run',
-    description: null,
-    activityTypeId: 'at-work',
-    frequencyCount: 3,
-    frequencyUnit: 'week',
-    estimatedLength: 30,
-    priority: 1,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    ...overrides,
-  };
-}
-
-function makeCompletion(habitId = 'habit-1'): HabitCompletion {
-  const now = new Date();
-  return {
-    id: crypto.randomUUID(),
-    habitId,
-    scheduledAt: null,
-    completedAt: now,
-    createdAt: now,
-  };
-}
-
-function setupEmptyDb(user: User = makeUser()) {
+function setupEmptyDb(user = makeUser()) {
   vi.mocked(db.query.apiKeys.findFirst).mockResolvedValue(makeApiKey());
   vi.mocked(db.query.users.findFirst).mockResolvedValue(user);
   vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([]);
@@ -326,9 +209,8 @@ describe('icalHandler', () => {
     });
 
     it('generates events for todos that fit in a time block', async () => {
-      const user = makeUser();
       vi.mocked(db.query.apiKeys.findFirst).mockResolvedValue(makeApiKey());
-      vi.mocked(db.query.users.findFirst).mockResolvedValue(user);
+      vi.mocked(db.query.users.findFirst).mockResolvedValue(makeUser());
       vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([
         makeTimeBlock(),
       ]);
@@ -348,11 +230,10 @@ describe('icalHandler', () => {
     });
 
     it('maps todo activity type through its list', async () => {
-      const user = makeUser();
       const todoList = makeTodoList({ activityTypeId: 'at-work' });
       const todo = makeTodo({ listId: 'list-1' });
       vi.mocked(db.query.apiKeys.findFirst).mockResolvedValue(makeApiKey());
-      vi.mocked(db.query.users.findFirst).mockResolvedValue(user);
+      vi.mocked(db.query.users.findFirst).mockResolvedValue(makeUser());
       vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([
         makeTimeBlock(),
       ]);
@@ -391,7 +272,10 @@ describe('icalHandler', () => {
 
     it('suppresses habit events when deficit is zero', async () => {
       const habit = makeHabit({ frequencyCount: 2, frequencyUnit: 'week' });
-      const completions = [makeCompletion(), makeCompletion()];
+      const completions = [
+        makeHabitCompletion(habit.id),
+        makeHabitCompletion(habit.id),
+      ];
       vi.mocked(db.query.apiKeys.findFirst).mockResolvedValue(makeApiKey());
       vi.mocked(db.query.users.findFirst).mockResolvedValue(makeUser());
       vi.mocked(db.query.timeBlocks.findMany).mockResolvedValue([
