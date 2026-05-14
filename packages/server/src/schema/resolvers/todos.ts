@@ -3,8 +3,10 @@ import { eq } from 'drizzle-orm';
 import type { GraphQLObjectType } from 'graphql';
 import type { InnerOrder, TodoOrderBy } from '../../__generated__/resolvers.ts';
 import type { Context } from '../../context.ts';
+import { pubsub } from '../../pubsub.ts';
 import { runSchedulerWriteback } from '../../services/scheduler-writeback.ts';
 import { CreateTodoInput, UpdateTodoInput } from '../validators.ts';
+import { TODO_EVENT } from './subscriptions.ts';
 
 type Fields = ReturnType<GraphQLObjectType['getFields']>;
 
@@ -79,6 +81,9 @@ export function applyTodoResolvers(
       .returning();
     if (!todo) throw new Error('Failed to create todo');
     runSchedulerWriteback(context.db, context.userId).catch(console.error);
+    pubsub
+      .publish(TODO_EVENT(context.userId), { type: 'created', todo })
+      .catch(console.error);
     return todo;
   };
 
@@ -137,6 +142,9 @@ export function applyTodoResolvers(
       .returning();
     if (!updated) throw new Error(`Failed to update todo ${input.id}`);
     runSchedulerWriteback(context.db, context.userId).catch(console.error);
+    pubsub
+      .publish(TODO_EVENT(context.userId), { type: 'updated', todo: updated })
+      .catch(console.error);
     return updated;
   };
 
@@ -170,6 +178,9 @@ export function applyTodoResolvers(
       .returning();
     if (!completed) throw new Error(`Failed to complete todo ${args.id}`);
     runSchedulerWriteback(context.db, context.userId).catch(console.error);
+    pubsub
+      .publish(TODO_EVENT(context.userId), { type: 'updated', todo: completed })
+      .catch(console.error);
     return completed;
   };
 
@@ -187,6 +198,12 @@ export function applyTodoResolvers(
     if (existing.userId !== context.userId) throw new Error('Forbidden');
     await context.db.delete(todos).where(eq(todos.id, args.id));
     runSchedulerWriteback(context.db, context.userId).catch(console.error);
+    pubsub
+      .publish(TODO_EVENT(context.userId), {
+        type: 'deleted',
+        deletedId: args.id,
+      })
+      .catch(console.error);
     return true;
   };
 }
