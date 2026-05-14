@@ -5,6 +5,14 @@ import {
   type CompletionDialogTarget,
 } from '@/components/domain/CompletionDialog';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { InlineLengthEdit } from '@/components/ui/inline-length-edit';
 import {
   Tooltip,
@@ -15,7 +23,7 @@ import { priorityLabel } from '@/lib/utils';
 import { gql } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
 import { Link } from '@tanstack/react-router';
-import { AlertTriangle, Check, Pencil, Undo2 } from 'lucide-react';
+import { AlertTriangle, Check, Pencil, Trash2, Undo2 } from 'lucide-react';
 import { useState } from 'react';
 
 // Colocated here so /todo-lists doesn't depend on a deleted parent list component.
@@ -60,6 +68,12 @@ const UNCOMPLETE_TODO = graphql(`
   }
 `);
 
+const DELETE_TODO = gql`
+  mutation DeleteTodo($id: ID!) {
+    myDeleteTodo(id: $id)
+  }
+`;
+
 type Todo = Todo_TodoListFragment;
 
 type TodoItemProps = {
@@ -71,6 +85,7 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
   const isCompleted = todo.completedAt !== null;
   const [completionTarget, setCompletionTarget] =
     useState<CompletionDialogTarget | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const [uncompleteTodo, { loading: uncompleting }] = useMutation(
     UNCOMPLETE_TODO,
@@ -81,6 +96,10 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
     UPDATE_TODO_LENGTH,
     { refetchQueries: ['GetTodoListsPage'] },
   );
+
+  const [deleteTodo, { loading: deleting }] = useMutation(DELETE_TODO, {
+    refetchQueries: ['GetTodoListsPage'],
+  });
 
   function handleSaveLength(estimatedLength: number) {
     updateTodo({ variables: { input: { id: todo.id, estimatedLength } } });
@@ -176,6 +195,43 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
       >
         <Pencil className="h-3.5 w-3.5" />
       </Button>
+
+      <Button
+        size="icon"
+        variant="ghost"
+        onClick={() => setDeleteOpen(true)}
+        aria-label={`Delete ${todo.title}`}
+        className="h-6 w-6 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 hover:text-destructive"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </Button>
+
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent className="sm:max-w-[360px]">
+          <DialogHeader>
+            <DialogTitle>Delete todo?</DialogTitle>
+            <DialogDescription>
+              &ldquo;{todo.title}&rdquo; will be permanently deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleting}
+              onClick={() =>
+                deleteTodo({ variables: { id: todo.id } }).then(() =>
+                  setDeleteOpen(false),
+                )
+              }
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <CompletionDialog
         target={completionTarget}
