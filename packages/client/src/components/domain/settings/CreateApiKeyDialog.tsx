@@ -123,10 +123,34 @@ export function CreateApiKeyDialog({
   }
 
   function handleCopy(token: string) {
-    navigator.clipboard.writeText(token).then(() => {
+    const finish = () => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    });
+    };
+
+    if (navigator.clipboard) {
+      navigator.clipboard
+        .writeText(token)
+        .then(finish)
+        .catch(() => {
+          legacyCopy(token);
+          finish();
+        });
+    } else {
+      legacyCopy(token);
+      finish();
+    }
+  }
+
+  function legacyCopy(text: string) {
+    const el = document.createElement('textarea');
+    el.value = text;
+    el.style.position = 'fixed';
+    el.style.opacity = '0';
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
   }
 
   return (
