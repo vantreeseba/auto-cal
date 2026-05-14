@@ -30,7 +30,8 @@ const base = buildMocks(schema, {
 
 function first<T>(typeName: string): T {
   const item = (base[typeName] as unknown[])?.[0];
-  if (item === undefined) throw new Error(`[test-mocks] no mock for ${typeName}`);
+  if (item === undefined)
+    throw new Error(`[test-mocks] no mock for ${typeName}`);
   return item as T;
 }
 

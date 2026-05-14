@@ -1,10 +1,10 @@
 import type { ActivityType, Habit, TimeBlock } from '@auto-cal/db';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  makeActivityType,
   makeHabit as baseMakeHabit,
-  makeTimeBlock,
   makeTodo as baseMakeTodo,
+  makeActivityType,
+  makeTimeBlock,
 } from '../test-mocks.ts';
 import {
   type TodoWithActivityType,

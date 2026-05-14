@@ -1,8 +1,8 @@
 import {
-  type GraphQLObjectType,
-  type GraphQLSchema,
   GraphQLList,
   GraphQLNonNull,
+  type GraphQLObjectType,
+  type GraphQLSchema,
   GraphQLString,
   extendSchema,
   parse,
