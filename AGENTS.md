@@ -33,6 +33,8 @@ npm run build:docker     # docker build -t auto-cal .
 npm test                 # vitest
 ```
 
+**Before every commit:** run `npm test` and `npm run lint`. CI will fail if either does not pass.
+
 ## Tech Stack
 
 | Choice | Why |
