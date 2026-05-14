@@ -275,7 +275,7 @@ export type CreateTodoOnboardingMutation = { myCreateTodo: { id: string, title: 
 export type MyApiKeysQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type MyApiKeysQuery = { myApiKeys: Array<{ id: string, name: string, keyPrefix: string, scopes: string, lastUsedAt: unknown, expiresAt: unknown, createdAt: unknown }> };
+export type MyApiKeysQuery = { myApiKeys: Array<{ id: string, name: string, keyPrefix: string, scopes: Array<string>, lastUsedAt: unknown, expiresAt: unknown, createdAt: unknown }> };
 
 export type MyRevokeApiKeyMutationVariables = Exact<{
   id: string | number;
@@ -289,7 +289,7 @@ export type MyCreateApiKeyMutationVariables = Exact<{
 }>;
 
 
-export type MyCreateApiKeyMutation = { myCreateApiKey: { token: string, apiKey: { id: string, name: string, keyPrefix: string, scopes: string, createdAt: unknown } } };
+export type MyCreateApiKeyMutation = { myCreateApiKey: { token: string, apiKey: { id: string, name: string, keyPrefix: string, scopes: Array<string>, createdAt: unknown } } };
 
 export type CreateTimeBlockMutationVariables = Exact<{
   input: CreateTimeBlockArgs;
