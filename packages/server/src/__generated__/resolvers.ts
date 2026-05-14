@@ -110,7 +110,7 @@ export type ApiKey = {
   name: Scalars['String']['output'];
   /** DateTime */
   revokedAt: Maybe<Scalars['DateTime']['output']>;
-  scopes: Scalars['String']['output'];
+  scopes: Array<Scalars['String']['output']>;
   user: Maybe<User>;
   userId: Scalars['String']['output'];
 };
@@ -360,7 +360,6 @@ export type CreateUserInput = {
   /** DateTime */
   createdAt?: InputMaybe<Scalars['DateTime']['input']>;
   email: Scalars['String']['input'];
-  icalSecret?: InputMaybe<Scalars['String']['input']>;
   id?: InputMaybe<Scalars['String']['input']>;
   timezone?: InputMaybe<Scalars['String']['input']>;
   /** DateTime */
@@ -702,7 +701,6 @@ export type Mutation = {
   myDeleteTimeBlock: Scalars['Boolean']['output'];
   myDeleteTodo: Scalars['Boolean']['output'];
   myDeleteTodoList: Scalars['Boolean']['output'];
-  myRegenerateIcalSecret: Scalars['String']['output'];
   myReschedule: Scalars['Boolean']['output'];
   myRevokeApiKey: Scalars['Boolean']['output'];
   myUncompleteHabit: Scalars['Boolean']['output'];
@@ -1687,7 +1685,6 @@ export type UpdateUserInput = {
   /** DateTime */
   createdAt?: InputMaybe<Scalars['DateTime']['input']>;
   email?: InputMaybe<Scalars['String']['input']>;
-  icalSecret?: InputMaybe<Scalars['String']['input']>;
   id?: InputMaybe<Scalars['String']['input']>;
   timezone?: InputMaybe<Scalars['String']['input']>;
   /** DateTime */
@@ -1702,7 +1699,6 @@ export type User = {
   createdAt: Scalars['DateTime']['output'];
   email: Scalars['String']['output'];
   habits: Array<Habit>;
-  icalSecret: Scalars['String']['output'];
   id: Scalars['String']['output'];
   timeBlocks: Array<TimeBlock>;
   timezone: Scalars['String']['output'];
@@ -1764,7 +1760,6 @@ export type UserFilters = {
   OR?: InputMaybe<Array<UserFiltersOr>>;
   createdAt?: InputMaybe<DateTimeFilter>;
   email?: InputMaybe<StringFilter>;
-  icalSecret?: InputMaybe<StringFilter>;
   id?: InputMaybe<IdFilter>;
   timezone?: InputMaybe<StringFilter>;
   updatedAt?: InputMaybe<DateTimeFilter>;
@@ -1773,7 +1768,6 @@ export type UserFilters = {
 export type UserFiltersOr = {
   createdAt?: InputMaybe<DateTimeFilter>;
   email?: InputMaybe<StringFilter>;
-  icalSecret?: InputMaybe<StringFilter>;
   id?: InputMaybe<IdFilter>;
   timezone?: InputMaybe<StringFilter>;
   updatedAt?: InputMaybe<DateTimeFilter>;
@@ -1782,7 +1776,6 @@ export type UserFiltersOr = {
 export type UserOrderBy = {
   createdAt?: InputMaybe<InnerOrder>;
   email?: InputMaybe<InnerOrder>;
-  icalSecret?: InputMaybe<InnerOrder>;
   id?: InputMaybe<InnerOrder>;
   timezone?: InputMaybe<InnerOrder>;
   updatedAt?: InputMaybe<InnerOrder>;
@@ -1791,7 +1784,6 @@ export type UserOrderBy = {
 export type UserProfile = {
   __typename?: 'UserProfile';
   email: Scalars['String']['output'];
-  icalSecret: Scalars['String']['output'];
   id: Scalars['ID']['output'];
   timezone: Scalars['String']['output'];
 };
@@ -2095,7 +2087,7 @@ export type ApiKeyResolvers<ContextType = Context, ParentType extends ResolversP
   lastUsedAt?: Resolver<Maybe<ResolversTypes['DateTime']>, ParentType, ContextType>;
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   revokedAt?: Resolver<Maybe<ResolversTypes['DateTime']>, ParentType, ContextType>;
-  scopes?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  scopes?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
   user?: Resolver<Maybe<ResolversTypes['User']>, ParentType, ContextType, Partial<ApiKeyUserArgs>>;
   userId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 };
@@ -2214,7 +2206,6 @@ export type MutationResolvers<ContextType = Context, ParentType extends Resolver
   myDeleteTimeBlock?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationMyDeleteTimeBlockArgs, 'id'>>;
   myDeleteTodo?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationMyDeleteTodoArgs, 'id'>>;
   myDeleteTodoList?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationMyDeleteTodoListArgs, 'id'>>;
-  myRegenerateIcalSecret?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   myReschedule?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, Partial<MutationMyRescheduleArgs>>;
   myRevokeApiKey?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationMyRevokeApiKeyArgs, 'id'>>;
   myUncompleteHabit?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationMyUncompleteHabitArgs, 'completionId'>>;
@@ -2355,7 +2346,6 @@ export type UserResolvers<ContextType = Context, ParentType extends ResolversPar
   createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   email?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   habits?: Resolver<Array<ResolversTypes['Habit']>, ParentType, ContextType, Partial<UserHabitsArgs>>;
-  icalSecret?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   timeBlocks?: Resolver<Array<ResolversTypes['TimeBlock']>, ParentType, ContextType, Partial<UserTimeBlocksArgs>>;
   timezone?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -2366,7 +2356,6 @@ export type UserResolvers<ContextType = Context, ParentType extends ResolversPar
 
 export type UserProfileResolvers<ContextType = Context, ParentType extends ResolversParentTypes['UserProfile'] = ResolversParentTypes['UserProfile']> = {
   email?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
-  icalSecret?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   timezone?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
 };

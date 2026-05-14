@@ -1,6 +1,9 @@
 import {
   type GraphQLObjectType,
   type GraphQLSchema,
+  GraphQLList,
+  GraphQLNonNull,
+  GraphQLString,
   extendSchema,
   parse,
 } from 'graphql';
@@ -307,6 +310,12 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   const timeBlockType = extended.getType('TimeBlock') as GraphQLObjectType;
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
   timeBlockType.getFields().activityType!.resolve = resolveActivityType;
+
+  // drizzle-graphql generates ApiKey.scopes as String! but the DB stores a
+  // text[] array; patch the field type so GraphQL serializes it as [String!]!.
+  const apiKeyType = extended.getType('ApiKey') as GraphQLObjectType;
+  (apiKeyType.getFields().scopes as unknown as { type: unknown }).type =
+    new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(GraphQLString)));
 
   const todoType = extended.getType('Todo') as GraphQLObjectType;
   // biome-ignore lint/style/noNonNullAssertion: field is defined in SDL above
