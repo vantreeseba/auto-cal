@@ -6,13 +6,6 @@ import type {
 type ActivityTypeStats = GetActivityTypeStatsQuery['activityTypeStats'][number];
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Pencil, Plus, Tag } from 'lucide-react';
 import { useState } from 'react';
 import { ActivityTypeForm } from './ActivityTypeForm';
@@ -59,77 +52,73 @@ export function ActivityTypeList({ items, statsById }: ActivityTypeListProps) {
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Activity Types</CardTitle>
-              <CardDescription>
-                Categories for your todos, habits, and time blocks
-              </CardDescription>
-            </div>
-            <Button size="sm" onClick={openCreate}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Activity Type
-            </Button>
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">Activity Types</h2>
+          <p className="text-sm text-muted-foreground">
+            Categories for your todos, habits, and time blocks
+          </p>
+        </div>
+        <Button size="sm" onClick={openCreate}>
+          <Plus className="mr-2 h-4 w-4" />
+          New Activity Type
+        </Button>
+      </div>
+
+      {items.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 py-10 text-center">
+          <div className="rounded-full bg-muted p-3">
+            <Tag className="h-6 w-6 text-muted-foreground" />
           </div>
-        </CardHeader>
-        <CardContent>
-          {items.length === 0 && (
-            <div className="flex flex-col items-center gap-3 py-10 text-center">
-              <div className="rounded-full bg-muted p-3">
-                <Tag className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="font-medium text-sm">No activity types yet</p>
-                <p className="text-sm text-muted-foreground">
-                  Activity types categorize your todos, habits, and time blocks
-                </p>
-              </div>
-              <Button size="sm" onClick={openCreate}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add activity type
-              </Button>
-            </div>
-          )}
-          <div className="space-y-2">
-            {items.map((item) => {
-              const stats = statsById?.get(item.id);
-              return (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between rounded-md border px-3 py-2"
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="inline-block h-4 w-4 rounded-full border border-border"
-                      style={{ backgroundColor: item.color }}
-                    />
-                    <span className="text-sm font-medium">{item.name}</span>
-                    {stats && (
-                      <span className="text-xs text-muted-foreground">
-                        {stats.totalTodos} todo
-                        {stats.totalTodos !== 1 ? 's' : ''}
-                        {' · '}
-                        {stats.totalHabits} habit
-                        {stats.totalHabits !== 1 ? 's' : ''}
-                      </span>
-                    )}
-                  </div>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => openEdit(item)}
-                    aria-label={`Edit ${item.name}`}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
+          <div>
+            <p className="font-medium text-sm">No activity types yet</p>
+            <p className="text-sm text-muted-foreground">
+              Activity types categorize your todos, habits, and time blocks
+            </p>
+          </div>
+          <Button size="sm" onClick={openCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add activity type
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {items.map((item) => {
+            const stats = statsById?.get(item.id);
+            return (
+              <div
+                key={item.id}
+                className="flex items-center justify-between rounded-md border px-3 py-2"
+              >
+                <div className="flex items-center gap-3">
+                  <span
+                    className="inline-block h-4 w-4 rounded-full border border-border"
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <span className="text-sm font-medium">{item.name}</span>
+                  {stats && (
+                    <span className="text-xs text-muted-foreground">
+                      {stats.totalTodos} todo
+                      {stats.totalTodos !== 1 ? 's' : ''}
+                      {' · '}
+                      {stats.totalHabits} habit
+                      {stats.totalHabits !== 1 ? 's' : ''}
+                    </span>
+                  )}
                 </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => openEdit(item)}
+                  aria-label={`Edit ${item.name}`}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <ActivityTypeForm
         {...(editingItem !== null ? { activityType: editingItem } : {})}

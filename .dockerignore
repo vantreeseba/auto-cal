@@ -1,13 +1,24 @@
-node_modules
-dist
-__generated__
-pgdata
-.env
-.env.local
-*.log
-.DS_Store
+# Git and editor metadata
 .git
+.claude
 .vscode
 .idea
-# Only exclude the root drizzle dir (none exists currently, but safe to list)
-/drizzle
+.DS_Store
+
+# Logs and local runtime data
+*.log
+pgdata
+pgdata-codegen
+coverage
+
+# Environment files (never bake secrets into the image)
+.env
+.env.local
+.env.*.local
+
+# node_modules are installed fresh inside each build stage
+**/node_modules
+
+# Local Expo cache / intermediate outputs — rebuilt inside Stage 1
+packages/client/.expo
+packages/client/dist

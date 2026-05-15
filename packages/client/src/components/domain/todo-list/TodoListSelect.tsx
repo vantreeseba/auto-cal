@@ -7,7 +7,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useQuery } from '@apollo/client/react';
-import { Link } from '@tanstack/react-router';
+import { Link } from 'expo-router';
 
 const GET_TODO_LISTS = graphql(`
   query GetTodoListsForSelect {
@@ -52,7 +52,7 @@ export function TodoListSelect({
     return (
       <p className="text-sm text-muted-foreground">
         No todo lists yet —{' '}
-        <Link to="/todo-lists" className="underline">
+        <Link href="/todo-lists" className="underline">
           create one first
         </Link>
         .

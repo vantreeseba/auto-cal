@@ -1,6 +1,7 @@
+import { storage } from '@/storage';
 import { gql } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 
 interface VerifyMagicLinkResult {
@@ -16,29 +17,25 @@ const VERIFY_MAGIC_LINK = gql`
   }
 `;
 
-export const Route = createFileRoute('/auth/verify')({
-  component: VerifyPage,
-});
-
-function VerifyPage() {
-  const navigate = useNavigate();
+export default function VerifyPage() {
+  const router = useRouter();
+  const { token: queryToken } = useLocalSearchParams<{ token?: string }>();
 
   const [verify, { error }] = useMutation<VerifyMagicLinkResult>(
     VERIFY_MAGIC_LINK,
     {
       onCompleted(data) {
-        localStorage.setItem('auth_token', data.verifyMagicLink.token);
-        navigate({ to: '/dashboard' });
+        storage.setItem('auth_token', data.verifyMagicLink.token);
+        router.replace('/(app)/dashboard');
       },
     },
   );
 
   useEffect(() => {
-    const token = new URLSearchParams(window.location.search).get('token');
-    if (token) {
-      verify({ variables: { token } });
+    if (queryToken) {
+      verify({ variables: { token: queryToken } });
     }
-  }, [verify]);
+  }, [queryToken, verify]);
 
   if (error) {
     return (

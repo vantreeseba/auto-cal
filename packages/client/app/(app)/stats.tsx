@@ -4,19 +4,10 @@ import type {
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { RouteError } from '@/components/ui/route-error';
 import { useQuery } from '@apollo/client/react';
-import { createFileRoute } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
-import {
-  Bar,
-  BarChart,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+import { View } from 'react-native';
+import { BarChart } from 'react-native-gifted-charts';
 
 const GET_MY_STATS = graphql(`
   query GetMyStats($startDate: String, $endDate: String) {
@@ -83,7 +74,7 @@ function getDateRange(key: DateRangeKey): {
 } {
   const now = new Date();
   const endDate = now.toISOString();
-  // biome-ignore lint/style/noNonNullAssertion: key always comes from DATE_RANGES so find always succeeds
+  // biome-ignore lint/style/noNonNullAssertion: key always comes from DATE_RANGES
   const range = DATE_RANGES.find((r) => r.key === key)!;
   if (range.days === null) return { endDate };
   const start = new Date(now.getTime() - range.days * 24 * 60 * 60 * 1000);
@@ -102,13 +93,6 @@ function scoreColor(pct: number): string {
   return 'text-destructive';
 }
 
-export const Route = createFileRoute('/stats')({
-  component: StatsPage,
-  errorComponent: ({ error, reset }) => (
-    <RouteError error={error} reset={reset} />
-  ),
-});
-
 type StatsData = NonNullable<GetMyStatsQuery['myStats']>;
 type HabitRow = StatsData['habits'][number];
 type TodoRow = StatsData['todos'];
@@ -116,8 +100,6 @@ type ActivityTypeStatRow =
   GetActivityTypeStatsWithRangeQuery['activityTypeStats'][number];
 type ActivityTypeRow =
   GetActivityTypeStatsWithRangeQuery['myActivityTypes'][number];
-
-// ─── Score cards ─────────────────────────────────────────────────────────────
 
 function ScoreCard({
   label,
@@ -165,14 +147,28 @@ function ScoreCard({
   );
 }
 
-// ─── Habit consistency bar chart ─────────────────────────────────────────────
-
 function HabitConsistencySection({ habits }: { habits: HabitRow[] }) {
-  const chartData = habits.map((h) => ({
-    name: h.title.length > 14 ? `${h.title.slice(0, 13).trimEnd()}…` : h.title,
-    fullName: h.title,
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  const initialSpacing = 8;
+  // No y-axis labels — each bar's topLabelComponent already shows the %.
+  // This means width = containerWidth with no offsets to subtract.
+  const slotWidth = Math.max(
+    28,
+    Math.floor((containerWidth - initialSpacing) / Math.max(habits.length, 1)),
+  );
+  const barWidth = Math.min(40, Math.floor(slotWidth * 0.65));
+  const spacing = slotWidth - barWidth;
+
+  const barData = habits.map((h) => ({
     value: Math.min(Math.round(h.completionRate * 100), 100),
-    color: h.activityType?.color ?? '#94a3b8',
+    label: h.title.length > 10 ? `${h.title.slice(0, 9).trimEnd()}…` : h.title,
+    frontColor: h.activityType?.color ?? '#94a3b8',
+    topLabelComponent: () => (
+      <span style={{ fontSize: 10 }}>
+        {Math.min(Math.round(h.completionRate * 100), 100)}%
+      </span>
+    ),
   }));
 
   return (
@@ -184,52 +180,37 @@ function HabitConsistencySection({ habits }: { habits: HabitRow[] }) {
         {habits.length === 0 ? (
           <p className="text-sm text-muted-foreground">No habits yet.</p>
         ) : (
-          <ResponsiveContainer
-            width="100%"
-            height={Math.max(180, habits.length * 40)}
+          <View
+            style={{ width: '100%' }}
+            onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
           >
-            <BarChart
-              data={chartData}
-              margin={{ top: 4, right: 16, left: 0, bottom: 4 }}
-            >
-              <XAxis
-                dataKey="name"
-                tick={{ fontSize: 11 }}
-                interval={0}
-                tickLine={false}
+            {containerWidth > 0 && (
+              <BarChart
+                data={barData}
+                barWidth={barWidth}
+                initialSpacing={initialSpacing}
+                spacing={spacing}
+                barBorderRadius={4}
+                hideYAxisText
+                yAxisThickness={0}
+                xAxisThickness={1}
+                xAxisColor="#e2e8f0"
+                maxValue={100}
+                noOfSections={5}
+                labelWidth={0}
+                xAxisLabelTextStyle={{ fontSize: 10, color: '#64748b' }}
+                width={containerWidth}
+                height={180}
+                endSpacing={0}
+                disableScroll
               />
-              <YAxis
-                domain={[0, 100]}
-                tickFormatter={(v) => `${v}%`}
-                tick={{ fontSize: 11 }}
-                tickLine={false}
-                axisLine={false}
-                width={36}
-              />
-              <Tooltip
-                formatter={(value, _name, item) => [
-                  `${value ?? 0}%`,
-                  (item.payload as { fullName?: string })?.fullName ?? '',
-                ]}
-                contentStyle={{
-                  fontSize: 12,
-                  borderRadius: 6,
-                }}
-              />
-              <Bar dataKey="value" name="Completion" radius={[4, 4, 0, 0]}>
-                {chartData.map((entry) => (
-                  <Cell key={entry.fullName} fill={entry.color} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+            )}
+          </View>
         )}
       </CardContent>
     </Card>
   );
 }
-
-// ─── Todo throughput ──────────────────────────────────────────────────────────
 
 function TodoThroughputSection({
   todos,
@@ -278,8 +259,6 @@ function TodoThroughputSection({
   );
 }
 
-// ─── Activity type breakdown ──────────────────────────────────────────────────
-
 function ActivityTypeBreakdownSection({
   stats,
   activityTypes,
@@ -288,7 +267,6 @@ function ActivityTypeBreakdownSection({
   activityTypes: ActivityTypeRow[];
 }) {
   const colorById = new Map(activityTypes.map((at) => [at.id, at.color]));
-
   const rows = stats.filter((s) => s.totalTodos > 0 || s.totalHabits > 0);
 
   return (
@@ -356,24 +334,17 @@ function ActivityTypeBreakdownSection({
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
-function StatsPage() {
+export default function StatsPage() {
   const [range, setRange] = useState<DateRangeKey>('month');
-
   const variables = useMemo(() => getDateRange(range), [range]);
 
   const { data, loading, error } = useQuery(GET_MY_STATS, {
     variables,
     fetchPolicy: 'cache-and-network',
   });
-
   const { data: activityData, loading: activityLoading } = useQuery(
     GET_ACTIVITY_TYPE_STATS_WITH_RANGE,
-    {
-      variables,
-      fetchPolicy: 'cache-and-network',
-    },
+    { variables, fetchPolicy: 'cache-and-network' },
   );
 
   const stats: StatsData | undefined = data?.myStats;
@@ -381,7 +352,6 @@ function StatsPage() {
 
   return (
     <div className="container mx-auto flex-1 overflow-y-auto px-4 py-6 space-y-6">
-      {/* Time-range filter */}
       <div className="flex gap-1 flex-wrap">
         {DATE_RANGES.map((r) => (
           <button
@@ -408,7 +378,6 @@ function StatsPage() {
 
       {stats && (
         <>
-          {/* 1. Composite score */}
           <div className="flex gap-4 flex-wrap sm:flex-nowrap">
             <ScoreCard
               label="Weighted score"
@@ -419,10 +388,8 @@ function StatsPage() {
             <ScoreCard label="Todo score" score={stats.todoScore} />
           </div>
 
-          {/* 2. Habit consistency bar chart */}
           <HabitConsistencySection habits={stats.habits} />
 
-          {/* 3. Todo throughput */}
           <TodoThroughputSection
             todos={stats.todos}
             todoScore={stats.todoScore}
@@ -430,7 +397,6 @@ function StatsPage() {
         </>
       )}
 
-      {/* 4. Activity type breakdown — separate query */}
       {activityData && (
         <ActivityTypeBreakdownSection
           stats={activityData.activityTypeStats}

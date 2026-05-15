@@ -1,3 +1,23 @@
+# ── Stage 1: bundle the Expo web client ──────────────────────────────────────
+FROM node:22-alpine AS client-builder
+
+WORKDIR /app
+
+# Copy workspace manifests so npm install can resolve all workspaces
+COPY package*.json ./
+COPY packages/client/package*.json ./packages/client/
+COPY packages/db/package*.json ./packages/db/
+COPY packages/server/package*.json ./packages/server/
+
+RUN npm install --legacy-peer-deps
+
+# Copy client source (includes committed src/__generated__/ types)
+COPY packages/client ./packages/client
+
+# Export the web bundle; no EXPO_PUBLIC_API_URL → defaults to '' → relative /graphql
+RUN cd packages/client && npx expo export --platform web
+
+# ── Stage 2: production server ────────────────────────────────────────────────
 FROM node:22-alpine
 
 WORKDIR /app
@@ -10,7 +30,9 @@ RUN npm install --omit=dev
 
 COPY packages/server ./packages/server
 COPY packages/db ./packages/db
-COPY packages/client/dist ./packages/client/dist
+
+# Pull the built web bundle from Stage 1
+COPY --from=client-builder /app/packages/client/dist ./packages/client/dist
 
 RUN mkdir -p /app/pgdata
 

@@ -22,7 +22,7 @@ import {
 import { priorityLabel } from '@/lib/utils';
 import { gql } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
-import { Link } from '@tanstack/react-router';
+import { Link } from 'expo-router';
 import { AlertTriangle, Check, Pencil, Trash2, Undo2 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -170,7 +170,7 @@ export function TodoItem({ todo, onEdit }: TodoItemProps) {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
-                  to="/time-blocks"
+                  href="/time-blocks"
                   className="inline-flex items-center gap-1 text-amber-600 hover:text-amber-700 hover:underline"
                 >
                   <AlertTriangle className="h-3 w-3" />
