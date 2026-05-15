@@ -7,7 +7,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useQuery } from '@apollo/client/react';
-import { Link } from '@tanstack/react-router';
+import { Link } from 'expo-router';
 
 const GET_ACTIVITY_TYPES = graphql(`
   query GetActivityTypesForSelect {
@@ -38,7 +38,7 @@ export function ActivityTypeSelect({
     return (
       <p className="text-sm text-muted-foreground">
         No activity types yet —{' '}
-        <Link to="/activity-types" className="underline">
+        <Link href="/activity-types" className="underline">
           create one first
         </Link>
         .

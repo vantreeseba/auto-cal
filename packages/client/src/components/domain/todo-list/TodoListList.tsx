@@ -4,13 +4,6 @@ import type {
 } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { ListTodo, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { TodoListCard } from './TodoListCard';
@@ -45,31 +38,34 @@ export function TodoListList({ lists, todosByListId }: TodoListListProps) {
   if (lists.length === 0) {
     return (
       <>
-        <Card>
-          <CardHeader>
-            <CardTitle>Todos</CardTitle>
-            <CardDescription>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">Todos</h2>
+            <p className="text-sm text-muted-foreground">
               Lists group todos by activity type. Create one to get started.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col items-center gap-3 py-10 text-center">
-              <div className="rounded-full bg-muted p-3">
-                <ListTodo className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="font-medium text-sm">No todo lists yet</p>
-                <p className="text-sm text-muted-foreground">
-                  Create one to start adding todos
-                </p>
-              </div>
-              <Button size="sm" onClick={() => setCreatingList(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Create list
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+            </p>
+          </div>
+          <Button size="sm" onClick={() => setCreatingList(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            New List
+          </Button>
+        </div>
+
+        <div className="flex flex-col items-center gap-3 py-10 text-center">
+          <div className="rounded-full bg-muted p-3">
+            <ListTodo className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="font-medium text-sm">No todo lists yet</p>
+            <p className="text-sm text-muted-foreground">
+              Create one to start adding todos
+            </p>
+          </div>
+          <Button size="sm" onClick={() => setCreatingList(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create list
+          </Button>
+        </div>
 
         <TodoListForm open={creatingList} onOpenChange={setCreatingList} />
       </>

@@ -10,7 +10,6 @@ import {
 import { priorityLabel } from '@/lib/utils';
 import { gql } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
-import { Link } from '@tanstack/react-router';
 import {
   addDays,
   endOfDay,
@@ -20,6 +19,7 @@ import {
   startOfDay,
   startOfMonth,
 } from 'date-fns';
+import { Link } from 'expo-router';
 import { AlertTriangle, Check, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
@@ -277,7 +277,7 @@ function ScheduleCard({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Link
-                    to="/time-blocks"
+                    href="/time-blocks"
                     className="text-amber-500 hover:text-amber-600"
                   >
                     <AlertTriangle className="h-4 w-4" />

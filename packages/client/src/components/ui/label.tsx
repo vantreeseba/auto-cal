@@ -4,7 +4,7 @@ import { type VariantProps, cva } from 'class-variance-authority';
 import type * as React from 'react';
 
 const labelVariants = cva(
-  'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70',
+  'text-foreground text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70',
 );
 
 function Label({

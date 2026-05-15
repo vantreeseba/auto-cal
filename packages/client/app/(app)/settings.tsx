@@ -7,23 +7,16 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { RouteError } from '@/components/ui/route-error';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { storage } from '@/storage';
+import { useRouter } from 'expo-router';
 import { Wand2 } from 'lucide-react';
 
-export const Route = createFileRoute('/settings')({
-  component: SettingsPage,
-  errorComponent: ({ error, reset }) => (
-    <RouteError error={error} reset={reset} />
-  ),
-});
-
-function SettingsPage() {
-  const navigate = useNavigate();
+export default function SettingsPage() {
+  const router = useRouter();
 
   function handleRunWizard() {
-    localStorage.removeItem('onboarding_done');
-    navigate({ to: '/onboarding', search: { step: 1, force: true } });
+    storage.removeItem('onboarding_done');
+    router.push('/onboarding?step=1&force=true');
   }
 
   return (

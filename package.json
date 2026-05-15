@@ -8,8 +8,10 @@
   "scripts": {
     "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
     "dev:server": "npm run dev -w @auto-cal/server",
-    "dev:client": "npm run dev -w @auto-cal/client",
-    "build": "npm run codegen && (cd packages/client && npx @tanstack/router-cli generate) && npm run build -w @auto-cal/client && npm run build -w @auto-cal/server",
+    "dev:client": "cd packages/client && EXPO_NO_DEVTOOLS=1 npx expo start --web",
+    "build": "npm run codegen && npm run build:client && npm run build:server",
+    "build:client": "cd packages/client && npx expo export --platform web",
+    "build:server": "npm run build -w @auto-cal/server",
     "build:docker": "docker build -t auto-cal .",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "biome check .",
@@ -35,12 +37,16 @@
     "@graphql-codegen/schema-ast": "^6.0.0",
     "@graphql-codegen/typescript": "^6.0.0",
     "@graphql-codegen/typescript-resolvers": "^6.0.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vantreeseba/graphql-mocks": "^1.0.5",
     "@vitest/coverage-v8": "^4.1.6",
     "concurrently": "^9.1.2",
     "esbuild": "^0.28.0",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.5",
-    "@vantreeseba/graphql-mocks": "^1.0.5"
+    "graphql-parse-resolve-info": "^4.14.1",
+    "graphql-scalars": "^1.25.0",
+    "typescript": "~5.9.2",
+    "vitest": "^4.1.5"
   },
   "resolutions": {
     "graphql": "16.10.0"

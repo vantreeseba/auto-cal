@@ -4,15 +4,13 @@ import { StepHabits } from '@/components/domain/onboarding/StepHabits';
 import { StepTimeBlocks } from '@/components/domain/onboarding/StepTimeBlocks';
 import { StepTodos } from '@/components/domain/onboarding/StepTodos';
 import { Button } from '@/components/ui/button';
-import { RouteError } from '@/components/ui/route-error';
 import { cn } from '@/lib/utils';
+import { storage } from '@/storage';
 import { useQuery } from '@apollo/client/react';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Check, X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
-import { z } from 'zod';
 
-// Only used to detect if the user is already onboarded (has activity types)
 const CHECK_ONBOARDED = graphql(`
   query CheckOnboarded {
     myActivityTypes {
@@ -28,25 +26,13 @@ const STEPS = [
   { label: 'Todos' },
 ] as const;
 
-export const Route = createFileRoute('/onboarding')({
-  validateSearch: z.object({
-    step: z.number().int().min(1).max(4).catch(1),
-    // force=true skips the "already set up" redirect, used when re-running from settings
-    force: z.boolean().catch(false),
-  }),
-  component: OnboardingPage,
-  errorComponent: ({ error, reset }) => (
-    <RouteError error={error} reset={reset} />
-  ),
-});
-
-function OnboardingPage() {
-  const { step, force } = Route.useSearch();
-  const navigate = useNavigate({ from: '/onboarding' });
+export default function OnboardingPage() {
+  const router = useRouter();
+  const params = useLocalSearchParams<{ step?: string; force?: string }>();
+  const step = Math.max(1, Math.min(4, Number(params.step ?? 1)));
+  const force = params.force === 'true';
   const checked = useRef(false);
 
-  // On first load only (and only when not forced): if the user already has
-  // activity types they're set up — redirect to dashboard and mark done.
   const { data, loading } = useQuery(CHECK_ONBOARDED, {
     skip: step > 1 || force,
     fetchPolicy: 'network-only',
@@ -56,26 +42,25 @@ function OnboardingPage() {
     if (checked.current || loading || step > 1 || force) return;
     if (data && data.myActivityTypes.length > 0) {
       checked.current = true;
-      localStorage.setItem('onboarding_done', '1');
-      navigate({ to: '/dashboard' });
+      storage.setItem('onboarding_done', '1');
+      router.replace('/dashboard');
     }
-  }, [data, loading, step, force, navigate]);
+  }, [data, loading, step, force, router]);
 
   function goToStep(s: number) {
-    navigate({ search: { step: s } });
+    router.push({ pathname: '/onboarding', params: { step: String(s) } });
   }
 
   function handleFinish() {
-    localStorage.setItem('onboarding_done', '1');
-    navigate({ to: '/dashboard' });
+    storage.setItem('onboarding_done', '1');
+    router.replace('/dashboard');
   }
 
   function handleSkipAll() {
-    localStorage.setItem('onboarding_done', '1');
-    navigate({ to: '/dashboard' });
+    storage.setItem('onboarding_done', '1');
+    router.replace('/dashboard');
   }
 
-  // Show spinner only on initial check
   if (step === 1 && loading) {
     return (
       <div className="flex flex-1 items-center justify-center">
@@ -87,7 +72,6 @@ function OnboardingPage() {
   return (
     <div className="flex flex-1 flex-col items-center overflow-y-auto py-8 px-4">
       <div className="w-full max-w-2xl space-y-6">
-        {/* Header */}
         <div className="flex items-start justify-between">
           <div>
             <h2 className="text-2xl font-bold">Welcome to Auto Cal</h2>
@@ -106,7 +90,6 @@ function OnboardingPage() {
           </Button>
         </div>
 
-        {/* Step indicator */}
         <div className="flex items-center">
           {STEPS.map((s, i) => (
             <div key={s.label} className="flex flex-1 items-center">
@@ -146,7 +129,6 @@ function OnboardingPage() {
           ))}
         </div>
 
-        {/* Step content */}
         {step === 1 && <StepActivityTypes onNext={() => goToStep(2)} />}
         {step === 2 && (
           <StepTimeBlocks
@@ -169,7 +151,6 @@ function OnboardingPage() {
           />
         )}
 
-        {/* Step counter */}
         <p className="text-center text-xs text-muted-foreground">
           Step {step} of {STEPS.length}
           {step > 2 && ' · optional from here'}

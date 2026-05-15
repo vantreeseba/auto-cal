@@ -2,13 +2,11 @@ import { graphql } from '@/__generated__/index.js';
 import { CalendarView } from '@/components/domain/dashboard/CalendarView';
 import { ScheduleView } from '@/components/domain/dashboard/ScheduleView';
 import { WeekNavigator } from '@/components/domain/dashboard/WeekNavigator';
-import { RouteError } from '@/components/ui/route-error';
 import { gql } from '@apollo/client';
-import { useMutation, useQuery, useReadQuery } from '@apollo/client/react';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { useMutation, useQuery } from '@apollo/client/react';
 import { addDays, addMonths, addWeeks, format, startOfMonth } from 'date-fns';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { z } from 'zod';
 
 const GET_CALENDAR_DATA = graphql(`
   query GetCalendarData {
@@ -37,16 +35,6 @@ const UPDATE_PROFILE = gql`
 
 type CalendarViewMode = 'day' | 'week' | 'month';
 
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-const dashboardSearchSchema = z.object({
-  weekStart: z.string().regex(ISO_DATE_RE).optional(),
-  day: z.string().regex(ISO_DATE_RE).optional(),
-  view: z.enum(['day', 'week', 'month']).optional(),
-});
-
-type DashboardSearch = z.infer<typeof dashboardSearchSchema>;
-
 function toMonday(date: Date): Date {
   const d = new Date(date);
   const day = d.getDay();
@@ -55,10 +43,9 @@ function toMonday(date: Date): Date {
   return d;
 }
 
-/** Parse an ISO date as a *local* Date (not UTC midnight). */
 function parseISODate(s: string): Date {
   const [y, m, d] = s.split('-').map(Number);
-  // biome-ignore lint/style/noNonNullAssertion: regex-validated upstream
+  // biome-ignore lint/style/noNonNullAssertion: regex-validated input
   return new Date(y!, (m as number) - 1, d!);
 }
 
@@ -66,32 +53,20 @@ function isoDate(d: Date): string {
   return format(d, 'yyyy-MM-dd');
 }
 
-/**
- * Resolve URL search → effective view + date pair.
- * - If `day` is set, view forces to 'day' regardless of `view`.
- * - Else respect `view` (default 'week') with date anchored to `weekStart`
- *   (defaults to current Monday).
- */
-function resolveViewAndDate(search: DashboardSearch): {
-  view: CalendarViewMode;
-  date: Date;
-} {
-  if (search.day) {
-    return { view: 'day', date: parseISODate(search.day) };
+function resolveViewAndDate(params: {
+  weekStart?: string;
+  day?: string;
+  view?: string;
+}): { view: CalendarViewMode; date: Date } {
+  if (params.day) {
+    return { view: 'day', date: parseISODate(params.day) };
   }
-  const view = search.view ?? 'week';
-  const anchor = search.weekStart
-    ? parseISODate(search.weekStart)
+  const view = (params.view as CalendarViewMode | undefined) ?? 'week';
+  const anchor = params.weekStart
+    ? parseISODate(params.weekStart)
     : toMonday(new Date());
   if (view === 'month') return { view, date: startOfMonth(anchor) };
   return { view, date: toMonday(anchor) };
-}
-
-/** Encode a (view, date) pair back into URL search params. */
-function searchFromState(view: CalendarViewMode, date: Date): DashboardSearch {
-  if (view === 'day') return { view: 'day', day: isoDate(date) };
-  if (view === 'month') return { view: 'month', weekStart: isoDate(date) };
-  return { view: 'week', weekStart: isoDate(toMonday(date)) };
 }
 
 function navigateDate(date: Date, view: CalendarViewMode, dir: 1 | -1): Date {
@@ -139,52 +114,55 @@ function isCurrent(date: Date, view: CalendarViewMode): boolean {
   }
 }
 
-export const Route = createFileRoute('/dashboard')({
-  component: DashboardPage,
-  validateSearch: dashboardSearchSchema,
-  errorComponent: ({ error, reset }) => (
-    <RouteError error={error} reset={reset} />
-  ),
-  loader: ({ context }) => ({
-    calendarData: context.preloadQuery(GET_CALENDAR_DATA),
-  }),
-});
+export default function DashboardPage() {
+  const router = useRouter();
+  const params = useLocalSearchParams<{
+    weekStart?: string;
+    day?: string;
+    view?: string;
+  }>();
 
-function DashboardPage() {
-  const { calendarData } = Route.useLoaderData();
-  const { data: calendarViewData } = useReadQuery(calendarData);
+  const { view, date } = resolveViewAndDate(params);
 
-  const search = Route.useSearch();
-  const navigate = useNavigate({ from: Route.fullPath });
-  const { view, date } = resolveViewAndDate(search);
-
-  function setSearch(next: DashboardSearch) {
-    navigate({ search: next, replace: true });
+  function setSearch(next: {
+    weekStart?: string;
+    day?: string;
+    view?: string;
+  }) {
+    router.replace({ pathname: '/dashboard', params: next });
   }
 
   function setDate(nextDate: Date) {
-    setSearch(searchFromState(view, nextDate));
+    if (view === 'day') setSearch({ view: 'day', day: isoDate(nextDate) });
+    else if (view === 'month')
+      setSearch({ view: 'month', weekStart: isoDate(nextDate) });
+    else setSearch({ view: 'week', weekStart: isoDate(toMonday(nextDate)) });
   }
 
   function handleViewChange(nextView: CalendarViewMode) {
-    // Snap date to an appropriate anchor for the new view
     let nextDate = date;
     if (nextView === 'week') nextDate = toMonday(date);
     if (nextView === 'month') nextDate = startOfMonth(date);
-    setSearch(searchFromState(nextView, nextDate));
+    if (nextView === 'day') setSearch({ view: 'day', day: isoDate(nextDate) });
+    else if (nextView === 'month')
+      setSearch({ view: 'month', weekStart: isoDate(nextDate) });
+    else setSearch({ view: 'week', weekStart: isoDate(toMonday(nextDate)) });
   }
 
   const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
   const [updateProfile] = useMutation(UPDATE_PROFILE);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional mount-only effect — timezone sync runs once on load
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional mount-only effect
   useEffect(() => {
     updateProfile({ variables: { timezone: clientTimezone } }).catch(
       console.error,
     );
   }, []);
 
-  // Schedule is always week-scoped regardless of calendar view
+  const { data: calendarViewData } = useQuery(GET_CALENDAR_DATA, {
+    fetchPolicy: 'cache-and-network',
+  });
+
   const weekStart = toMonday(date);
   const { data: scheduleData } = useQuery(MY_SCHEDULE, {
     variables: {

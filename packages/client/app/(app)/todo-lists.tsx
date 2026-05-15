@@ -1,9 +1,7 @@
 import type { Todo_TodoListFragment } from '@/__generated__/graphql.js';
 import { graphql } from '@/__generated__/index.js';
 import { TodoListList } from '@/components/domain/todo-list/TodoListList';
-import { RouteError } from '@/components/ui/route-error';
 import { useQuery } from '@apollo/client/react';
-import { createFileRoute } from '@tanstack/react-router';
 import { useMemo } from 'react';
 
 const GET_TODO_LISTS_PAGE = graphql(`
@@ -17,14 +15,7 @@ const GET_TODO_LISTS_PAGE = graphql(`
   }
 `);
 
-export const Route = createFileRoute('/todo-lists')({
-  component: TodoListsPage,
-  errorComponent: ({ error, reset }) => (
-    <RouteError error={error} reset={reset} />
-  ),
-});
-
-function TodoListsPage() {
+export default function TodoListsPage() {
   const { data, loading, error } = useQuery(GET_TODO_LISTS_PAGE, {
     fetchPolicy: 'cache-and-network',
   });
@@ -37,7 +28,6 @@ function TodoListsPage() {
       bucket.push(todo);
       map.set(todo.list.id, bucket);
     }
-    // Stable per-list order: incomplete first, then by createdAt desc
     for (const todos of map.values()) {
       todos.sort((a, b) => {
         const aDone = a.completedAt ? 1 : 0;

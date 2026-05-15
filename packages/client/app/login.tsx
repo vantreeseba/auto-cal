@@ -1,7 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { gql } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
-import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 
 interface RequestMagicLinkResult {
@@ -17,11 +16,7 @@ const REQUEST_MAGIC_LINK = gql`
   }
 `;
 
-export const Route = createFileRoute('/login')({
-  component: LoginPage,
-});
-
-function LoginPage() {
+export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [magicLink, setMagicLink] = useState<string | null>(null);
