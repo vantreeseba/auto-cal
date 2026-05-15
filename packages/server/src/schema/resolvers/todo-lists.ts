@@ -2,7 +2,9 @@ import { todoLists } from '@auto-cal/db/schema';
 import { eq } from 'drizzle-orm';
 import type { GraphQLObjectType } from 'graphql';
 import type { Context } from '../../context.ts';
+import { pubsub } from '../../pubsub.ts';
 import { CreateTodoListInput, UpdateTodoListInput } from '../validators.ts';
+import { TODO_LIST_EVENT } from './subscriptions.ts';
 
 type Fields = ReturnType<GraphQLObjectType['getFields']>;
 
@@ -55,6 +57,12 @@ export function applyTodoListResolvers(
       })
       .returning();
     if (!list) throw new Error('Failed to create todo list');
+    pubsub
+      .publish(TODO_LIST_EVENT(context.userId), {
+        type: 'created',
+        todoList: list,
+      })
+      .catch(console.error);
     return list;
   };
 
@@ -103,6 +111,12 @@ export function applyTodoListResolvers(
       .where(eq(todoLists.id, input.id))
       .returning();
     if (!updated) throw new Error(`Failed to update todo list ${input.id}`);
+    pubsub
+      .publish(TODO_LIST_EVENT(context.userId), {
+        type: 'updated',
+        todoList: updated,
+      })
+      .catch(console.error);
     return updated;
   };
 
@@ -131,6 +145,12 @@ export function applyTodoListResolvers(
     }
 
     await context.db.delete(todoLists).where(eq(todoLists.id, args.id));
+    pubsub
+      .publish(TODO_LIST_EVENT(context.userId), {
+        type: 'deleted',
+        deletedId: args.id,
+      })
+      .catch(console.error);
     return true;
   };
 }

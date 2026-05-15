@@ -15,6 +15,7 @@ import { applyHabitResolvers } from './habits.ts';
 import { applyProfileResolvers } from './profile.ts';
 import { applyScheduleResolvers } from './schedule.ts';
 import { applyStatsResolvers } from './stats.ts';
+import { applySubscriptionResolvers } from './subscriptions.ts';
 import { applyTimeBlockResolvers } from './time-blocks.ts';
 import { applyTodoListResolvers } from './todo-lists.ts';
 import { applyTodoResolvers } from './todos.ts';
@@ -215,6 +216,29 @@ const extensionSDL = `
     expiresAt: String
   }
 
+  enum TodoEventType {
+    created
+    updated
+    deleted
+  }
+
+  type TodoListEvent {
+    type: TodoEventType!
+    todoList: TodoList
+    deletedId: ID
+  }
+
+  type TodoEvent {
+    type: TodoEventType!
+    todo: Todo
+    deletedId: ID
+  }
+
+  type Subscription {
+    myTodoListsUpdated: TodoListEvent!
+    myTodosUpdated: TodoEvent!
+  }
+
   extend type Todo {
     activityType: ActivityType
   }
@@ -277,8 +301,12 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
 
   const queryType = extended.getType('Query') as GraphQLObjectType;
   const mutationType = extended.getType('Mutation') as GraphQLObjectType;
+  const subscriptionType = extended.getType(
+    'Subscription',
+  ) as GraphQLObjectType;
   const queryFields = queryType.getFields();
   const mutationFields = mutationType.getFields();
+  const subscriptionFields = subscriptionType.getFields();
 
   applyProfileResolvers(queryFields, mutationFields);
   applyActivityTypeResolvers(queryFields, mutationFields);
@@ -290,6 +318,7 @@ export function applyCustomResolvers(schema: GraphQLSchema): GraphQLSchema {
   applyScheduleResolvers(queryFields, mutationFields);
   applyAuthResolvers(mutationFields);
   applyApiKeyResolvers(queryFields, mutationFields);
+  applySubscriptionResolvers(subscriptionFields);
 
   // Field resolvers: activityType on Habit and TimeBlock load directly from
   // their activityTypeId. Todo.activityType derives from its list.
